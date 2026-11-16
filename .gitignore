@@ -1,0 +1,6 @@
+.runtime/
+__pycache__/
+.ruff_cache/
+SMB Transcriber.app/
+VoxDrop.app/
+.DS_Store

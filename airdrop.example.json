@@ -1,0 +1,14 @@
+{
+  "folders": [],
+  "create_output_subfolder": false,
+  "output_subfolder": "_FERTIGGESTELLT",
+  "interval_seconds": 30,
+  "language": "auto",
+  "model": "qwen3-asr-1.7b",
+  "hardware": "metal",
+  "speakers": true,
+  "dover_lap": false,
+  "skip_silence": false,
+  "speaker_count": null,
+  "monitoring": false
+}
