@@ -3,7 +3,6 @@
 import argparse
 import ctypes
 import errno
-import fcntl
 import hashlib
 import json
 import os
@@ -20,14 +19,26 @@ import uuid
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from contextlib import closing, contextmanager, suppress
 from functools import lru_cache
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 
-import app_upgrade
 import login_agent
-from smb_paths import resolve_folder, smb_mounts, validate_folder_path
+from platform_io import (
+    WINDOWS,
+    is_reparse_point,
+    lock_service,
+    open_regular,
+    process_options,
+)
+from smb_paths import (
+    on_network_volume,
+    resolve_folder,
+    smb_mounts,
+    validate_folder_path,
+)
 from transcription_worker import run_transcription
 from voxdrop import (
     DEFAULT_DATA,
+    DEFAULT_HARDWARE,
     DEFAULT_MODEL,
     HARDWARE,
     MEDIA_EXTENSIONS,
@@ -157,7 +168,7 @@ def read_settings(path):
         "dover_lap": False,
         "monitoring": False,
         "require_smb": False,
-        "hardware": "metal",
+        "hardware": DEFAULT_HARDWARE,
         "model": DEFAULT_MODEL,
         "skip_silence": False,
     }
@@ -207,7 +218,7 @@ def read_settings(path):
     if settings["language"] not in ("auto", "de", "en"):
         raise ValueError("Erlaubte Sprachen sind auto, de und en.")
     if settings["hardware"] not in HARDWARE:
-        raise ValueError("Erlaubte Rechengeräte sind metal und cpu.")
+        raise ValueError(f"Erlaubte Rechengeräte sind {', '.join(HARDWARE)}.")
     if settings["model"] not in MODELS:
         raise ValueError("Erlaubte Transkriptionsmodelle sind Qwen und Whisper.")
     count = settings["speaker_count"]
@@ -224,6 +235,14 @@ def validate_subfolder(name):
         or name != name.strip()
         or name in {"", ".", ".."}
         or any(character in name for character in ("/", "\\", "\0"))
+        or (
+            WINDOWS
+            and (
+                PureWindowsPath(name).is_reserved()
+                or name.endswith(".")
+                or any(c in ':*?"<>|' or ord(c) < 32 for c in name)
+            )
+        )
     ):
         raise ValueError(
             "Für den Unterordner ist ein einzelner Ordnername erforderlich."
@@ -245,7 +264,11 @@ def output_folder(source, settings):
         metadata = output.lstat()
     except FileNotFoundError:
         return output
-    if not stat.S_ISDIR(metadata.st_mode) or metadata.st_dev != source.stat().st_dev:
+    if (
+        not stat.S_ISDIR(metadata.st_mode)
+        or is_reparse_point(metadata)
+        or metadata.st_dev != source.stat().st_dev
+    ):
         raise ValueError("Der Unterordner muss ein regulärer Ordner am Quellpfad sein.")
     return output
 
@@ -290,7 +313,7 @@ def database(state):
 
 
 def initialise(state):
-    if any(state.is_relative_to(root) for _, _, root in smb_mounts()):
+    if on_network_volume(state, smb_mounts()):
         raise ValueError(
             "Datenbank und temporäre Medienkopie benötigen einen lokalen Pfad."
         )
@@ -382,7 +405,11 @@ def inspect_folders(settings):
                 metadata = entry.stat(follow_symlinks=False)
             except FileNotFoundError:
                 continue
-            if not stat.S_ISREG(metadata.st_mode) or not metadata.st_size:
+            if (
+                not stat.S_ISREG(metadata.st_mode)
+                or is_reparse_point(metadata)
+                or not metadata.st_size
+            ):
                 continue
             versions.append((entry.path, metadata.st_size, metadata.st_mtime_ns))
     return str(incoming), str(completed), versions
@@ -392,12 +419,19 @@ def inspect_folders_with_deadline(settings):
     # A directory open on an SMB mount can block in the kernel. Isolate it from the watcher.
     try:
         result = subprocess.run(
-            [sys.executable, "-BEs", str(Path(__file__).resolve()), "inspect-folders"],
+            [
+                sys.executable,
+                "-BEs",
+                "-Xutf8",
+                str(Path(__file__).resolve()),
+                "inspect-folders",
+            ],
             input=json.dumps(settings),
             capture_output=True,
-            text=True,
+            encoding="utf-8",
             timeout=SMB_PROBE_TIMEOUT,
             check=True,
+            **process_options(),
         )
     except subprocess.TimeoutExpired as error:
         raise OSError("Zeitlimit beim Zugriff auf die SMB-Ordner erreicht.") from error
@@ -455,6 +489,10 @@ def rename_function():
 
 
 def rename_exclusive(source, target):
+    if WINDOWS:
+        # MoveFileEx without MOVEFILE_REPLACE_EXISTING also works on UNC paths.
+        os.rename(source, target)
+        return
     # RENAME_EXCL from the macOS SDK. The filesystem must provide the guarantee.
     if rename_function()(os.fsencode(source), os.fsencode(target), 0x00000004) == -1:
         code = ctypes.get_errno()
@@ -467,7 +505,7 @@ def rename_exclusive(source, target):
 
 @contextmanager
 def regular_reader(path):
-    descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+    descriptor = open_regular(path, os.O_RDONLY)
     with os.fdopen(descriptor, "rb") as reader:
         if not stat.S_ISREG(os.fstat(descriptor).st_mode):
             raise OSError(f"Kein reguläres Medium: {path}")
@@ -511,7 +549,7 @@ def stage(job, target):
                 raise SourceChanged(
                     "Die Quelle hat sich während der Übernahme geändert."
                 )
-        partial.rename(target)
+        os.replace(partial, target)
     finally:
         partial.unlink(missing_ok=True)
     return sha.hexdigest()
@@ -552,14 +590,14 @@ def copy_identity(metadata):
 
 
 def copy_verified(db, job_id, source, target, expected):
-    flags = os.O_RDWR | os.O_NOFOLLOW | os.O_NONBLOCK
+    flags = os.O_RDWR
     try:
-        descriptor = os.open(target, flags | os.O_CREAT | os.O_EXCL, 0o600)
+        descriptor = open_regular(target, flags | os.O_CREAT | os.O_EXCL)
         created = True
     except FileExistsError:
         if matches(target, expected):
             return
-        descriptor = os.open(target, flags)
+        descriptor = open_regular(target, flags)
         created = False
 
     with os.fdopen(descriptor, "r+b") as writer, regular_reader(source) as reader:
@@ -1278,7 +1316,7 @@ def run(state, config, *, once):
 
     with (state / "service.lock").open("a") as lock, closing(database(state)) as db:
         try:
-            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            lock_service(lock)
         except BlockingIOError as error:
             raise RuntimeError(
                 "Der Dienst läuft bereits für diese Auftragsdatenbank."
@@ -1333,7 +1371,7 @@ def run(state, config, *, once):
 def is_running(state):
     with (state / "service.lock").open("a") as lock:
         try:
-            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            lock_service(lock)
         except BlockingIOError:
             return True
     return False
@@ -1348,6 +1386,7 @@ def start_in_background(state, model_data, config):
             [
                 sys.executable,
                 "-BEs",
+                "-Xutf8",
                 str(Path(__file__).resolve()),
                 "--state-dir",
                 str(state),
@@ -1356,7 +1395,7 @@ def start_in_background(state, model_data, config):
                 "run",
                 str(config.resolve()),
             ],
-            start_new_session=True,
+            **process_options(background=True),
             stdin=subprocess.DEVNULL,
             stdout=log,
             stderr=log,
@@ -1415,6 +1454,10 @@ def main(argv=None):
     args = cli.parse_args(argv)
     try:
         if args.command == "prepare-app-data":
+            if WINDOWS:
+                return 0
+            import app_upgrade
+
             if app_upgrade.migrate(
                 args.state_dir.parent, Path(__file__).resolve().parents[3]
             ):
@@ -1474,6 +1517,10 @@ def main(argv=None):
             start_in_background(state, args.model_data, args.config)
             return 0
         if args.command == "autostart":
+            if WINDOWS:
+                raise ValueError(
+                    "Der Windows-Anmeldestart wird über die VoxDrop-Oberfläche verwaltet."
+                )
             import plistlib
 
             config = args.config.resolve()

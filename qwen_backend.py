@@ -10,6 +10,8 @@ import sys
 import tempfile
 from pathlib import Path
 
+from platform_io import WINDOWS, process_options
+
 ASR = "qwen3-asr-1.7b"
 ALIGNER = "qwen3-forced-aligner-0.6b"
 SAMPLE_RATE = 16000
@@ -30,7 +32,8 @@ EVENT = "smb-qwen:"
 
 
 def model_manifest():
-    return json.loads((HERE / "qwen-models.json").read_text(encoding="utf-8"))
+    filename = "qwen-windows-models.json" if WINDOWS else "qwen-models.json"
+    return json.loads((HERE / filename).read_text(encoding="utf-8"))
 
 
 def require_models(data_dir):
@@ -111,7 +114,7 @@ def transcribe(audio, *, data_dir, hardware, language, report):
 
     model_root = require_models(data_dir)
     packages = package_directory()
-    if not (packages / "mlx_audio").is_dir():
+    if not WINDOWS and not (packages / "mlx_audio").is_dir():
         raise RuntimeError(
             "Die Qwen-Laufzeit fehlt. Zuerst scripts/bootstrap.sh ausführen."
         )
@@ -123,7 +126,8 @@ def transcribe(audio, *, data_dir, hardware, language, report):
         np.save(recording, audio, allow_pickle=False)
         command = [
             sys.executable,
-            "-BESs",
+            "-BEs" if WINDOWS else "-BESs",
+            "-Xutf8",
             str(Path(__file__).resolve()),
             str(packages),
             str(model_root),
@@ -135,7 +139,12 @@ def transcribe(audio, *, data_dir, hardware, language, report):
         env = {**os.environ, "HF_HUB_OFFLINE": "1", "TRANSFORMERS_OFFLINE": "1"}
         detail = None
         with subprocess.Popen(
-            command, stdout=subprocess.PIPE, text=True, encoding="utf-8", env=env
+            command,
+            stdout=subprocess.PIPE,
+            text=True,
+            encoding="utf-8",
+            env=env,
+            **process_options(),
         ) as child:
             try:
                 for line in child.stdout:
@@ -196,14 +205,42 @@ def align_words(aligner, audio, text, language, offset, duration, chunk_duration
 
 
 def recognize_words(asr, aligner, audio, language, split_audio, report):
+    words = []
+
+    def consume(samples, text, detected, start, end):
+        words.extend(
+            timed_words(aligner, samples, text, detected, start, end, len(audio))
+        )
+
+    recognize_chunks(asr, audio, language, split_audio, report, consume)
+    return words
+
+
+def timed_words(aligner, samples, text, language, start, end, total):
+    aligned = []
+    if aligner is not None and language and language.lower() in ALIGNER_LANGUAGES:
+        aligned = align_words(
+            aligner,
+            samples,
+            text,
+            language,
+            start / SAMPLE_RATE,
+            total / SAMPLE_RATE,
+            (end - start) / SAMPLE_RATE,
+        )
+    return aligned or [
+        {"word": " " + text, "start": start / SAMPLE_RATE, "end": end / SAMPLE_RATE}
+    ]
+
+
+def recognize_chunks(asr, audio, language, split_audio, report, consume):
     duration = len(audio) / SAMPLE_RATE
     if not duration:
-        return []
+        return
 
     chunks = split_audio(audio, SAMPLE_RATE, chunk_duration=80.0)
     offsets = [round(offset * SAMPLE_RATE) for _, offset in chunks] + [len(audio)]
     requested_language = LANGUAGES.get(language)
-    words = []
     progress_label = "Transkribieren (Qwen)"
 
     def recognize(samples, start, end, retrying=False):
@@ -212,8 +249,15 @@ def recognize_words(asr, aligner, audio, language, split_audio, report):
         # Bound the time spent on repeated output from short retries.
         retry_limit = min(MAX_TOKENS, max(128, int(48 * chunk_duration)))
         limit = retry_limit if retrying else MAX_TOKENS
-        output = asr.generate(samples, language=requested_language, max_tokens=limit)
-        if output.generation_tokens >= limit:
+        try:
+            output = asr.generate(
+                samples, language=requested_language, max_tokens=limit
+            )
+        except MemoryError:
+            if end - start < 2 * MIN_RETRY_SAMPLES:
+                raise
+            output = None
+        if output is None or output.generation_tokens >= limit:
             report(
                 "Qwen versucht einen schwierigen Abschnitt erneut", start / len(audio)
             )
@@ -246,24 +290,19 @@ def recognize_words(asr, aligner, audio, language, split_audio, report):
         text = output.text.strip()
         if text:
             detected = requested_language or output.segments[0].get("language")
-            aligned = []
-            if detected and detected.lower() in ALIGNER_LANGUAGES:
-                aligned = align_words(
-                    aligner, samples, text, detected, offset, duration, chunk_duration
-                )
-            words.extend(
-                aligned
-                or [{"word": " " + text, "start": offset, "end": end / SAMPLE_RATE}]
-            )
+            consume(samples, text, detected, start, end)
         report(progress_label, end / len(audio))
 
     report(progress_label, 0.0)
     for (samples, _), start, end in zip(chunks, offsets[:-1], offsets[1:], strict=True):
         recognize(samples, start, end)
-    return words
 
 
 def run(packages, model_root, recording, result, hardware, language):
+    if WINDOWS:
+        from qwen_cuda import run_windows
+
+        return run_windows(model_root, recording, result, hardware, language)
     sys.path.insert(0, str(packages))
 
     import mlx.core as mx
@@ -295,7 +334,9 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ("packages", "model_root", "recording", "result"):
         parser.add_argument(name, type=Path)
-    parser.add_argument("hardware", choices=("metal", "cpu"))
+    parser.add_argument(
+        "hardware", choices=("cuda", "cpu") if WINDOWS else ("metal", "cpu")
+    )
     parser.add_argument("language")
     try:
         run(**vars(parser.parse_args()))

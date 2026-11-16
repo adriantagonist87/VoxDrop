@@ -9,6 +9,7 @@ import tempfile
 import threading
 from pathlib import Path
 
+from platform_io import WINDOWS, process_options
 from voxdrop import DEFAULT_DATA, configure_runtime, transcribe
 
 EVENT = "smb-transcription:"
@@ -28,29 +29,37 @@ class ProcessUsage(ctypes.Structure):
 def sample_peak(pid, stop, peaks):
     import psutil
 
-    try:
-        usage_info = ctypes.CDLL("/usr/lib/libSystem.B.dylib").proc_pid_rusage
-    except (OSError, AttributeError):
-        return
-    usage_info.argtypes = (ctypes.c_int, ctypes.c_int, ctypes.c_void_p)
-    usage_info.restype = ctypes.c_int
+    if not WINDOWS:
+        try:
+            usage_info = ctypes.CDLL("/usr/lib/libSystem.B.dylib").proc_pid_rusage
+        except (OSError, AttributeError):
+            return
+        usage_info.argtypes = (ctypes.c_int, ctypes.c_int, ctypes.c_void_p)
+        usage_info.restype = ctypes.c_int
     try:
         process = psutil.Process(pid)
     except psutil.Error:
         return
     usage = ProcessUsage()
 
-    def footprint(process_id):
-        if usage_info(process_id, 0, ctypes.byref(usage)) == 0:
+    def footprint(child):
+        if WINDOWS:
+            try:
+                return child.memory_info().rss
+            except psutil.Error:
+                return 0
+        if usage_info(child.pid, 0, ctypes.byref(usage)) == 0:
             return usage.physical_bytes
         return 0
 
     while not stop.is_set():
         try:
             children = process.children(recursive=True)
+        except (psutil.AccessDenied, PermissionError):
+            children = []
         except psutil.Error:
             break
-        total = footprint(pid) + sum(footprint(child.pid) for child in children)
+        total = footprint(process) + sum(footprint(child) for child in children)
         if total:
             peaks[0] = max(peaks[0], total)
         stop.wait(SAMPLE_INTERVAL)
@@ -69,6 +78,7 @@ def run_transcription(media, *, report, measurements, **settings):
         command = [
             sys.executable,
             "-BEs",
+            "-Xutf8",
             str(Path(__file__).resolve()),
             data_dir,
             str(media),
@@ -78,7 +88,11 @@ def run_transcription(media, *, report, measurements, **settings):
         error = None
         peak = [0]
         with subprocess.Popen(
-            command, stdout=subprocess.PIPE, text=True, encoding="utf-8"
+            command,
+            stdout=subprocess.PIPE,
+            text=True,
+            encoding="utf-8",
+            **process_options(),
         ) as child:
             stop = threading.Event()
             sampler = threading.Thread(target=sample_peak, args=(child.pid, stop, peak))

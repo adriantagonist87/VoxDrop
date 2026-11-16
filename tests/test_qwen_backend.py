@@ -2,7 +2,10 @@ import unittest
 from types import SimpleNamespace
 from unittest.mock import Mock
 
+import numpy as np
+
 from qwen_backend import MAX_TOKENS, SAMPLE_RATE, recognize_words
+from qwen_cuda import split_at_quiet_points
 
 
 def split_at_boundary(samples, rate, *, chunk_duration, **_):
@@ -14,6 +17,24 @@ def split_at_boundary(samples, rate, *, chunk_duration, **_):
 
 
 class QwenTextLimitTests(unittest.TestCase):
+    def test_memory_retry_keeps_the_whole_windows_audio_timeline(self):
+        audio = np.ones(12 * SAMPLE_RATE, dtype=np.float32)
+        audio[6 * SAMPLE_RATE : 6 * SAMPLE_RATE + SAMPLE_RATE // 100] = 0
+
+        def generate(samples, *, language, max_tokens):
+            if len(samples) > 8 * SAMPLE_RATE:
+                raise MemoryError("GPU-Speicher")
+            return SimpleNamespace(
+                text="Sprache", generation_tokens=1, segments=[{"language": None}]
+            )
+
+        words = recognize_words(
+            Mock(generate=generate), None, audio, "de", split_at_quiet_points, Mock()
+        )
+        self.assertEqual(
+            [(word["start"], word["end"]) for word in words], [(0, 6), (6, 12)]
+        )
+
     def test_only_saturated_ranges_split_and_keep_the_original_timeline(self):
         audio = range(100 * SAMPLE_RATE)
         calls = []

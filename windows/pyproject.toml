@@ -1,0 +1,40 @@
+[project]
+name = "voxdrop-windows"
+version = "1.0.0"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "accelerate==1.15.0",
+    "av==18.1.0",
+    "ctranslate2==4.8.0",
+    "faster-whisper==1.2.1",
+    "huggingface-hub==1.33.0",
+    "intervaltree==3.2.1",
+    "librosa==0.11.0",
+    "numpy==2.4.6",
+    "onnxruntime==1.27.0",
+    "pandas==3.1.0",
+    "platformdirs==4.14.0",
+    "psutil==7.2.2",
+    "pyannote.audio==4.0.7",
+    "PySide6-Essentials==6.10.2",
+    "tabulate==0.9.0",
+    "torch==2.9.1+cu128",
+    "torchaudio==2.9.1+cu128",
+    "torchcodec==0.9.1",
+    "transformers==5.22.0",
+]
+
+[tool.uv]
+package = false
+environments = ["sys_platform == 'win32' and platform_machine == 'AMD64'"]
+required-environments = ["sys_platform == 'win32' and platform_machine == 'AMD64'"]
+no-build = true
+
+[[tool.uv.index]]
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu128"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cu128" }
+torchaudio = { index = "pytorch-cu128" }

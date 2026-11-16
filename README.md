@@ -6,6 +6,8 @@ VoxDrop ist eine kostenlose macOS-App auf Basis von aTrain. Sie überwacht lokal
 
 Voraussetzung ist ein Mac mit Apple Silicon und macOS 26.2 oder neuer.
 
+Die Windows-Ausgabe richtet sich an Windows 11 x64 mit NVIDIA-RTX-GPU. [VoxDrop für Windows](windows/README.md)
+
 ## Modelle und Funktionen
 
 - **Qwen3-ASR 1.7B** ist das Standardmodell. **Whisper Large v3 Turbo** ist als Alternative auswählbar.

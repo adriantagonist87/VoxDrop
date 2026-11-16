@@ -8,6 +8,7 @@ import time
 from pathlib import Path
 
 import qwen_backend
+from platform_io import WINDOWS
 from silence import restore_timestamps, select_speech
 
 WHISPER_MODEL = "large-v3-turbo"
@@ -34,7 +35,8 @@ MEDIA_EXTENSIONS = frozenset(
     ]
 )
 DEFAULT_DATA = Path(__file__).resolve().parent / ".runtime" / "data"
-HARDWARE = ("metal", "cpu")
+HARDWARE = ("cuda", "cpu") if WINDOWS else ("metal", "cpu")
+DEFAULT_HARDWARE = HARDWARE[0]
 
 
 def configure_runtime(data_dir, *, setup=False):
@@ -167,8 +169,10 @@ def publish_text(target, transcript):
             handle.write(transcript)
             handle.flush()
             os.fsync(handle.fileno())
-        # On the local Mac volume this publishes a complete file without replacing an existing one.
-        os.link(temporary, target)
+        if WINDOWS:
+            temporary.rename(target)
+        else:
+            os.link(temporary, target)
     finally:
         if temporary is not None:
             temporary.unlink(missing_ok=True)
@@ -209,6 +213,16 @@ def load_whisper(path, hardware):
         return engine.load_transcriber(
             ModelKey(WHISPER_MODEL, Device.CPU, ComputeType.INT8, 0), path
         )
+    if hardware == "cuda":
+        import torch
+
+        if not torch.cuda.is_available():
+            raise RuntimeError("CUDA ist nicht verfügbar. Prüfe den NVIDIA-Treiber.")
+        dll_directory = str(Path(torch.__file__).parent / "lib")
+        os.environ["PATH"] = dll_directory + os.pathsep + os.environ.get("PATH", "")
+        return engine.load_transcriber(
+            ModelKey(WHISPER_MODEL, Device.GPU, ComputeType.FLOAT16, 0), path
+        )
 
     from ctranslate2 import get_supported_compute_types
     from faster_whisper import WhisperModel
@@ -240,7 +254,7 @@ def transcribe(
     language,
     speakers,
     speaker_count,
-    hardware="metal",
+    hardware=DEFAULT_HARDWARE,
     model=DEFAULT_MODEL,
     report=console_progress,
     measurements=None,
@@ -254,7 +268,7 @@ def transcribe(
     audio, duration = decode_media(media)
     if measurements is not None:
         measurements["audio_seconds"] = duration
-    accelerator = "Apple GPU" if hardware == "metal" else "CPU"
+    accelerator = {"metal": "Apple GPU", "cuda": "NVIDIA CUDA", "cpu": "CPU"}[hardware]
     whisper = None
     speech_started = time.monotonic()
     speech, mapping = audio, None
@@ -328,9 +342,20 @@ def assign_speakers(
 
     if speakers:
         speaker_started = time.monotonic()
-        accelerator = "Apple GPU" if hardware == "metal" else "CPU"
+        accelerator = {"metal": "Apple GPU", "cuda": "NVIDIA CUDA", "cpu": "CPU"}[
+            hardware
+        ]
         report(f"Sprechermodell laden ({accelerator})", None)
-        diarizer = engine.load_diarizer(Device.CPU, log=lambda _: None)
+        if hardware == "cuda":
+            import torch
+
+            if not torch.cuda.is_available():
+                raise RuntimeError(
+                    "CUDA steht für die Sprechererkennung nicht zur Verfügung."
+                )
+        diarizer = engine.load_diarizer(
+            Device.GPU if hardware == "cuda" else Device.CPU, log=lambda _: None
+        )
         if hardware == "metal":
             import torch
 
@@ -379,7 +404,7 @@ def parser():
     job.add_argument("media", type=Path)
     job.add_argument("--output-dir", required=True, type=Path)
     job.add_argument("--language", choices=("auto", "de", "en"), default="auto")
-    job.add_argument("--hardware", choices=HARDWARE, default="metal")
+    job.add_argument("--hardware", choices=HARDWARE, default=DEFAULT_HARDWARE)
     job.add_argument("--model", choices=MODELS, default=DEFAULT_MODEL)
     job.add_argument(
         "--skip-silence",

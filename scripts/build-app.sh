@@ -47,7 +47,7 @@ rsync -a --exclude='__pycache__/' --exclude='*.pyc' \
 
 rsync -a --exclude='__pycache__/' --exclude='*.pyc' "$qwen_packages/" "$resources/QwenPackages/"
 rsync -a --exclude='__pycache__/' --exclude='*.pyc' --exclude='bin/' "$dover_packages/" "$resources/DoverPackages/"
-for file in watch_service.py voxdrop.py transcription_worker.py silence.py smb_paths.py login_agent.py app_upgrade.py airdrop.example.json qwen_backend.py qwen-models.json speaker_diarization.py; do
+for file in watch_service.py voxdrop.py transcription_worker.py silence.py smb_paths.py platform_io.py login_agent.py app_upgrade.py airdrop.example.json qwen_backend.py qwen-models.json speaker_diarization.py; do
     cp "$project_dir/$file" "$resources/Engine/"
 done
 cp "$reference/LICENSE" "$resources/Engine/aTrain-LICENSE.txt"

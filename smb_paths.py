@@ -1,11 +1,15 @@
-"""Resolve existing macOS mounts without handling SMB credentials."""
+"""Resolve network folders through the operating system's SMB client."""
 
 import subprocess
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
 
+from platform_io import WINDOWS
+
 
 def smb_mounts():
+    if WINDOWS:
+        return []
     try:
         output = subprocess.check_output(
             ["/sbin/mount", "-t", "smbfs"], text=True, timeout=10
@@ -24,6 +28,20 @@ def smb_mounts():
                 (address.hostname, unquote(address.path).strip("/"), Path(mount))
             )
     return mounts
+
+
+def on_network_volume(path, mounts=None):
+    if WINDOWS:
+        import ctypes
+
+        return (
+            path.drive.startswith("\\")
+            or ctypes.windll.kernel32.GetDriveTypeW(path.anchor) == 4
+        )
+    return any(
+        path.is_relative_to(root)
+        for _, _, root in (smb_mounts() if mounts is None else mounts)
+    )
 
 
 def smb_address(value):
@@ -56,6 +74,20 @@ def resolve_folder(value, mounts, *, require_smb):
     if value.lower().startswith("smb://"):
         hostname, parts = smb_address(value)
         share, *subdirectory = parts
+        if WINDOWS:
+            if any(c in hostname for c in "\\/:") or any(
+                c in part for part in parts for c in ':*?"<>|'
+            ):
+                raise ValueError(
+                    "Der SMB-Pfad enthält unter Windows ungültige Zeichen."
+                )
+            root = Path(f"\\\\{hostname}\\{share}\\").resolve(strict=True)
+            folder = root.joinpath(*subdirectory).resolve(strict=True)
+            if not folder.is_relative_to(root):
+                raise ValueError("Der Ordner liegt außerhalb der SMB-Freigabe.")
+            if not folder.is_dir():
+                raise NotADirectoryError(folder)
+            return folder
         matches = [
             path
             for server, mounted_share, path in mounts
@@ -72,9 +104,7 @@ def resolve_folder(value, mounts, *, require_smb):
         if not folder.is_absolute():
             raise ValueError("Es ist ein absoluter Ordnerpfad erforderlich.")
         folder = folder.resolve(strict=True)
-        if require_smb and not any(
-            folder.is_relative_to(path) for _, _, path in mounts
-        ):
+        if require_smb and not on_network_volume(folder, mounts):
             raise OSError(
                 f"Der Ordner liegt nicht auf einer eingehängten SMB-Freigabe: {folder}"
             )
