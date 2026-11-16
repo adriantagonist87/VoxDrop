@@ -1,8 +1,10 @@
 """Run diagnostics on the Windows computer receiving the portable build."""
 
 import sys
+from pathlib import Path
 
-from desktop import command
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "Desktop"))
+from controller import command
 
 
 def main():

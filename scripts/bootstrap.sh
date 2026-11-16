@@ -50,6 +50,8 @@ UV_PROJECT_ENVIRONMENT="$runtime/qwen-venv" \
     "$uv" sync --directory "$project_dir/qwen" --locked --python "$python_version"
 "$uv" pip install --python "$reference/.venv/bin/python" --target "$runtime/dover-packages" \
     --require-hashes --no-deps --no-binary spy-der -r "$project_dir/dover-requirements.txt"
+"$uv" pip install --python "$reference/.venv/bin/python" --target "$runtime/desktop-packages" \
+    --require-hashes --no-deps -r "$project_dir/desktop/requirements-macos.txt"
 # DOVER-Lap 1.3.1 needs pairwise broadcasting before reduction on NumPy 2.
 "$reference/.venv/bin/python" -BEs - "$runtime/dover-packages" <<'PY'
 import sys

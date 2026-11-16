@@ -21,10 +21,12 @@ checksum=$(cut -d ' ' -f 1 "$uv.sha256")
 printf '%s  %s\n' "$checksum" "$uv" | shasum -a 256 -c -
 unzip -p "$uv" '*uv.exe' > "$app/tools/uv.exe"
 cp "$uv.sha256" "$app/tools/uv-download.sha256"
-for filename in desktop.py diagnose.py launcher.c pyproject.toml uv.lock; do
+for filename in diagnose.py launcher.c pyproject.toml uv.lock; do
     cp "$project/windows/$filename" "$app/windows/"
 done
 cp "$project/windows/README.md" "$app/Installation.md"
+cp "$project/LICENSE" "$app/LICENSE"
+rsync -a --exclude='__pycache__/' --exclude='*.pyc' "$project/desktop/" "$app/Desktop/"
 cp "$project/macos/VoxDropLogo.png" "$app/assets/"
 for source in watch_service.py voxdrop.py transcription_worker.py silence.py smb_paths.py platform_io.py login_agent.py \
     qwen_backend.py qwen_cuda.py qwen-models.json qwen-windows-models.json speaker_diarization.py; do

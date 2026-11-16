@@ -126,9 +126,9 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE previous, PWSTR parameters, in
                             L"Beim ersten Start sind Internet und freier Speicherplatz erforderlich.");
     }
 
-    const wchar_t *script = diagnose ? L"diagnose.py" : L"desktop.py";
+    const wchar_t *script = diagnose ? L"windows\\diagnose.py" : L"Desktop\\desktop.py";
     if (swprintf(command, PATH_LENGTH, L"\"%ls\" -BEs -Xutf8 \"%ls\\%ls\"%ls",
-                 python, project, script, background ? L" --background" : L"") < 0) {
+                 python, root, script, background ? L" --background" : L"") < 0) {
         return error_dialog(L"Der Installationspfad ist zu lang.");
     }
     status = launch(python, command, root, diagnose ? CREATE_NEW_CONSOLE : 0, FALSE);

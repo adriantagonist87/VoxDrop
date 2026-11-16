@@ -8,8 +8,10 @@ python="$reference/.venv/bin/python"
 metal_python="$runtime/metal-venv/bin/python"
 qwen_python="$runtime/qwen-venv/bin/python"
 dover_packages="$runtime/dover-packages"
+desktop_packages="$runtime/desktop-packages"
 output="$runtime/package/VoxDrop.app"
-if [ ! -x "$python" ] || [ ! -x "$metal_python" ] || [ ! -x "$qwen_python" ] || [ ! -d "$dover_packages/dover_lap" ]; then
+if [ ! -x "$python" ] || [ ! -x "$metal_python" ] || [ ! -x "$qwen_python" ] \
+    || [ ! -d "$dover_packages/dover_lap" ] || [ ! -d "$desktop_packages/PySide6" ]; then
     printf '%s\n' 'Bitte zuerst scripts/bootstrap.sh ausführen.' >&2
     exit 1
 fi
@@ -27,7 +29,7 @@ cp "$project_dir/macos/VoxDropLogo.png" "$resources/VoxDropLogo.png"
 minimum=$(/usr/bin/plutil -extract LSMinimumSystemVersion raw -o - "$bundle/Info.plist")
 xcrun swiftc -parse-as-library -O -target "arm64-apple-macos$minimum" \
     -module-cache-path "$runtime/swift-cache" \
-    -o "$bundle/MacOS/VoxDrop" "$project_dir/macos/TranscriberApp.swift"
+    -o "$bundle/MacOS/VoxDrop" "$project_dir/macos/Launcher.swift"
 xcrun swift -module-cache-path "$runtime/swift-cache" "$project_dir/macos/AppIcon.swift" \
     "$resources/VoxDropLogo.png" "$stage/AppIcon.iconset"
 iconutil -c icns "$stage/AppIcon.iconset" -o "$resources/AppIcon.icns"
@@ -47,6 +49,11 @@ rsync -a --exclude='__pycache__/' --exclude='*.pyc' \
 
 rsync -a --exclude='__pycache__/' --exclude='*.pyc' "$qwen_packages/" "$resources/QwenPackages/"
 rsync -a --exclude='__pycache__/' --exclude='*.pyc' --exclude='bin/' "$dover_packages/" "$resources/DoverPackages/"
+rsync -a --exclude='__pycache__/' --exclude='*.pyc' --exclude='/bin/' \
+    --exclude='/PySide6/*.app/' --exclude='/PySide6/*.pyi' --exclude='/PySide6/include/' \
+    "$desktop_packages/" "$bundled_packages/"
+rsync -a --exclude='__pycache__/' --exclude='*.pyc' "$project_dir/desktop/" "$resources/Desktop/"
+cp "$project_dir/LICENSE" "$resources/LICENSE"
 for file in watch_service.py voxdrop.py transcription_worker.py silence.py smb_paths.py platform_io.py login_agent.py app_upgrade.py airdrop.example.json qwen_backend.py qwen-models.json speaker_diarization.py; do
     cp "$project_dir/$file" "$resources/Engine/"
 done
@@ -63,6 +70,7 @@ import sys
 sys.path.append(sys.argv[1])
 from dover_lap.src.doverlap import DOVERLap
 ' "$resources/DoverPackages"
+"$resources/Python/bin/python3.12" -BEs -c 'from PySide6.QtQml import QQmlApplicationEngine; from PySide6.QtQuickControls2 import QQuickStyle'
 /usr/bin/codesign --force --sign - --timestamp=none "$app"
 /usr/bin/codesign --verify --strict "$app"
 
