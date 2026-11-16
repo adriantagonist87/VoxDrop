@@ -5,7 +5,7 @@ from unittest.mock import patch
 import numpy as np
 
 from silence import select_speech
-from smb_transcriber import transcribe
+from voxdrop import transcribe
 
 RATE = 16000
 
@@ -31,15 +31,11 @@ class SilenceTests(unittest.TestCase):
         }
         data = {}
         with (
-            patch("smb_transcriber.require_models", return_value={}),
-            patch("smb_transcriber.decode_media", return_value=(original, 20)),
+            patch("voxdrop.require_models", return_value={}),
+            patch("voxdrop.decode_media", return_value=(original, 20)),
             patch("faster_whisper.vad.get_speech_timestamps", return_value=spans),
-            patch(
-                "smb_transcriber.qwen_backend.transcribe", return_value=result
-            ) as model,
-            patch(
-                "smb_transcriber.assign_speakers", return_value="Resultat"
-            ) as diarization,
+            patch("voxdrop.qwen_backend.transcribe", return_value=result) as model,
+            patch("voxdrop.assign_speakers", return_value="Resultat") as diarization,
         ):
             self.assertEqual(
                 transcribe(

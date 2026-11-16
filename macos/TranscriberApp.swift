@@ -204,7 +204,7 @@ private struct CommandError: LocalizedError {
 private struct Project {
     let resources = Bundle.main.bundleURL.appendingPathComponent("Contents/Resources", isDirectory: true)
     let runtime = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        .appendingPathComponent("SMB Transcriber", isDirectory: true)
+        .appendingPathComponent("VoxDrop", isDirectory: true)
     var settingsURL: URL { runtime.appendingPathComponent("config.json") }
     var defaultSettingsURL: URL { resources.appendingPathComponent("Engine/airdrop.example.json") }
     var activeSettingsURL: URL {
@@ -256,6 +256,8 @@ private final class AppModel: ObservableObject {
     @Published var snapshot = Snapshot()
     @Published var message: String?
     @Published var busy = false
+    @Published private(set) var ready = false
+    @Published private(set) var preparing = false
     @Published var downloadingModels = false
     @Published var filter = "Alle"
     @Published var historyOrder = HistoryOrder(
@@ -308,23 +310,42 @@ private final class AppModel: ObservableObject {
     }
 
     init() {
-        do {
-            settings = try loadSettings()
-            monitoringEnabled = settings.monitoring
-        } catch { message = error.localizedDescription }
         UNUserNotificationCenter.current().delegate = notificationDelegate
         let timer = Timer(timeInterval: 2.0, repeats: true) { [weak self] _ in
             Task { @MainActor in await self?.refresh() }
         }
         RunLoop.main.add(timer, forMode: .common)
         refreshTimer = timer
-        Task { await refresh() }
+        prepare()
     }
 
     deinit { refreshTimer?.invalidate() }
 
+    func prepare() {
+        guard !ready, !preparing else { return }
+        preparing = true
+        message = nil
+        Task {
+            defer { preparing = false }
+            do {
+                let output = try await project.run(["prepare-app-data"])
+                settings = try loadSettings()
+                monitoringEnabled = settings.monitoring
+                if let saved = UserDefaults.standard.string(forKey: "historyOrder"),
+                   let order = HistoryOrder(rawValue: saved), order != historyOrder {
+                    historyOrder = order
+                }
+                if String(decoding: output, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines) == "resume" {
+                    _ = try await project.run(["start", project.activeSettingsURL.path])
+                }
+                ready = true
+                await refresh()
+            } catch { message = error.localizedDescription }
+        }
+    }
+
     func refresh() async {
-        guard !refreshing else { return }
+        guard ready, !refreshing else { return }
         refreshing = true
         defer { refreshing = false }
         do {
@@ -659,17 +680,30 @@ private struct Dashboard: View {
         VStack(spacing: 0) {
             branding
             Divider()
-            HStack(alignment: .top, spacing: 0) {
-                ScrollView { configuration.padding(24) }
-                    .frame(width: 340)
-                    .background(Color(red: 0.97, green: 0.98, blue: 0.97))
-                Divider()
-                VStack(spacing: 0) {
-                    folderWarnings.padding([.top, .horizontal], 24)
-                    ScrollView { activeJob.padding(24) }
-                }.frame(minWidth: 295, maxWidth: .infinity)
-                Divider()
-                history.padding(24).frame(minWidth: 365, maxWidth: .infinity)
+            if model.ready {
+                HStack(alignment: .top, spacing: 0) {
+                    ScrollView { configuration.padding(24) }
+                        .frame(width: 340)
+                        .background(Color(red: 0.97, green: 0.98, blue: 0.97))
+                    Divider()
+                    VStack(spacing: 0) {
+                        folderWarnings.padding([.top, .horizontal], 24)
+                        ScrollView { activeJob.padding(24) }
+                    }.frame(minWidth: 295, maxWidth: .infinity)
+                    Divider()
+                    history.padding(24).frame(minWidth: 365, maxWidth: .infinity)
+                }
+            } else {
+                VStack(spacing: 12) {
+                    if model.preparing {
+                        ProgressView("VoxDrop wird vorbereitet …")
+                    } else if let message = model.message {
+                        Text(message).textSelection(.enabled)
+                        Button("Erneut prüfen") { model.prepare() }
+                    }
+                }
+                .padding(24)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
         .frame(minWidth: 1050, minHeight: 650)
@@ -1053,7 +1087,7 @@ private struct StatusMenu: View {
                 model.toggleMonitoring()
             }.disabled(model.busy)
         } else {
-            Button("Dienst starten") { model.apply("start") }.disabled(model.busy)
+            Button("Dienst starten") { model.apply("start") }.disabled(model.busy || !model.ready)
         }
         Divider()
         Button("Oberfläche beenden") { NSApp.terminate(nil) }

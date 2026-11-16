@@ -9,7 +9,7 @@ import tempfile
 import threading
 from pathlib import Path
 
-from smb_transcriber import DEFAULT_DATA, configure_runtime, transcribe
+from voxdrop import DEFAULT_DATA, configure_runtime, transcribe
 
 EVENT = "smb-transcription:"
 SAMPLE_INTERVAL = 0.2

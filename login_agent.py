@@ -6,21 +6,21 @@ import sys
 import tempfile
 from pathlib import Path
 
-LABEL = "local.smb-transcriber.worker"
-BUNDLE_IDENTIFIER = "local.smb-transcriber"
+LABEL = "local.voxdrop.worker"
+BUNDLE_IDENTIFIER = "local.voxdrop"
 
 
 def agent_path():
     return Path.home() / "Library" / "LaunchAgents" / (LABEL + ".plist")
 
 
-def definition(worker, config, state, model_data):
+def definition(worker, config, state, model_data, *, python=None):
     log = str(state / "service.log")
     return {
         "Label": LABEL,
         "AssociatedBundleIdentifiers": [BUNDLE_IDENTIFIER],
         "ProgramArguments": [
-            sys.executable,
+            str(python) if python is not None else sys.executable,
             "-BEs",
             str(worker),
             "--state-dir",
@@ -57,9 +57,7 @@ def update(enabled, settings):
         )
     if enabled and existing is None:
         path.parent.mkdir(parents=True, exist_ok=True)
-        with tempfile.NamedTemporaryFile(
-            dir=path.parent, prefix=".smb-transcriber-"
-        ) as handle:
+        with tempfile.NamedTemporaryFile(dir=path.parent, prefix=".voxdrop-") as handle:
             plistlib.dump(settings, handle)
             handle.flush()
             os.fsync(handle.fileno())

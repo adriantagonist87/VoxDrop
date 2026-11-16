@@ -3,9 +3,9 @@
 <plist version="1.0">
 <dict>
 	<key>CFBundleExecutable</key>
-	<string>SMBTranscriber</string>
+	<string>VoxDrop</string>
 	<key>CFBundleIdentifier</key>
-	<string>local.smb-transcriber</string>
+	<string>local.voxdrop</string>
 	<key>CFBundleName</key>
 	<string>VoxDrop</string>
 	<key>CFBundleDisplayName</key>
@@ -17,7 +17,7 @@
 	<key>CFBundleShortVersionString</key>
 	<string>1.0.0</string>
 	<key>CFBundleVersion</key>
-	<string>15</string>
+	<string>16</string>
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.productivity</string>
 	<key>LSMinimumSystemVersion</key>

@@ -390,7 +390,7 @@ wheels = [
 ]
 
 [[package]]
-name = "smb-transcriber-qwen"
+name = "voxdrop-qwen"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [

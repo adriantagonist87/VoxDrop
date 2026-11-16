@@ -7,7 +7,7 @@ from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 from unittest.mock import patch
 
-from smb_transcriber import (
+from voxdrop import (
     DEFAULT_MODEL,
     decode_media,
     format_transcript,
@@ -70,7 +70,7 @@ class LocalJobTests(unittest.TestCase):
         ]
         with (
             patch.dict(os.environ),
-            patch("smb_transcriber.transcribe", return_value=result) as engine,
+            patch("voxdrop.transcribe", return_value=result) as engine,
         ):
             with (
                 redirect_stdout(io.StringIO()) as stdout,

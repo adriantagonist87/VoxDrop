@@ -1,5 +1,5 @@
 [project]
-name = "smb-transcriber-qwen"
+name = "voxdrop-qwen"
 version = "0.1.0"
 requires-python = "==3.12.*"
 dependencies = ["mlx-audio==0.6.5"]

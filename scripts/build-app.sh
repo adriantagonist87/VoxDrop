@@ -27,7 +27,7 @@ cp "$project_dir/macos/VoxDropLogo.png" "$resources/VoxDropLogo.png"
 minimum=$(/usr/bin/plutil -extract LSMinimumSystemVersion raw -o - "$bundle/Info.plist")
 xcrun swiftc -parse-as-library -O -target "arm64-apple-macos$minimum" \
     -module-cache-path "$runtime/swift-cache" \
-    -o "$bundle/MacOS/SMBTranscriber" "$project_dir/macos/TranscriberApp.swift"
+    -o "$bundle/MacOS/VoxDrop" "$project_dir/macos/TranscriberApp.swift"
 xcrun swift -module-cache-path "$runtime/swift-cache" "$project_dir/macos/AppIcon.swift" \
     "$resources/VoxDropLogo.png" "$stage/AppIcon.iconset"
 iconutil -c icns "$stage/AppIcon.iconset" -o "$resources/AppIcon.icns"
@@ -47,7 +47,7 @@ rsync -a --exclude='__pycache__/' --exclude='*.pyc' \
 
 rsync -a --exclude='__pycache__/' --exclude='*.pyc' "$qwen_packages/" "$resources/QwenPackages/"
 rsync -a --exclude='__pycache__/' --exclude='*.pyc' --exclude='bin/' "$dover_packages/" "$resources/DoverPackages/"
-for file in watch_service.py smb_transcriber.py transcription_worker.py silence.py smb_paths.py login_agent.py airdrop.example.json qwen_backend.py qwen-models.json speaker_diarization.py; do
+for file in watch_service.py voxdrop.py transcription_worker.py silence.py smb_paths.py login_agent.py app_upgrade.py airdrop.example.json qwen_backend.py qwen-models.json speaker_diarization.py; do
     cp "$project_dir/$file" "$resources/Engine/"
 done
 cp "$reference/LICENSE" "$resources/Engine/aTrain-LICENSE.txt"

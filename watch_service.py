@@ -22,9 +22,11 @@ from contextlib import closing, contextmanager, suppress
 from functools import lru_cache
 from pathlib import Path
 
+import app_upgrade
 import login_agent
 from smb_paths import resolve_folder, smb_mounts, validate_folder_path
-from smb_transcriber import (
+from transcription_worker import run_transcription
+from voxdrop import (
     DEFAULT_DATA,
     DEFAULT_MODEL,
     HARDWARE,
@@ -35,7 +37,6 @@ from smb_transcriber import (
     publish_text,
     setup_models,
 )
-from transcription_worker import run_transcription
 
 STARTUP_RETRY_DELAYS = (10, 30, 60)
 SMB_PROBE_TIMEOUT = 8
@@ -350,9 +351,7 @@ def connection_state(db, available, error=None):
 
 def verify_writable(folder):
     try:
-        with tempfile.NamedTemporaryFile(
-            dir=folder, prefix=".smb-transcriber-write-"
-        ) as probe:
+        with tempfile.NamedTemporaryFile(dir=folder, prefix=".voxdrop-write-") as probe:
             probe.write(b"1")
             probe.flush()
     except OSError as error:
@@ -1387,6 +1386,7 @@ def main(argv=None):
     cli.add_argument("--model-data", type=Path, default=DEFAULT_DATA)
     commands = cli.add_subparsers(dest="command", required=True)
     commands.add_parser("inspect-folders", help=argparse.SUPPRESS)
+    commands.add_parser("prepare-app-data", help=argparse.SUPPRESS)
     for name in ("check", "run", "start"):
         command = commands.add_parser(name)
         command.add_argument("config", type=Path)
@@ -1414,6 +1414,12 @@ def main(argv=None):
     commands.add_parser("clear-history")
     args = cli.parse_args(argv)
     try:
+        if args.command == "prepare-app-data":
+            if app_upgrade.migrate(
+                args.state_dir.parent, Path(__file__).resolve().parents[3]
+            ):
+                print("resume")
+            return 0
         if args.command == "validate-settings":
             read_settings(args.config)
             return 0

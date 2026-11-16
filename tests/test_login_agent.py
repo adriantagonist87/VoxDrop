@@ -23,7 +23,7 @@ class LoginAgentTests(unittest.TestCase):
                 self.assertEqual(plistlib.loads(path.read_bytes()), config)
                 self.assertTrue(config["RunAtLoad"])
                 self.assertEqual(
-                    config["AssociatedBundleIdentifiers"], ["local.smb-transcriber"]
+                    config["AssociatedBundleIdentifiers"], ["local.voxdrop"]
                 )
                 login_agent.update(False, config)
                 self.assertFalse(path.exists())

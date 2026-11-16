@@ -9,7 +9,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 from smb_paths import resolve_folder
-from smb_transcriber import DEFAULT_MODEL, WHISPER_MODEL
+from voxdrop import DEFAULT_MODEL, WHISPER_MODEL
 from watch_service import (
     active_folders,
     clear_history,
