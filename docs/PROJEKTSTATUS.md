@@ -8,7 +8,7 @@ Stand vom 17. November 2026. Für jede Weiterentwicklung sind zusätzlich die Ar
 | --- | --- |
 | Öffentliches Repository | `adriantagonist87/VoxDrop`, Hauptbranch `main` |
 | Freigegebener Stand | `v1.3.0`, macOS-Build 22, Windows-x64-ZIP |
-| Getesteter Implementierungscommit | `2936f8992a977d6db11dd3d442ebf4d447a748d7` |
+| Getesteter Implementierungscommit | `abfd597b69dc04054557c9b4af661e3d9f973427` |
 | Gemeinsame Entwicklungsbasis | `main` mit App-Code, Arbeitsregeln und gemeinsamer Dokumentation |
 | Betriebsmodell | Eigenständige lokale macOS- und Windows-Apps, auch in verschiedenen Netzwerken |
 | Referenzbibliothek | aTrain `ea8a7057857220b4299c0ba0b2aaf6def2f35b87` |
@@ -25,7 +25,7 @@ Die ursprüngliche Mac-Historie von v1.2.0 mit Code-Commit `19c8084193ec96717d87
 
 | Umgebung | Letzter geprüfter öffentlicher Commit | Prüfung und Ergebnis |
 | --- | --- | --- |
-| macOS, Apple Silicon | `2936f8992a977d6db11dd3d442ebf4d447a748d7` | v1.3.0 Build 22 auf diesem Mac installiert. Frischer Quell-Checkout, vollständig neuer Bootstrap, leeres Testprofil, echte Downloads von Qwen/Aligner/pyannote und Whisper erfolgreich. Beide ASR-Modelle auf Metal mit Sprecherzuordnung geprüft, Qwen zusätzlich mit drei DOVER-Lap-Durchgängen. Alle 58 automatisierten Tests unter macOS 27.2, arm64, Python 3.12.13 bestanden. |
+| macOS, Apple Silicon | `abfd597b69dc04054557c9b4af661e3d9f973427` | v1.3.0 Build 22 auf diesem Mac installiert. Frischer Quell-Checkout, vollständig neuer Bootstrap, leeres Testprofil, echte Downloads von Qwen/Aligner/pyannote und Whisper erfolgreich. Beide ASR-Modelle auf Metal mit Sprecherzuordnung geprüft, Qwen zusätzlich mit drei DOVER-Lap-Durchgängen. Alle 58 automatisierten Tests unter macOS 27.2, arm64, Python 3.12.13 bestanden. |
 | Windows 11 mit NVIDIA | **UNGEPRÜFT unter Windows**, noch kein bestätigter Test-Commit | Der Nutzer meldete eine funktionsgestörte Windows-Ausgabe. Der v1.3.0-Launcher wurde auf dem Mac als PE32+ x86-64 gebaut. ZIP und Lockfile wurden auf dem Mac geprüft. Ein nativer Windows-/CUDA-End-to-End-Test ist offen. |
 | Linux | **UNGEPRÜFT**, Zielport offen | Gemeinsame Qt-Oberfläche vorhanden. Backends, Plattformadapter, Einrichtung und Pakete sind auf macOS/Windows ausgerichtet. |
 
@@ -36,6 +36,7 @@ Der macOS-Testbefehl war `MPLCONFIGDIR=<lokales Testverzeichnis> .runtime/aTrain
 - Die Distribution installiert einen gemeinsamen Ordner `VoxDrop` mit `VoxDrop.app` und dem später angelegten Ordner `Modelle`. Heruntergeladene Gewichte und Cache lagen im Test vollständig unter `Modelle`, zusammen rund 9,6 GiB für den geprüften Modellbestand.
 - Die signierte App blieb nach beiden Downloads und Transkriptionen verifizierbar. Python, Qt, aTrain, CTranslate2/Metal und MLX ließen sich bei ausgeblendetem Build-Verzeichnis aus dem installierten Bundle laden.
 - Ein Update innerhalb des bestehenden Ordners erhielt die frisch geladenen Modellgewichte mit bestätigten Prüfsummen. Die produktive Installation übernahm ihre bisherigen Modelle aus dem Benutzerprofil und aktualisierte den Anmeldestart auf den App-Launcher. Konfiguration und Verlauf wurden erhalten.
+- Die alte angeheftete Dock-Verknüpfung wurde auf den neuen App-Pfad aktualisiert und ihr Ziel geprüft. `macos/UpdateDock.swift` übernimmt diesen Schritt bei der beauftragten Aktualisierung aus der Entwicklungsumgebung.
 - MAC-01 wurde durch den neuen Installer `macos/install.py` und die vereinfachte Installationshilfe behoben. Ein Regressionstest prüft die Wiederherstellung von App und Modellen bei fehlgeschlagenem Austausch.
 - Die App bleibt ad hoc signiert. Der Nutzer hat ein kostenpflichtiges Apple-Developer-Konto ausdrücklich abgelehnt. Die einmalige Freigabe unter „Datenschutz & Sicherheit → Dennoch öffnen“ ist für neue Macs dokumentiert. Die Standard-Gatekeeper-Prüfung weist diesen Build wegen der fehlenden Developer-ID-/Notarisierungsfreigabe zurück.
 
