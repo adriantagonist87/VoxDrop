@@ -2,6 +2,8 @@
 
 Stand vom 17. November 2026. Für jede Weiterentwicklung sind zusätzlich die Arbeitsregeln und die Entwicklungsanleitung zu lesen. [Arbeitsregeln](../AGENTS.md) · [Entwicklung](ENTWICKLUNG.md) · [Windows-Übergabeauftrag](UEBERGABE_WINDOWS.md)
 
+**Windows-Nachtrag:** Die native Windows-Arbeit ist im [Draft-PR #1](https://github.com/adriantagonist87/VoxDrop/pull/1) veröffentlicht; final geprüfter Code `8b80572b1fc8196f310a89b82b526fa2112098a3`. Dieser `main`-Commit enthält ausschließlich Dokumentation. Die nachstehenden bisherigen Release-Prüfstände bleiben erhalten; neue Ergebnisse, Grenzen und konkrete Mac-Aufgaben stehen im [Windows-Übergabestatus](WINDOWS_STATUS_2026-11-17.md) und in der PR-Dokumentation. Gemeinsamer neuer Code ist **UNGEPRÜFT unter macOS** und bleibt zunächst im PR.
+
 ## Gemeinsamer Stand
 
 | Gegenstand | Stand |

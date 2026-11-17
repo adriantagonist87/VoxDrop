@@ -250,3 +250,7 @@ Ein nativer Windows-Buildweg ist als BUILD-01 offen. Änderungen am Windows-Code
 Nach relevanten Änderungen Projektstatus und betroffene Anleitung aktualisieren. Für Plattformtests jeweils den vollständigen getesteten Code-SHA erfassen. Die Lizenzhinweise und erforderlichen Quellcode-Assets bleiben Teil des Releaseumfangs. [Qt-Lizenzhinweise](../desktop/Qt-Lizenzen.md)
 
 Quellcode, gemeinsame Dokumentation und der geprüfte Mac-Build werden auf `main` zusammengeführt. Windows-Prüfstände bleiben nach tatsächlich durchgeführten Tests gekennzeichnet.
+
+### Windows-Übergabe am 17.11.2026
+
+Der [Windows-Übergabestatus](WINDOWS_STATUS_2026-11-17.md) verweist auf PR #1, den nativ geprüften Code `8b80572b1fc8196f310a89b82b526fa2112098a3` und die neuen Build-/Testbefehle im Aufgabenbranch. Portable Modell-/Laufzeitablage, native Windows-Builds sowie Netzwerk- und Vollbildkorrekturen sind dort umgesetzt, noch nicht auf `main` integriert. Vor Integration die dokumentierten Mac-Gegenprüfungen ausführen; bisherigen Mac-Prüfstand bewahren.
