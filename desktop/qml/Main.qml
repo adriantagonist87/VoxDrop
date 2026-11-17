@@ -489,6 +489,7 @@ ApplicationWindow {
                     Action {
                         Layout.fillWidth: true
                         visible: viewState.waitingForNetwork
+                        objectName: "cancelNetworkWait"
                         text: "Warten abbrechen"
                         onClicked: api.cancelNetworkWait()
                     }

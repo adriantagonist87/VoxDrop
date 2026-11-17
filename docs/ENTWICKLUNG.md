@@ -201,6 +201,8 @@ Bei einer Windows-Netzwerkfreigabe entscheidet der Nutzer im Systemdialog selbst
 
 Die Testsuite kann mit dem Release-Interpreter laufen. Beim Quellcheckout die im Referenzpaket enthaltenen `Engine`- und `DoverPackages`-Verzeichnisse an `sys.path` anhängen, damit die unveränderten Vendor-Abhängigkeiten gefunden werden. `QT_QPA_PLATFORM=offscreen` prüft Qt-Logik; native Fenster zusätzlich ohne diese Variable prüfen. Mac-Migrationstests sind unter Windows explizit übersprungen; Symlinktests melden WinError 1314 als fehlendes Recht, während rekursive und normale Dateiabläufe weiter geprüft werden. Keine Aktivierung von Entwicklermodus oder Änderung von Sicherheitsrichtlinien erforderlich.
 
+`tests/test_desktop_window.py` lädt zusätzlich das vollständige QML-Fenster mit isolierten Einstellungen. Die Vollbild-Minimierungsregression wartet auf native Fensterereignisse; der frühere unmittelbar abgefragte Qt-Zustand allein verfehlte den Windows-Zwischenzustand. Für native Abnahme `QT_QPA_PLATFORM` entfernen; für kontrollierte Skalierung `QT_SCALE_FACTOR=1`, `1.25` oder `1.5` vor dem jeweiligen Prozessstart setzen. Windows behandelt den kurzzeitigen `Windowed`-Zustand beim Minimieren erst nach Abschluss des Ereigniswechsels als bewusste Normalmoduswahl. Den Mac-Ablauf separat gegenprüfen.
+
 Alle folgenden Windows-Läufe sind **UNGEPRÜFT unter Windows**. Zuerst ist das ausgelieferte Paket nach dem Windows-Übergabeauftrag zu reproduzieren.
 
 Die ZIP vollständig entpacken und `VoxDrop.exe` öffnen. Der Launcher führt im Ordner `windows/` folgenden Einrichtungsschritt mit dem mitgelieferten `tools/uv.exe` aus.

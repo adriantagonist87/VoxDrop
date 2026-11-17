@@ -28,6 +28,16 @@ Der Modelldownload erkennt WinError 10013 jetzt auch in CLI-Ausgaben ohne Traceb
 
 Nach diesen Ergänzungen bestanden 74 Tests in 11,561 s mit sieben expliziten Skips unter Windows. Ein vorheriger Fehlversuch des neuen Regressionstests importierte dieselbe Hilfsklasse unter zwei Modulnamen; dieser Testfehler wurde korrigiert. Der direkte erste Whisper-Messlauf verwendete versehentlich `auto` statt des Dienstwerts `auto-detect` und scheiterte erwartungsgemäß. Mit dem unveränderten Dienstwert bestand Whisper samt pyannote in 20,172 s bei 2,19 GiB Spitzen-RSS, GPU 98 % und GPU-Gesamtbelegung 6231 MiB; Originalhash unverändert. Dieses synthetische Mischsprachenbeispiel ist keine vollständige Sprach-/Sprecherqualitätsabnahme.
 
+### Native Vollbildregression und längere Aufnahme
+
+WIN-04 wurde am vollständigen QML-Fenster reproduziert: normal öffnen, Vollbild wählen, minimieren, wieder öffnen, native Ereignisse abwarten. Beobachtet wurde `WindowNoState` statt `WindowFullScreen`, obwohl die sechs bisherigen Kurztests auch auf dem Windows-Backend bestanden. Windows meldet vor `Minimized` kurzzeitig `Windowed`; dieses Zwischenereignis überschrieb den gespeicherten Modus. Zusätzlich muss der native minimierte Zustand vor erneutem Vollbild aufgehoben werden.
+
+`desktop/window_state.py` merkt unter Windows den normalen Modus erst nach dem abgeschlossenen Ereigniswechsel und stellt minimiertes Vollbild zunächst nativ wieder her. Die Mac-Aktivierungslogik bleibt erhalten, aber die gemeinsame Datei ist **UNGEPRÜFT unter macOS**. Ein neuer vollständiger QML-Regressionstest mit abgewarteten nativen Ereignissen schlägt mit dem vorherigen Code nachweislich fehl. Erste engere Korrekturversuche bestanden einzelne GUI-Sequenzen, scheiterten aber am erweiterten Gesamttest; erst die Berücksichtigung des Zwischenzustands bestand die komplette native Suite: 76 Tests in 14,108 s, sieben explizite Skips.
+
+Die vollständige GUI wurde mit dem nativen Qt-Plugin `windows` bei 100 %, 125 % und 150 % Qt-Skalierungsfaktor sowie 1280×820, Mindestgröße 1010×630 und 1530×900 geprüft. Lange künstliche Unicode-Namen, Auftragsdetails, rekursive UI-Sperre, gespeicherte Spaltenbreiten und Netzwerk-Warteanzeige waren sichtbar; keine QML-Warnungen. Dies sind native Qt-Prüfungen mit `QT_SCALE_FACTOR`, keine Änderung der systemweiten Windows-DPI-Einstellungen. Physischer Explorer-Drop und tatsächliche Taskleisten-/Infobereichsklicks sind davon getrennte Prüfungen.
+
+Auf ausdrückliche Nutzerfreigabe wurde zusätzlich eine lange persönliche Besprechung ausschließlich als lokale Audiotestkopie verarbeitet. Paket-Code `284004ea5792cfee4c813cad5cb76df06a40487a`, Qwen mit Forced Aligner, CUDA und Stilleüberspringen, ohne Sprecher: 2935,339 s Audio in 320,172 s; 3,10 GiB Spitzen-RSS des Prozessbaums, GPU bis 99 %, GPU-Gesamtbelegung bis 6878 MiB. Verarbeitung erfolgreich; Original und Testkopie behielten ihre SHA-256. Keine persönlichen Dateinamen, Inhalte oder Logs wurden übernommen. Dies belegt einen langen erfolgreichen Lauf, keine manuelle vollständige Inhaltsprüfung und keinen Vergleichslauf ohne Stilleüberspringen.
+
 ## Gemeinsamer Stand
 
 | Gegenstand | Stand |
