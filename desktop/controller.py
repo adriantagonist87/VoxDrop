@@ -471,8 +471,9 @@ class Controller(QObject):
         self.waiting_for_network = waiting
         if self.downloading:
             self.notify(
-                "Warte auf Netzwerkfreigabe. Bestätige den angezeigten Windows-Firewall-Dialog selbst. "
-                "VoxDrop prüft den Download alle fünf Sekunden erneut."
+                "Netzwerkzugriff verweigert (Windows 10013). Falls eine Freigabeanfrage erscheint, "
+                "bestätige sie selbst. Ohne sichtbare Anfrage prüfe das Protokoll. "
+                "VoxDrop versucht den Download alle fünf Sekunden erneut."
                 if waiting else "Modelle werden heruntergeladen und geprüft …"
             )
 

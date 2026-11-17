@@ -484,7 +484,7 @@ ApplicationWindow {
                         Layout.fillWidth: true
                         visible: viewState.waitingForNetwork
                         color: warningColor
-                        text: "Warte auf Windows-Netzwerkfreigabe. Bestätige den Firewall-Dialog selbst. Der Download wird automatisch erneut geprüft."
+                        text: "Netzwerkzugriff verweigert (10013). Bestätige eine eventuell angezeigte Freigabeanfrage selbst. Ohne sichtbare Anfrage: Protokoll öffnen. Der Download wird automatisch erneut geprüft."
                     }
                     Action {
                         Layout.fillWidth: true

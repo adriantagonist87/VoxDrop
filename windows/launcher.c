@@ -176,12 +176,12 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE previous, PWSTR parameters, in
                 status = install_runtime(uv, command, project, setup_log);
                 if (!status) break;
                 int retry = MessageBoxW(NULL,
-                    L"Die Einrichtung konnte den Download noch nicht abschließen.\n\n"
-                    L"Falls Windows eine Firewall- oder Netzwerkfreigabe anzeigt, bestätige sie dort selbst. "
-                    L"Wähle danach Wiederholen. Die bisherigen Downloads bleiben erhalten.\n\n"
-                    L"Prüfe außerdem Internet und freien Speicherplatz. "
-                    L"Details stehen im Programmordner unter Laufzeit\\setup.log.",
-                    L"VoxDrop – Auf Netzwerkfreigabe warten", MB_RETRYCANCEL | MB_ICONINFORMATION);
+                    L"Die Einrichtung wurde nicht abgeschlossen. "
+                    L"Die konkrete Ursache steht im Programmordner unter Laufzeit\\setup.log.\n\n"
+                    L"Falls eine Firewall- oder Netzwerkfreigabeanfrage erscheint, bestätige sie dort selbst. "
+                    L"Ohne sichtbare Anfrage prüfe das Protokoll, Internet und freien Speicherplatz.\n\n"
+                    L"Wähle danach Wiederholen. Die bisherigen Downloads bleiben erhalten.",
+                    L"VoxDrop – Einrichtung unterbrochen", MB_RETRYCANCEL | MB_ICONINFORMATION);
                 if (retry != IDRETRY) {
                     cancelled = TRUE;
                     break;
