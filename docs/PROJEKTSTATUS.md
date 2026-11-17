@@ -2,6 +2,8 @@
 
 Stand vom 17. November 2026. Für jede Weiterentwicklung sind zusätzlich die Arbeitsregeln und die Entwicklungsanleitung zu lesen. [Arbeitsregeln](../AGENTS.md) · [Entwicklung](ENTWICKLUNG.md) · [Windows-Übergabeauftrag](UEBERGABE_WINDOWS.md)
 
+**Abgleich mit main:** Der separate [Windows-Übergabestatus](WINDOWS_STATUS_2026-11-17.md) ist dort als reiner Dokumentationscommit veröffentlicht. App-Code bleibt im [Draft-PR #1](https://github.com/adriantagonist87/VoxDrop/pull/1). Final geprüfter Code: `8b80572b1fc8196f310a89b82b526fa2112098a3`; gemeinsame Änderungen bleiben **UNGEPRÜFT unter macOS**.
+
 ## Windows-Arbeitsblock vom 17.11.2026
 
 Arbeitsbranch `fix/windows-native-validation`, Ausgangspunkt `4162030e17dc0b6d9a95a0356e6cd0dfac2a16c9`. Der unveränderte öffentliche Download v1.3.1 wurde vor Codeänderungen über `VoxDrop.exe` mit isoliertem Profil gestartet. ZIP-SHA-256: `b6ab4c819d9fe48db52633ab80eccf4829750e1384ae215582e2503c1ba2b897`. Die bisherigen Mac-Prüfstände unten bleiben erhalten. Der abschließende Windows-Code-SHA und weitere Abnahmen folgen im Statuscommit nach den Paketprüfungen.

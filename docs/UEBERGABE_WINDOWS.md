@@ -145,3 +145,7 @@ Verwende synthetische Testmedien in eigenen lokalen Verzeichnissen. Nutze freige
 - Halte Ursache und Korrektur von WIN-01 getrennt von weiteren Befunden fest. Ergänze Regressionstests und dokumentiere notwendige Abhängigkeits- oder Buildänderungen in `docs/ENTWICKLUNG.md`.
 - Gib die auf dem Mac nachzuprüfenden gemeinsamen Codewege an. Der Mac-Codex liest diese Dokumentation nach `git fetch` bei der nächsten Aufgabe.
 - Ein erfolgreicher Windows-Abschluss umfasst den tatsächlichen EXE-Start, die lokale Transkription beider Modelle auf CUDA, Sprecherzuordnung, die wesentlichen Dateiabläufe und die GUI-Prüfungen. Verbleibende Punkte werden einzeln ausgewiesen.
+
+## Rückgabe vom Windows-PC am 17.11.2026
+
+Die Arbeit liegt auf [fix/windows-native-validation](https://github.com/adriantagonist87/VoxDrop/tree/fix/windows-native-validation), [Draft-PR #1](https://github.com/adriantagonist87/VoxDrop/pull/1). Final geprüfter Code: `8b80572b1fc8196f310a89b82b526fa2112098a3`. Der [separate Übergabestatus auf main](WINDOWS_STATUS_2026-11-17.md) enthält vollständige SHAs, bestätigte Windows-Ergebnisse, offene Probleme und die nächsten Mac-Prüfungen. Der aktuelle Commit integriert ausschließlich Dokumentation; gemeinsame Codeänderungen bleiben bis zur Mac-Gegenprüfung im PR.
