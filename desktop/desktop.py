@@ -6,6 +6,7 @@ from hashlib import sha256
 from pathlib import Path
 
 from controller import LOGO, PROFILE, Controller
+from window_state import WindowPresenter
 from PySide6.QtCore import Qt, QUrl
 from PySide6.QtGui import QFont, QFontDatabase, QIcon, QWindow
 from PySide6.QtNetwork import QLocalServer, QLocalSocket
@@ -67,19 +68,13 @@ def main():
         )
         return 1
 
-    def show():
-        if window.visibility() == QWindow.Visibility.Minimized:
-            window.showNormal()
-        else:
-            window.show()
-        window.raise_()
-        window.requestActivate()
+    presenter = WindowPresenter(window)
 
     def reopen(state):
         if state == Qt.ApplicationState.ApplicationActive and (
             not window.isVisible() or window.visibility() == QWindow.Visibility.Minimized
         ):
-            show()
+            presenter.show()
 
     def activate_existing():
         while server.hasPendingConnections():
@@ -88,18 +83,18 @@ def main():
 
             def read(socket=connection):
                 if bytes(socket.readAll()) == b"open":
-                    show()
+                    presenter.show()
 
             connection.readyRead.connect(read)
             if connection.bytesAvailable():
                 read()
 
     server.newConnection.connect(activate_existing)
-    controller.windowRequested.connect(show)
+    controller.windowRequested.connect(presenter.show)
     if sys.platform == "darwin":
         app.applicationStateChanged.connect(reopen)
     if not background or not controller.hasTray():
-        window.show()
+        presenter.show()
     controller.start(background)
     return app.exec()
 
