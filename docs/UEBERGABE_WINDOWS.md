@@ -1,5 +1,15 @@
 # Übergabeauftrag für Codex auf dem Windows-PC
 
+## Fortschritt im Windows-Arbeitsbranch
+
+`fix/windows-native-validation` beginnt bei `4162030e17dc0b6d9a95a0356e6cd0dfac2a16c9`. Release v1.3.1 wurde über die EXE reproduziert; vollständige Modell-Setups sowie echte Qwen-/Aligner-/pyannote-/DOVER-Lap-CUDA-Verarbeitung auf RTX 5060 bestanden. Messwerte, historische Fehlversuche und Grenzen stehen im neuen Windows-Arbeitsblock des Projektstatus.
+
+Der Nutzer hat Modelle im App-Ordner präzisiert. Neue Pakete halten Modelle/Download-Cache in `Modelle` und Python/CUDA/uv-Cache in `Laufzeit` neben der EXE. Bestehende ältere externe Bestände sind bisher erhalten. Ein nativer Windows-Builder mit geprüften Vendorquellen wurde ergänzt. Die Paketabnahme und das finale SHA-Statusupdate folgen nach den Tests.
+
+Nächste Prüfungen: neues Paket wirklich über EXE installieren, Modellpfade und Speicherfreigabe bestätigen, echte Dateiabläufe/GUI mit isoliertem Profil, längere Aufnahme mit Stille. Der Nutzer hat einen lokalen Besprechungsordner für Tests freigegeben. Nur Testkopien verwenden; keine persönlichen Dateinamen, Inhalte oder Logs veröffentlichen. Den offenen Textverlust bei Qwen mit Stilleüberspringen im gemischten synthetischen Dialog getrennt untersuchen.
+
+Mac-Gegenprüfung: gemeinsame Tests einschließlich separierter Symlinkfälle, bisherige Modellablage und isolierte Profile, QML/Fensteraktivierung sowie Qwen mit langen Pausen. Bisherige Mac-Prüfstände bewahren. Alle gemeinsamen Änderungen dieses Branches sind bis dahin **UNGEPRÜFT unter macOS**. Code bleibt im Pull Request; nur der separate Dokumentationsstatus wird nach dem Remote-Abgleich auf `main` übergeben.
+
 ## Auftrag und Ausgangspunkt
 
 Untersuche und behebe die vom Nutzer gemeldete funktionsgestörte Windows-Ausgabe von VoxDrop. Verwende zuerst das aktuelle Windows-Paket v1.3.1 und halte den Fehler mit Umgebung und Logs reproduzierbar fest. Arbeite anschließend auf einem eigenen Fix-Branch von `main` weiter und aktualisiere die gemeinsame Dokumentation.

@@ -52,6 +52,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE previous, PWSTR parameters, in
     wchar_t profile[PATH_LENGTH];
     wchar_t runtime[PATH_LENGTH];
     wchar_t managed_python[PATH_LENGTH];
+    wchar_t cache[PATH_LENGTH];
     wchar_t project[PATH_LENGTH];
     wchar_t python[PATH_LENGTH];
     wchar_t uv[PATH_LENGTH];
@@ -73,9 +74,10 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE previous, PWSTR parameters, in
 
     wcscpy(root, executable);
     *wcsrchr(root, L'\\') = L'\0';
-    swprintf(profile, PATH_LENGTH, L"%ls\\VoxDrop", local);
+    swprintf(profile, PATH_LENGTH, L"%ls\\Laufzeit", root);
     swprintf(runtime, PATH_LENGTH, L"%ls\\%ls", profile, VOXDROP_RUNTIME);
     swprintf(managed_python, PATH_LENGTH, L"%ls\\python", profile);
+    swprintf(cache, PATH_LENGTH, L"%ls\\cache", profile);
     swprintf(project, PATH_LENGTH, L"%ls\\windows", root);
     swprintf(uv, PATH_LENGTH, L"%ls\\tools\\uv.exe", root);
     swprintf(ready, PATH_LENGTH, L"%ls\\ready", runtime);
@@ -84,10 +86,15 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE previous, PWSTR parameters, in
 
     if (!SetEnvironmentVariableW(L"UV_PROJECT_ENVIRONMENT", runtime) ||
         !SetEnvironmentVariableW(L"UV_PYTHON_INSTALL_DIR", managed_python) ||
+        !SetEnvironmentVariableW(L"UV_CACHE_DIR", cache) ||
         !SetEnvironmentVariableW(L"VOXDROP_LAUNCHER", executable)) {
         return error_dialog(L"Die Laufzeitpfade konnten nicht gesetzt werden.");
     }
-    CreateDirectoryW(profile, NULL);
+    if (!CreateDirectoryW(profile, NULL) && GetLastError() != ERROR_ALREADY_EXISTS) {
+        return error_dialog(L"Der VoxDrop-Programmordner ist nicht beschreibbar. "
+                            L"Entpacke die gesamte App in einen beschreibbaren lokalen Ordner. "
+                            L"Laufzeit und Modelle werden dort gespeichert.");
+    }
     HANDLE mutex = CreateMutexW(NULL, FALSE, L"Local\\VoxDrop.Runtime.Install");
     if (!mutex) {
         return error_dialog(L"Die Installation konnte nicht gesperrt werden.");

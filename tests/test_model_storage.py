@@ -30,6 +30,21 @@ class ModelStorageTests(unittest.TestCase):
         with patch.dict(os.environ, {}, clear=True):
             self.assertEqual(data_directory(profile, Path("source")), profile / "data")
 
+    def test_windows_package_keeps_models_and_cache_beside_executable(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            app = Path(temporary) / "VoxDrop"
+            (app / "windows").mkdir(parents=True)
+            (app / "VoxDrop.exe").touch()
+            (app / "windows/uv.lock").touch()
+            profile = Path(temporary) / "profile"
+            with patch("desktop.model_storage.sys.platform", "win32"), patch.dict(
+                os.environ, {"VOXDROP_PROFILE": str(profile)}, clear=True
+            ):
+                self.assertEqual(data_directory(profile, app), app / "Modelle")
+                explicit = Path(temporary) / "explicit-model-test"
+                with patch.dict(os.environ, {"VOXDROP_MODEL_DATA": str(explicit)}):
+                    self.assertEqual(data_directory(profile, app), explicit)
+
 
 @unittest.skipUnless(sys.platform == "darwin", "macOS installation")
 class ModelMigrationTests(unittest.TestCase):

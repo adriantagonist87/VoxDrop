@@ -2,6 +2,22 @@
 
 Stand vom 17. November 2026. Für jede Weiterentwicklung sind zusätzlich die Arbeitsregeln und die Entwicklungsanleitung zu lesen. [Arbeitsregeln](../AGENTS.md) · [Entwicklung](ENTWICKLUNG.md) · [Windows-Übergabeauftrag](UEBERGABE_WINDOWS.md)
 
+## Windows-Arbeitsblock vom 17.11.2026
+
+Arbeitsbranch `fix/windows-native-validation`, Ausgangspunkt `4162030e17dc0b6d9a95a0356e6cd0dfac2a16c9`. Der unveränderte öffentliche Download v1.3.1 wurde vor Codeänderungen über `VoxDrop.exe` mit isoliertem Profil gestartet. ZIP-SHA-256: `b6ab4c819d9fe48db52633ab80eccf4829750e1384ae215582e2503c1ba2b897`. Die bisherigen Mac-Prüfstände unten bleiben erhalten. Der abschließende Windows-Code-SHA und weitere Abnahmen folgen im Statuscommit nach den Paketprüfungen.
+
+- Umgebung: Windows 11 Pro 25H2, Build 26200.9457, x64; RTX 5060, 8151 MiB, Treiber 596.36; Python 3.12.13, Torch 2.9.1+cu128. Der Registry-Altname „Windows 10 Pro“ ist kein Nachweis für Windows 10.
+- Release-EXE richtete die gesperrte Laufzeit ein und öffnete das vollständige dunkle QML-Fenster. Qwen, Forced Aligner und pyannote wurden über die GUI neu geladen; Whisper samt Sprecherdateien zusätzlich über die Paket-CLI. Beide vollständigen Setups einschließlich Prüfsummen bestanden.
+- WIN-01: Der historische Python-Downloadfehler 10013 ist in diesen Läufen **nicht reproduziert**. PowerShell `Invoke-WebRequest` erhielt dagegen einen Socket-Zugriffsfehler; Git und Windows-curl konnten GitHub erreichen. Das belegt unterschiedliche Ergebnisse je Prozess, keine bestätigte Firewall-Ursache. Schutzfunktionen wurden nicht geändert.
+- 51,347 s künstliche Zweistimmenaufnahme, 12 s eingefügte Stille: Qwen/Aligner ohne Sprecher erfolgreich in 23,609 s, Spitzen-RSS des Prozessbaums 2,58 GiB, GPU 72 %, GPU-Gesamtbelegung 6198 MiB. Qwen mit Stilleüberspringen und echter dreifacher DOVER-Lap-Fusion erfolgreich in 44,969 s, 2,57 GiB RSS, GPU 99 %, 6112 MiB. Originalhash jeweils unverändert. GPU-Belegung umfasst auch den Desktop und ist kein isolierter Modellverbrauch.
+- Offener Qualitätsbefund: Beim Qwen-Lauf mit Stilleüberspringen fehlt im gemischten deutsch-englischen Dialog der englische Abschnitt; ohne diese Option ist er vorhanden. VAD behält die Intervalle 0–14,74 s und 26,83–51,35 s einschließlich Englisch. Ursache in der Erkennung/Alignierung weiter offen; erfolgreicher Prozessstatus allein ist keine vollständige Inhaltsabnahme.
+- TEST-01 reproduziert: 63 Tests, zwei Fehlschläge, vier Fehler, drei übersprungen. Ursachen sind unbedingter `fcntl`-Import, Metal-Erwartung, zwei Symlink-Erstellungen ohne Windows-Recht, eine Mac-SMB-Mountannahme und Windows-Pfadescaping im Fehlerassert. Die Korrekturen erhalten die rekursive Datei-/Ausgabeprüfung und trennen Symlinkprüfungen mit explizitem Skip bei WinError 1314 ab. Zusätzliche Windows-UNC-Prüfungen verwenden keine realen Netzwerkzugriffe.
+- Diagnosebefund: Bei abgefangenem Konsoleneingang meldete die erfolgreiche Paketdiagnose abschließend `EOFError`. Der Windows-Diagnoseabschluss behandelt fehlende Eingabe jetzt ohne Verlust des eigentlichen Ergebnisses.
+- Nutzerpräzisierung: Neue Windows-Pakete speichern Modelle samt Hugging-Face-Cache unter `VoxDrop/Modelle`; verwaltetes Python, CUDA-Pakete und uv-Cache unter `VoxDrop/Laufzeit`. Der portable Programmordner enthält damit die großen Downloads. Einstellungen und SQLite-Verlauf bleiben lokal im Benutzerprofil. Explizite Entwicklerüberschreibungen sind weiter möglich. Bestehende ältere Installationen und deren externe Modell-/Laufzeitbestände wurden bisher nicht entfernt.
+- BUILD-01: Neuer nativer Builder `scripts/build-windows.py` verwendet einen per SHA-256 geprüften Referenz-ZIP für uv, Icon und Vendorpakete, prüft aTrain byteweise gegen den enthaltenen gepinnten Quellstand und ersetzt sämtliche eigenen App-Quellen aus dem sauberen Checkout. ZIP-Name enthält den Code-SHA; bestehende Release-Dateien werden nicht überschrieben. Native Paketabnahme läuft noch.
+
+Gemeinsame Änderungen dieses Branches sind **UNGEPRÜFT unter macOS**. Echte Anmeldung nach Windows-Neustart, erreichbare SMB-Freigabe und physischer Explorer-Drop sind zu diesem Zwischenstand noch **UNGEPRÜFT**.
+
 ## Gemeinsamer Stand
 
 | Gegenstand | Stand |
