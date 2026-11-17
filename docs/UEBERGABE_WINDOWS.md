@@ -1,5 +1,21 @@
 # Übergabeauftrag für Codex auf dem Windows-PC
 
+## Abschlussstatus und nächster Mac-Lauf
+
+**Geprüfter finaler Code:** `8b80572b1fc8196f310a89b82b526fa2112098a3` auf [fix/windows-native-validation](https://github.com/adriantagonist87/VoxDrop/tree/fix/windows-native-validation), [Draft-PR #1](https://github.com/adriantagonist87/VoxDrop/pull/1). Das finale native Testpaket öffnet über EXE die GUI mit „Modelle installiert“ und Modellspeicher neben der EXE. 76 Tests bestanden, sieben explizite Skips. Die tatsächlichen Modell-/Datei-/UNC-Messungen bei `436616ce527d4bbae5ad9922a9f175a39882da09` sowie der Langlauf bei `284004ea5792cfee4c813cad5cb76df06a40487a` bleiben mit diesen SHAs dokumentiert; danach wurden ausschließlich Netzwerkmeldungen präzisiert.
+
+Behoben sind Windows-Testannahmen, der native Vollbild-Minimierungsfehler, fehlender nativer Buildweg sowie die große Modell-/Laufzeitablage außerhalb neuer App-Ordner. WinError 10013 wurde konkret reproduziert; Freigaben erteilte der Nutzer selbst. Warte-/Retry-/Abbruchlogik und konkrete Protokolle ersetzen einen sofortigen Setup-Abbruch. Eine Meldung behauptet keine offene Firewall-Anfrage, wenn keine sichtbar ist.
+
+Für Codex auf dem Mac:
+
+1. `git fetch origin`, PR-Branch prüfen; gemeinsame Codeänderungen bleiben bis zur Gegenprüfung im PR. Den bisherigen Mac-Prüfstand `df207f79aa812f70d090e4306443436d51d48952` bewahren.
+2. Vollständige Suite einschließlich `test_desktop_window.py` nativ auf Cocoa ausführen. Bewusste Normalgröße, Maximierung, Vollbild, Minimierung, Dock-/Menüleisten- und Einzelinstanz-Wiederöffnung gegenprüfen.
+3. Mac-Modellablage neben der signierten App und isolierte Profile prüfen; die neue Windows-Paketerkennung darf das Mac-Verhalten nicht ändern. QML-Netzwerk-Warteanzeige und Abbruch prüfen, ohne Sicherheitsregeln zu verändern.
+4. WIN-05 eingrenzen: gemischtsprachiger synthetischer Dialog mit und ohne Stilleüberspringen, Roh-ASR und Aligner-Ergebnis vergleichen. Die realen Langlaufwerte ersetzen keine vollständige Inhaltsabnahme.
+5. Anschließend gemeinsame Integration/Release entscheiden. Bestehende Release-Dateien wurden nicht überschrieben.
+
+Offen auf Windows: echter Neustart/Anmeldestart, physischer Explorer-Drop, physische Taskleisten-/Infobereichsklicks, systemweiter DPI-Wechsel, tatsächlicher SMB-Serverausfall, native erfolgreiche Retry-Bedienung nach künstlicher Installationsverweigerung und gesicherte Migration/Bereinigung älterer externer Bestände. Jeweils **UNGEPRÜFT**. Die neuen großen Downloads liegen vollständig im App-Ordner; alte Bestände wurden nicht heimlich gelöscht. Alle gemeinsamen Änderungen dieses PRs sind **UNGEPRÜFT unter macOS**.
+
 ## Fortschritt im Windows-Arbeitsbranch
 
 `fix/windows-native-validation` beginnt bei `4162030e17dc0b6d9a95a0356e6cd0dfac2a16c9`. Release v1.3.1 wurde über die EXE reproduziert; vollständige Modell-Setups sowie echte Qwen-/Aligner-/pyannote-/DOVER-Lap-CUDA-Verarbeitung auf RTX 5060 bestanden. Messwerte, historische Fehlversuche und Grenzen stehen im neuen Windows-Arbeitsblock des Projektstatus.

@@ -205,7 +205,7 @@ Die Testsuite kann mit dem Release-Interpreter laufen. Beim Quellcheckout die im
 
 `tests/test_desktop_window.py` lädt zusätzlich das vollständige QML-Fenster mit isolierten Einstellungen. Die Vollbild-Minimierungsregression wartet auf native Fensterereignisse; der frühere unmittelbar abgefragte Qt-Zustand allein verfehlte den Windows-Zwischenzustand. Für native Abnahme `QT_QPA_PLATFORM` entfernen; für kontrollierte Skalierung `QT_SCALE_FACTOR=1`, `1.25` oder `1.5` vor dem jeweiligen Prozessstart setzen. Windows behandelt den kurzzeitigen `Windowed`-Zustand beim Minimieren erst nach Abschluss des Ereigniswechsels als bewusste Normalmoduswahl. Den Mac-Ablauf separat gegenprüfen.
 
-Alle folgenden Windows-Läufe sind **UNGEPRÜFT unter Windows**. Zuerst ist das ausgelieferte Paket nach dem Windows-Übergabeauftrag zu reproduzieren.
+Die folgenden ursprünglichen Release-/Quellstartbefehle beschreiben v1.3.1. Die tatsächlich ausgeführten Windows-Prüfungen und die neue portable Ablage stehen oben und im Projektstatus; nicht aufgeführte Varianten bleiben **UNGEPRÜFT unter Windows**.
 
 Die ZIP vollständig entpacken und `VoxDrop.exe` öffnen. Der Launcher führt im Ordner `windows/` folgenden Einrichtungsschritt mit dem mitgelieferten `tools/uv.exe` aus.
 
@@ -268,6 +268,15 @@ sh scripts/build-windows.sh /pfad/zu/zig /pfad/zu/uv-x86_64-pc-windows-msvc.zip
 Das Script prüft die uv-Prüfsumme, erstellt Icon-Ressourcen und ein `x86_64-windows-gnu`-GUI-Programm. Es bündelt dieselben Desktop-/Engine-Quellen sowie `windows/uv.lock`, DOVER-Lap und den aTrain-Quellstand im ZIP. Die Paketversion folgt `macos/Info.plist`. Halte `windows/pyproject.toml` und den Eintrag `voxdrop-windows` in `windows/uv.lock` synchron dazu.
 
 Ein nativer Windows-Buildweg ist als BUILD-01 offen. Änderungen am Windows-Code können zunächst über den beschriebenen Quellstart getestet und über den bestehenden Mac-Build paketiert werden. Die Tests auf dem Windows-PC bestimmen die Plattformfreigabe.
+
+BUILD-01 ist auf dem Windows-Arbeitsbranch durch `scripts/build-windows.py` umgesetzt und nativ geprüft. Der vorstehende Mac-Cross-Build bleibt erhalten. Abschluss-Code `8b80572b1fc8196f310a89b82b526fa2112098a3`: 76 Tests, sieben explizite Skips; abschließender Lauf mit `QT_QPA_PLATFORM=offscreen` in 13,143 s. Native Tests wurden zuvor ohne diese Variable ausgeführt. Beispiel für den Quellcheckout mit paketierten Vendor-Abhängigkeiten:
+
+```powershell
+$env:MPLCONFIGDIR = Join-Path (Get-Location).Path '.runtime/test-mpl'
+& $py -BEs -Xutf8 -c "import sys,unittest; sys.path.append(r'<App>/Engine'); sys.path.append(r'<App>/DoverPackages'); r=unittest.TextTestRunner(verbosity=2).run(unittest.defaultTestLoader.discover('tests')); raise SystemExit(not r.wasSuccessful())"
+```
+
+Zusätzlich wurden echte Dienstaufträge über `enqueue-folders`, `next_job`, `retranscribe`, `retry` und `probe_pending_folders` mit neuen lokalen Testverzeichnissen sowie einer ausdrücklich freigegebenen UNC-Testablage ausgeführt. Modelle sind dabei lokal unter `<App>/Modelle`, Auftragsdatenbanken/Arbeitskopien außerhalb des öffentlichen Repositorys. Die genauen geprüften Fälle und Messwerte stehen im Projektstatus; persönliche Testpfade und Inhalte gehören nicht in öffentliche Befehlsbeispiele.
 
 ## Dokumentation und Veröffentlichung
 
