@@ -179,6 +179,8 @@ Für ein beauftragtes Update aus der Entwicklungsumgebung dient `sh scripts/inst
 
 Für einen isolierten Installationstest sind `--applications <Testverzeichnis>` und `--profile <Testprofil>` verfügbar. Zum Entfernen aller Modelle wird der gesamte installierte VoxDrop-Ordner gelöscht. Einstellungen, Verlauf und eine eingerichtete Anmelderegistrierung werden gesondert im Benutzerkonto verwaltet.
 
+Windows-Inferenzprozesse erhalten TMPDIR/TEMP/TMP im lokalen `transcription-*`-Verzeichnis ihres Auftrags. Damit erfasst die Auftragsbereinigung auch Qwen-Numpy-Audiodaten und Bibliotheks-Temporärdateien nach Prozessabbrüchen. Der Test `test_transcription_temp.py` verwendet einen echten kleinen abstürzenden Kindprozess und bestätigt, dass keine dekodierte Audiodatei im sonstigen System-Temp liegen bleibt. Mac-Umgebung unverändert.
+
 ## Windows einrichten und starten
 
 ### Windows-Arbeitsbranch: portable Daten und nativer Build

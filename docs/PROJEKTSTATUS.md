@@ -4,6 +4,8 @@ Stand vom 17. November 2026. Für jede Weiterentwicklung sind zusätzlich die Ar
 
 **Abgleich mit main:** Der separate [Windows-Übergabestatus](WINDOWS_STATUS_2026-11-17.md) ist dort als reiner Dokumentationscommit veröffentlicht. App-Code bleibt im [Draft-PR #1](https://github.com/adriantagonist87/VoxDrop/pull/1). Aktuell geprüfter Windows-Code: `2889268f52c9a69a42a3c4df38a0f029323ac9e8`; gemeinsame Änderungen bleiben **UNGEPRÜFT unter macOS**.
 
+Zusätzlicher Speicherbefund nach Paket `2889268f52c9a69a42a3c4df38a0f029323ac9e8`: Ein echter isolierter Worker-Absturztest reproduziert temporäre dekodierte Audiodaten außerhalb des Auftragsverzeichnisses. Unter Windows erhalten Inferenzprozesse jetzt TMPDIR/TEMP/TMP innerhalb ihres `transcription-*`-Arbeitsverzeichnisses. Bei regulärem Fehler bereinigt der Elternprozess diesen Ordner; nach Dienstabbruch entfernt ihn die vorhandene sichere Wiederaufnahme. Ein echter kleiner subprocess mit hartem `os._exit` prüft Ablage und Bereinigung, ohne KI-/GPU-Mocks oder persönliche Medien. Die alte Implementierung scheitert an dieser Regression. Die Mac-Umgebung bleibt unverändert; gemeinsame Datei weiter **UNGEPRÜFT unter macOS**.
+
 ## Windows-Arbeitsblock vom 17.11.2026
 
 ### Fortführung: unbeaufsichtigter Hintergrundbetrieb

@@ -87,11 +87,17 @@ def run_transcription(media, *, report, measurements, **settings):
         ]
         error = None
         peak = [0]
+        environment = os.environ.copy()
+        if WINDOWS:
+            # Qwen's decoded numpy audio and library temporaries must stay in
+            # recoverable job storage even when Windows kills the worker tree.
+            environment.update({name: directory for name in ("TMPDIR", "TEMP", "TMP")})
         with child_process(
             command,
             stdout=subprocess.PIPE,
             text=True,
             encoding="utf-8",
+            env=environment,
             **process_options(),
         ) as child:
             stop = threading.Event()

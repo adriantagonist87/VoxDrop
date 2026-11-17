@@ -19,6 +19,8 @@ Für Codex auf dem Mac:
 
 Offen auf Windows: echter Neustart/Anmeldestart, physischer Explorer-Drop, physische Taskleisten-/Infobereichsklicks, systemweiter DPI-Wechsel, tatsächlicher SMB-Serverausfall, native erfolgreiche Retry-Bedienung nach künstlicher Installationsverweigerung und gesicherte Migration/Bereinigung älterer externer Bestände. Jeweils **UNGEPRÜFT**. Die neuen großen Downloads liegen vollständig im App-Ordner; alte Bestände wurden nicht heimlich gelöscht. Alle gemeinsamen Änderungen dieses PRs sind **UNGEPRÜFT unter macOS**.
 
+Weiterer Nachtbefund: Nach hartem Worker-Abbruch konnten dekodierte temporäre Audiodaten außerhalb des Auftragsordners zurückbleiben. Windows-Prozesse bekommen deshalb TMPDIR/TEMP/TMP innerhalb des bereinigbaren `transcription-*`-Ordners. Regression mit echtem Kindprozess und `os._exit` reproduziert den alten Fehler. Finalen Paket-SHA nach den gezielten neuen Qwen-Abbruch-/Wiederanlauftests nachtragen; der schon laufende 30-Minuten-Test verwendet ausdrücklich noch Code `2889268f52c9a69a42a3c4df38a0f029323ac9e8`.
+
 ## Fortschritt im Windows-Arbeitsbranch
 
 `fix/windows-native-validation` beginnt bei `4162030e17dc0b6d9a95a0356e6cd0dfac2a16c9`. Release v1.3.1 wurde über die EXE reproduziert; vollständige Modell-Setups sowie echte Qwen-/Aligner-/pyannote-/DOVER-Lap-CUDA-Verarbeitung auf RTX 5060 bestanden. Messwerte, historische Fehlversuche und Grenzen stehen im neuen Windows-Arbeitsblock des Projektstatus.
