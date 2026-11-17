@@ -107,10 +107,9 @@ Voraussetzungen sind Git, Xcode Command Line Tools einschließlich Swift und ein
 ```sh
 sh scripts/bootstrap.sh
 sh scripts/build-app.sh
-open .runtime/package/VoxDrop.app
 ```
 
-Der Bootstrap lädt uv 0.13.7, Python 3.12.13 und den gepinnten aTrain-Commit. Er richtet aTrain, Metal, Qwen, DOVER-Lap und die Qt-Packages getrennt unter `.runtime/` ein. Für einen GUI-Test mit isoliertem Profil gilt beispielsweise folgender Start.
+Der Bootstrap lädt uv 0.13.7, Python 3.12.13 und den gepinnten aTrain-Commit. Er richtet aTrain, Metal, Qwen, DOVER-Lap und die Qt-Packages getrennt unter `.runtime/` ein. Der Entwicklungsbuild startet für GUI-Tests mit isoliertem Profil.
 
 ```sh
 trial=$(mktemp -d "${TMPDIR:-/tmp}/voxdrop-dev.XXXXXX")
