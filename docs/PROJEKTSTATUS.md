@@ -7,8 +7,8 @@ Stand vom 17. November 2026. Für jede Weiterentwicklung sind zusätzlich die Ar
 | Gegenstand | Stand |
 | --- | --- |
 | Öffentliches Repository | `adriantagonist87/VoxDrop`, Hauptbranch `main` |
-| Freigegebener Stand | `v1.3.0`, macOS-Build 22, Windows-x64-ZIP |
-| Getesteter Implementierungscommit | `abfd597b69dc04054557c9b4af661e3d9f973427` |
+| Freigegebener Stand | `v1.3.1`, macOS-Build 23, Windows-x64-ZIP |
+| Getesteter Implementierungscommit | `df207f79aa812f70d090e4306443436d51d48952` |
 | Gemeinsame Entwicklungsbasis | `main` mit App-Code, Arbeitsregeln und gemeinsamer Dokumentation |
 | Betriebsmodell | Eigenständige lokale macOS- und Windows-Apps, auch in verschiedenen Netzwerken |
 | Referenzbibliothek | aTrain `ea8a7057857220b4299c0ba0b2aaf6def2f35b87` |
@@ -25,11 +25,24 @@ Die ursprüngliche Mac-Historie von v1.2.0 mit Code-Commit `19c8084193ec96717d87
 
 | Umgebung | Letzter geprüfter öffentlicher Commit | Prüfung und Ergebnis |
 | --- | --- | --- |
-| macOS, Apple Silicon | `270e3af7ce96bfce8c5daf49236da2fa4d1d05be` (Implementierung unverändert gegenüber `abfd597b69dc04054557c9b4af661e3d9f973427`) | v1.3.0 Build 22 nach vollständigem Entfernen der alten Installation frisch von der öffentlichen GitHub-DMG installiert. Qwen/Aligner/pyannote und Whisper neu heruntergeladen; beide ASR-Modelle auf Metal mit Sprecherzuordnung geprüft, Qwen mit drei DOVER-Lap-Durchgängen. Echter Neustart, automatischer nativer App-/Dienststart und anschließende neue automatische Transkription erfolgreich. Alle 58 automatisierten Tests unter macOS 27.2, arm64, Python 3.12.13 bestanden. |
-| Windows 11 mit NVIDIA | **UNGEPRÜFT unter Windows**, noch kein bestätigter Test-Commit | Der Nutzer meldete eine funktionsgestörte Windows-Ausgabe. Der v1.3.0-Launcher wurde auf dem Mac als PE32+ x86-64 gebaut. ZIP und Lockfile wurden auf dem Mac geprüft. Ein nativer Windows-/CUDA-End-to-End-Test ist offen. |
+| macOS, Apple Silicon | `df207f79aa812f70d090e4306443436d51d48952` | v1.3.1 Build 23: alle 64 Tests einschließlich sechs neuer Fensterregressionen unter macOS 27.2, arm64, Python 3.12.13 bestanden. Zusätzlich vollständiges QML-Fenster auf Cocoa mit Öffnungssignalen, Einzelinstanz-Socket, Maximierung, Vollbild, Minimierung und Schließen geprüft. Auf diesem Mac installiert; Desktop-Dateien bytegleich zum Prüfstand, Einstellungen und Modellbestand erhalten. Die vollständige Modell-/Neustartabnahme erfolgte zuvor mit v1.3.0 bei `270e3af7ce96bfce8c5daf49236da2fa4d1d05be`; deren KI-Backend ist unverändert. |
+| Windows 11 mit NVIDIA | **UNGEPRÜFT unter Windows**, noch kein bestätigter Test-Commit | Der Nutzer meldete eine funktionsgestörte Windows-Ausgabe. Der v1.3.1-Launcher wurde auf dem Mac als PE32+ x86-64 gebaut. ZIP und Lockfile wurden auf dem Mac geprüft. Ein nativer Windows-/CUDA-End-to-End-Test ist offen. |
 | Linux | **UNGEPRÜFT**, Zielport offen | Gemeinsame Qt-Oberfläche vorhanden. Backends, Plattformadapter, Einrichtung und Pakete sind auf macOS/Windows ausgerichtet. |
 
 Der macOS-Testbefehl war `MPLCONFIGDIR=<lokales Testverzeichnis> .runtime/aTrain/.venv/bin/python -m unittest discover -s tests`. Das Ergebnis war `Ran 58 tests … OK`. Dieser Testlauf prüft teilweise gemockte Abläufe. Die zusätzlichen GUI- und Modellprüfungen haben den jeweils unten angegebenen Umfang. Die Ersteinrichtung wurde in einem leeren Profil auf dem vorhandenen Mac geprüft. Die Prüfung auf einem physisch zweiten Mac ist offen.
+
+### Fensterkorrektur in v1.3.1
+
+Der Nutzer meldete am 17.11.2026, dass ein maximiertes Fenster beim Öffnen über Dock oder Menüleistensymbol wieder klein wurde. Der Fehler wurde unter Cocoa reproduziert: Der bisherige Wiederöffnungsaufruf `QWindow.show()` änderte das maximierte Fenster von 1920 × 1051 auf 1280 × 820 Pixel und setzte den Fenstermodus auf normal zurück.
+
+`desktop/window_state.py` bündelt jetzt die Fensteraktivierung für Menüleistensymbol, Dock-Wiederöffnung und Einzelinstanz-Nachricht. `setVisible(True)` erhält den bestehenden Modus. Beim Zurückholen aus der Minimierung wird der letzte normale, maximierte oder Vollbildmodus wiederhergestellt. Bewusstes Verkleinern durch den Nutzer wird weiterhin berücksichtigt.
+
+- Sechs Regressionstests und die gesamte Suite mit insgesamt 64 Tests bestanden. Die neuen Tests wurden sowohl mit dem Offscreen-Plugin als auch im Cocoa-Gesamtlauf geprüft.
+- Die Anbindung im vollständigen QML-Fenster wurde zusätzlich über `windowRequested`, den echten `QLocalSocket`-Öffnungsweg und das macOS-Aktivierungssignal geprüft. Vier erneute Öffnungen im maximierten Zustand, Wiederöffnung nach Schließen und Minimieren, drei Vollbildaktivierungen sowie eine normale Benutzergröße von 1170 × 740 Pixeln blieben stabil. Dies war eine native Qt-Softwareprüfung der Öffnungssignale, kein automatisierter physischer Dock-Klick.
+- Die Mac-App wurde sicher aktualisiert und wieder geöffnet. Alle Modell-Dateien behielten Inode, Größe und Änderungszeit; die Verarbeitungseinstellungen blieben bytegleich. Die Signatur und die Übereinstimmung der installierten Desktop-Dateien zum Prüfstand wurden bestätigt.
+- Die gemeinsame Korrektur ist auch im neu gebauten Windows-ZIP enthalten. Dessen Desktop-Dateien, Lockfile und Launcher-Laufzeithash wurden auf dem Mac geprüft. Das Fensterverhalten bleibt **UNGEPRÜFT unter Windows**.
+
+Für diesen Oberflächenfix wurde die geprüfte gebündelte Laufzeit aus v1.3.0 wiederverwendet; Desktop-Quellen, Versionsmetadaten und nativer Mac-Launcher wurden neu paketiert. Die Windows-Ausgabe wurde mit dem bestehenden Buildscript und Zig 0.15.2 neu gebaut. Die Qt-Quellen entsprechen unverändert Version 6.10.2. [Release 1.3.1](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.1)
 
 ### Vollständige Neuinstallation aus dem GitHub-Download
 
@@ -66,7 +79,7 @@ Die Modell- und Neustartprüfungen verwendeten ausschließlich einen lokalen Ord
 | Ordner-Drag-and-drop einschließlich Unterordnern | Qt-Cocoa-Drop-Ereignisse und zwei Qwen-Aufträge geprüft. Vorgeschlagene Move-Aktion wurde als Copy bestätigt. Überwachung blieb pausiert. | **UNGEPRÜFT unter Windows**, insbesondere Explorer-Drop und DPI |
 | Verlauf, Duplikatschutz, Retry, Neutranskription und Veröffentlichung | Vorhandene automatisierte Tests auf macOS bestanden | **UNGEPRÜFT unter Windows** |
 | Lange Stille überspringen und Zeitrückrechnung | Vorhandene automatisierte Tests auf macOS bestanden | **UNGEPRÜFT unter Windows** |
-| Dock-Wiederöffnung und farbiges Menüleistensymbol | Cocoa-Probe für verstecktes/minimiertes Fenster und beide Statusfarben erfolgreich. Nutzer meldete anschließend funktionierende App. | Taskleisten-/Infobereichsverhalten **UNGEPRÜFT unter Windows** |
+| Dock-Wiederöffnung und farbiges Menüleistensymbol | Statusfarben zuvor geprüft. v1.3.1 erhält zusätzlich Maximierung und Vollbild bei erneuten Öffnungssignalen, beim Zurückholen und über den Einzelinstanz-Socket; unter Cocoa geprüft. | Taskleisten-/Infobereichsverhalten einschließlich Fensterkorrektur **UNGEPRÜFT unter Windows** |
 | Anmeldestart | Nativer App-Launcher mit `--background`: echter Neustart und Anmeldung nach vollständiger GitHub-Neuinstallation geprüft. App und Dienst starteten automatisch; neue Aufnahme wurde nach der einmaligen Ordnerfreigabe automatisch verarbeitet. | **UNGEPRÜFT unter Windows**, HKCU-Run-Anbindung implementiert |
 | Installationspaket | DMG-Prüfsumme, Signatur und Übereinstimmung zum installierten Build geprüft, ad hoc signiert | Auf dem Mac gebautes ZIP und öffentlicher Download geprüft, unsigniert. Installation **UNGEPRÜFT unter Windows**. |
 
@@ -80,7 +93,7 @@ Die Modell- und Neustartprüfungen verwendeten ausschließlich einen lokalen Ord
 | TEST-01 | Mittel. Die gesamte Testsuite hat Plattformannahmen. `test_app_upgrade.py` importiert das macOS-Modul mit `fcntl`. `test_local_job.py` erwartet explizit `metal`. Einige Tests erzeugen Symlinks. | Gemeinsame und OS-spezifische Prüfungen unter Windows ausführbar machen. Fehlende Symlink-Berechtigung als eigenen Testbefund festhalten. |
 | BUILD-01 | Mittel. `scripts/build-windows.sh` ist ein macOS-Cross-Build mit `plutil`, `rsync`, `zip` und Zig. Ein nativer Windows-Paketbuild ist offen. | Erst vorhandenes Paket und Quellstart diagnostizieren. Bei Bedarf nativen Build als eigenen Arbeitsschritt umsetzen und dokumentieren. |
 
-Der Fehlerbericht WIN-01 stammt aus einem früheren Testbuild. Die genaue Version des Screenshots ist offen. Für v1.3.0 bleibt die native Windows-Reproduktion ausstehend.
+Der Fehlerbericht WIN-01 stammt aus einem früheren Testbuild. Die genaue Version des Screenshots ist offen. Auch für v1.3.1 bleibt die native Windows-Reproduktion ausstehend.
 
 ## Fortführung auf dem Windows-PC
 

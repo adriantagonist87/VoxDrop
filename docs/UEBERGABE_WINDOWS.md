@@ -2,15 +2,15 @@
 
 ## Auftrag und Ausgangspunkt
 
-Untersuche und behebe die vom Nutzer gemeldete funktionsgestörte Windows-Ausgabe von VoxDrop. Verwende zuerst das aktuelle Windows-Paket v1.3.0 und halte den Fehler mit Umgebung und Logs reproduzierbar fest. Arbeite anschließend auf einem eigenen Fix-Branch von `main` weiter und aktualisiere die gemeinsame Dokumentation.
+Untersuche und behebe die vom Nutzer gemeldete funktionsgestörte Windows-Ausgabe von VoxDrop. Verwende zuerst das aktuelle Windows-Paket v1.3.1 und halte den Fehler mit Umgebung und Logs reproduzierbar fest. Arbeite anschließend auf einem eigenen Fix-Branch von `main` weiter und aktualisiere die gemeinsame Dokumentation.
 
 Lies vor Beginn `AGENTS.md`, `docs/PROJEKTSTATUS.md` und `docs/ENTWICKLUNG.md`. Dieser Auftrag gilt für eine eigenständige Windows-App mit lokaler KI auf dem Büro-PC, auch in einem anderen Netzwerk als der Mac mini.
 
 | Ausgangspunkt | Wert |
 | --- | --- |
 | Repository | `https://github.com/adriantagonist87/VoxDrop.git` |
-| Gemeinsame Basis | Aktueller `origin/main`, Tag `v1.3.0`. Letzter getesteter Code-SHA gemäß Projektstatus. |
-| Windows-Asset | `VoxDrop-1.3.0-Windows-x64.zip` plus gleichnamige `.sha256` |
+| Gemeinsame Basis | Aktueller `origin/main`, Tag `v1.3.1`. Letzter getesteter Code-SHA gemäß Projektstatus. |
+| Windows-Asset | `VoxDrop-1.3.1-Windows-x64.zip` plus gleichnamige `.sha256` |
 | Zielgerät | Windows 11 x64, NVIDIA RTX 5060 mit 8 GB oder kompatibel leistungsfähiger |
 | Bisherige Windows-Prüfung | **UNGEPRÜFT unter Windows**. EXE-Cross-Build, Archivprüfung und Lockfile-Prüfung auf dem Mac durchgeführt. |
 | Bekannte Nutzermeldung | Frühere Ausgabe mit Darstellungsfehlern und Modell-Setup-Abbruch bei `speaker-detection`, `httpcore.ConnectError`, `WinError 10013`. Genaue Testversion offen. |
@@ -88,7 +88,7 @@ Beide Setup-Befehle schließen standardmäßig `speaker-detection` ein. `--no-sp
 3. Den Quellstart aus `docs/ENTWICKLUNG.md` bei Bedarf für die Fehlerbehebung einrichten. Das ausgelieferte Paket bleibt als reproduzierbare Ausgangsbasis erhalten.
 4. Die bestehende Testsuite starten. Plattformbedingte Test-Importe und Annahmen aus TEST-01 korrigieren oder gezielt plattformspezifisch kennzeichnen. Gemeinsame Regressionstests ausführbar halten.
 5. Das aktuelle dunkle GUI mit 100 %, 125 % und 150 % Anzeige-Skalierung, Mindestfenstergröße, beiden Spaltentrennern, langen Unicode-Dateinamen und Auftragsdetails prüfen. Die zuletzt eingestellten Spaltenbreiten müssen nach Neustart wiederkehren.
-6. Taskleisten-Wiederöffnung, ausgeblendetes/minimiertes Fenster, Infobereichssymbol und den beauftragten Anmeldestart auf Windows tatsächlich prüfen.
+6. Taskleisten-Wiederöffnung, ausgeblendetes/minimiertes Fenster, Infobereichssymbol und den beauftragten Anmeldestart auf Windows tatsächlich prüfen. v1.3.1 enthält eine gemeinsame Korrektur in `desktop/window_state.py`: erneutes Öffnen muss Maximierung und Vollbild erhalten; nach Minimieren muss der vorherige Modus zurückkehren. Unter Cocoa geprüft, **UNGEPRÜFT unter Windows**. Dabei auch eine bewusst gewählte normale Benutzergröße überprüfen.
 
 ## 5. Dateiverhalten abnehmen
 
