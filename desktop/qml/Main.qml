@@ -247,6 +247,39 @@ ApplicationWindow {
         }
     }
 
+    DropArea {
+        id: folderDrop
+        objectName: "folderDrop"
+        anchors.fill: parent
+        z: 20
+        enabled: viewState.ready && !viewState.busy
+        onEntered: function(drag) {
+            drag.accepted = drag.hasUrls && (drag.supportedActions & Qt.CopyAction) !== 0
+        }
+        onDropped: function(drop) {
+            if (drop.hasUrls && (drop.supportedActions & Qt.CopyAction) !== 0) {
+                drop.accept(Qt.CopyAction)
+                api.enqueueFolders(drop.urls)
+            } else {
+                drop.accepted = false
+            }
+        }
+
+        Rectangle {
+            anchors.fill: parent
+            anchors.margins: 5
+            visible: folderDrop.containsDrag
+            radius: 9
+            color: "#b51e1e1e"
+            border.color: accent
+            border.width: 2
+            Heading {
+                anchors.centerIn: parent
+                text: "Ordner zur Warteschlange hinzufügen"
+            }
+        }
+    }
+
     SplitView {
         id: split
         objectName: "columns"
@@ -382,14 +415,24 @@ ApplicationWindow {
                         Action { text: "Alle prüfen"; Accessible.name: "Alle Ordner prüfen"; enabled: viewState.ready; onClicked: api.checkFolders("") }
                     }
                     Toggle {
+                        objectName: "includeSubfolders"
+                        text: "Unterordner mit einbeziehen"
+                        Layout.fillWidth: true
+                        checked: settings.include_subfolders
+                        onToggled: api.setSetting("include_subfolders", checked)
+                    }
+                    Toggle {
+                        objectName: "createOutputSubfolder"
                         text: "Unterordner für fertige Transkripte erstellen?"
                         Layout.fillWidth: true
+                        enabled: !settings.include_subfolders
                         checked: settings.create_output_subfolder
                         onToggled: api.setSetting("create_output_subfolder", checked)
                     }
                     Field {
+                        objectName: "outputSubfolderName"
                         Layout.fillWidth: true
-                        visible: settings.create_output_subfolder
+                        visible: settings.create_output_subfolder && !settings.include_subfolders
                         text: settings.output_subfolder || ""
                         Accessible.name: "Name des Unterordners"
                         placeholderText: "_FERTIGGESTELLT"
@@ -592,6 +635,11 @@ ApplicationWindow {
                     }
                     Rectangle { Layout.fillWidth: true; height: 1; color: line }
                     Copy { text: "Warteschlange  " + (viewState.waiting || 0); Layout.fillWidth: true }
+                    Muted {
+                        text: viewState.dropMessage || "Ordner für eine einmalige Transkription hier ablegen."
+                        color: viewState.dropError ? warningColor : muted
+                        Layout.fillWidth: true
+                    }
                 }
             }
         }

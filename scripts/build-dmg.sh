@@ -26,8 +26,9 @@ Voraussetzung ist ein Mac mit Apple Silicon und macOS $minimum oder neuer.
 
 1. VoxDrop in den Programme-Ordner ziehen und dort öffnen.
 2. Unter Modell auf „Modelle herunterladen“ klicken.
-3. Einen Eingangsordner hinzufügen, die Ordnerüberwachung einschalten und
-   den Dienst starten. Für SMB muss die Freigabe vorher eingehängt sein.
+3. Für eine einmalige Transkription Ordner ins Fenster ziehen. Für die
+   laufende Überwachung Ordner hinzufügen, die Ordnerüberwachung einschalten
+   und den Dienst starten. Für SMB muss die Freigabe vorher eingehängt sein.
 
 Der einmalige Modell-Download benötigt Internet. Die Transkription und
 Sprecherzuordnung erfolgen anschließend lokal auf dem Mac.

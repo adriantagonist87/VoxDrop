@@ -1,6 +1,6 @@
 [project]
 name = "voxdrop-windows"
-version = "1.1.0"
+version = "1.2.0"
 requires-python = ">=3.12,<3.13"
 dependencies = [
     "accelerate==1.15.0",

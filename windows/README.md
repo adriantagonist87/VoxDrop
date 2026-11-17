@@ -6,8 +6,10 @@ VoxDrop überwacht mehrere Ordner und transkribiert neue Audio- und Videodateien
 
 1. Die ZIP vollständig in einen lokalen Ordner entpacken und dort **VoxDrop.exe** öffnen.
 2. Beim ersten Start lädt VoxDrop die Python- und CUDA-Laufzeit für das Benutzerkonto. Dafür braucht der PC Internet und freien Speicherplatz. Das Fenster öffnet sich nach der Einrichtung.
-3. Unter **Modell** die gewünschten Modelle herunterladen. Anschließend lokale Ordner, Netzlaufwerke oder UNC-Pfade wie **\\Server\Freigabe\Aufnahmen** hinzufügen. SMB-URLs wie **smb://Server/Freigabe/Aufnahmen** werden ebenfalls akzeptiert. Windows verwaltet die Anmeldedaten der Freigabe.
-4. **Ordnerüberwachung aktiv** einschalten und **Dienst starten** wählen.
+3. Unter **Modell** die gewünschten Modelle herunterladen.
+4. Für eine einmalige Transkription Ordner ins Fenster ziehen. Für die laufende Überwachung lokale Ordner, Netzlaufwerke oder UNC-Pfade wie **\\Server\Freigabe\Aufnahmen** hinzufügen und **Ordnerüberwachung aktiv** sowie **Dienst starten** wählen. SMB-URLs wie **smb://Server/Freigabe/Aufnahmen** werden ebenfalls akzeptiert. Windows verwaltet die Anmeldedaten der Freigabe.
+
+Bei abgelegten Ordnern und bei aktiver Option **Unterordner mit einbeziehen** speichert VoxDrop die TXT-Dateien direkt neben den Aufnahmen. Die Originaldateien bleiben an ihrem Platz.
 
 Voraussetzungen sind Windows 11 x64, ein NVIDIA-Treiber für CUDA 12.8 und eine RTX 5060 mit 8 GB VRAM oder eine leistungsfähigere kompatible RTX-Karte. Die Laufzeit verwendet die Microsoft Visual C++ Redistributable für x64. Falls diese auf dem PC fehlt, lässt sie sich separat installieren. [Microsoft Visual C++ Redistributable](https://learn.microsoft.com/cpp/windows/latest-supported-vc-redist)
 

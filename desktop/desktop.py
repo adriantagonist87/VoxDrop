@@ -7,7 +7,7 @@ from pathlib import Path
 
 from controller import LOGO, PROFILE, Controller
 from PySide6.QtCore import Qt, QUrl
-from PySide6.QtGui import QFont, QFontDatabase, QIcon
+from PySide6.QtGui import QFont, QFontDatabase, QIcon, QWindow
 from PySide6.QtNetwork import QLocalServer, QLocalSocket
 from PySide6.QtQml import QQmlApplicationEngine
 from PySide6.QtQuickControls2 import QQuickStyle
@@ -22,7 +22,8 @@ def create_app(argv):
     app = QApplication(argv)
     app.setApplicationName("VoxDrop")
     app.setOrganizationName("VoxDrop")
-    app.setWindowIcon(QIcon(str(LOGO)))
+    if sys.platform != "darwin":
+        app.setWindowIcon(QIcon(str(LOGO)))
     app.setQuitOnLastWindowClosed(False)
     app.styleHints().setColorScheme(Qt.ColorScheme.Dark)
     QQuickStyle.setStyle("Basic")
@@ -67,9 +68,18 @@ def main():
         return 1
 
     def show():
-        window.showNormal()
+        if window.visibility() == QWindow.Visibility.Minimized:
+            window.showNormal()
+        else:
+            window.show()
         window.raise_()
         window.requestActivate()
+
+    def reopen(state):
+        if state == Qt.ApplicationState.ApplicationActive and (
+            not window.isVisible() or window.visibility() == QWindow.Visibility.Minimized
+        ):
+            show()
 
     def activate_existing():
         while server.hasPendingConnections():
@@ -86,6 +96,8 @@ def main():
 
     server.newConnection.connect(activate_existing)
     controller.windowRequested.connect(show)
+    if sys.platform == "darwin":
+        app.applicationStateChanged.connect(reopen)
     if not background or not controller.hasTray():
         window.show()
     controller.start(background)

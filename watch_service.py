@@ -51,6 +51,7 @@ from voxdrop import (
 
 STARTUP_RETRY_DELAYS = (10, 30, 60)
 SMB_PROBE_TIMEOUT = 8
+RECURSIVE_SCAN_TIMEOUT = 120
 
 JOBS_TABLE = """
 CREATE TABLE {name} (
@@ -184,16 +185,25 @@ def read_settings(path):
             raise ValueError("Ein Ordnerpfad ist mehrfach eingetragen.")
         for folder in paths:
             validate_folder_path(folder)
+        recursive = values.get("include_subfolders", False)
+        if type(recursive) is not bool:
+            raise ValueError(
+                "Unterordner einbeziehen muss ein- oder ausgeschaltet sein."
+            )
         create = values.get("create_output_subfolder", False)
         if type(create) is not bool:
             raise ValueError("Unterordner erstellen muss ein- oder ausgeschaltet sein.")
+        create = create and not recursive
         name = values.get("output_subfolder", "_FERTIGGESTELLT")
         if create:
             validate_subfolder(name)
         elif not isinstance(name, str):
             name = "_FERTIGGESTELLT"
         settings.update(
-            folders=paths, create_output_subfolder=create, output_subfolder=name
+            folders=paths,
+            include_subfolders=recursive,
+            create_output_subfolder=create,
+            output_subfolder=name,
         )
     else:
         for name in ("input_dir", "completed_dir"):
@@ -255,7 +265,7 @@ def folder_profile(settings, path):
 
 
 def output_folder(source, settings):
-    if not settings["create_output_subfolder"]:
+    if settings.get("include_subfolders") or not settings["create_output_subfolder"]:
         return source
     name = settings["output_subfolder"]
     validate_subfolder(name)
@@ -383,8 +393,77 @@ def verify_writable(folder):
         ) from error
 
 
+def is_scan_directory(metadata, device):
+    return (
+        stat.S_ISDIR(metadata.st_mode)
+        and not is_reparse_point(metadata)
+        and metadata.st_dev == device
+    )
+
+
+def verify_source_directory(root, parent):
+    if not parent.is_relative_to(root):
+        raise OSError(f"Ordner liegt außerhalb des überwachten Pfads: {parent}")
+    device = root.stat().st_dev
+    for name in parent.relative_to(root).parts:
+        root /= name
+        if name.startswith(".") or not is_scan_directory(root.lstat(), device):
+            raise OSError(f"Unterordner ist kein regulärer Ordner am Quellpfad: {root}")
+
+
+def media_versions(incoming, recursive):
+    versions = []
+    warnings = []
+    pending = [incoming]
+    device = incoming.stat().st_dev if recursive else None
+    while pending:
+        folder = pending.pop()
+        try:
+            if folder != incoming and not is_scan_directory(folder.lstat(), device):
+                continue
+            with os.scandir(folder) as entries:
+                for entry in entries:
+                    if entry.name.startswith("."):
+                        continue
+                    try:
+                        if recursive and entry.is_dir(follow_symlinks=False):
+                            pending.append(Path(entry.path))
+                        elif Path(entry.name).suffix.lower() in MEDIA_EXTENSIONS:
+                            metadata = entry.stat(follow_symlinks=False)
+                            if (
+                                stat.S_ISREG(metadata.st_mode)
+                                and not is_reparse_point(metadata)
+                                and metadata.st_size
+                            ):
+                                versions.append(
+                                    (entry.path, metadata.st_size, metadata.st_mtime_ns)
+                                )
+                    except FileNotFoundError:
+                        continue
+                    except OSError as error:
+                        if not recursive:
+                            raise
+                        warnings.append(str(error))
+        except OSError as error:
+            if folder == incoming:
+                raise
+            if not isinstance(error, FileNotFoundError):
+                warnings.append(str(error))
+    warning = None
+    if warnings:
+        warning = f"Ein Teil der Unterordner konnte nicht geprüft werden: {warnings[0]}"
+        if len(warnings) > 1:
+            warning += f" (+{len(warnings) - 1} weitere Fehler)"
+    return versions, warning
+
+
 def inspect_folders(settings):
     incoming, completed = active_folders(settings)
+    recursive = bool(settings.get("include_subfolders") and settings.get("watch_path"))
+    if recursive and (parent := settings.get("source_parent")):
+        parent = Path(parent)
+        verify_source_directory(incoming, parent)
+        incoming = completed = parent
     if settings.get("watch_path") and settings.get("probe_write", True):
         verify_writable(incoming)
         if completed != incoming and completed.is_dir():
@@ -394,25 +473,9 @@ def inspect_folders(settings):
             if folder.is_dir():
                 with os.scandir(folder) as entries:
                     next(entries, None)
-        return str(incoming), str(completed), []
-    versions = []
-    with os.scandir(incoming) as entries:
-        for entry in entries:
-            path = Path(entry.path)
-            if path.name.startswith(".") or path.suffix.lower() not in MEDIA_EXTENSIONS:
-                continue
-            try:
-                metadata = entry.stat(follow_symlinks=False)
-            except FileNotFoundError:
-                continue
-            if (
-                not stat.S_ISREG(metadata.st_mode)
-                or is_reparse_point(metadata)
-                or not metadata.st_size
-            ):
-                continue
-            versions.append((entry.path, metadata.st_size, metadata.st_mtime_ns))
-    return str(incoming), str(completed), versions
+        return str(incoming), str(completed), [], None
+    versions, warning = media_versions(incoming, recursive)
+    return str(incoming), str(completed), versions, warning
 
 
 def inspect_folders_with_deadline(settings):
@@ -429,12 +492,14 @@ def inspect_folders_with_deadline(settings):
             input=json.dumps(settings),
             capture_output=True,
             encoding="utf-8",
-            timeout=SMB_PROBE_TIMEOUT,
+            timeout=RECURSIVE_SCAN_TIMEOUT
+            if settings.get("include_subfolders") and settings["monitoring"]
+            else SMB_PROBE_TIMEOUT,
             check=True,
             **process_options(),
         )
     except subprocess.TimeoutExpired as error:
-        raise OSError("Zeitlimit beim Zugriff auf die SMB-Ordner erreicht.") from error
+        raise OSError("Zeitlimit bei der Ordnerprüfung erreicht.") from error
     except subprocess.CalledProcessError as error:
         detail = error.stderr.strip().removeprefix("Fehler: ")
         raise OSError(detail or "SMB-Ordnerprüfung fehlgeschlagen.") from error
@@ -442,7 +507,7 @@ def inspect_folders_with_deadline(settings):
 
 
 def scan(db, settings, now=None, *, inspect=inspect_folders):
-    _, completed, versions = inspect(settings)
+    _, completed, versions, warning = inspect(settings)
     if not settings["monitoring"]:
         service_state(db, "paused")
         return
@@ -454,6 +519,11 @@ def scan(db, settings, now=None, *, inspect=inspect_folders):
     )
     with db:
         for candidate in versions:
+            destination = (
+                str(Path(candidate[0]).parent)
+                if settings.get("include_subfolders")
+                else completed
+            )
             db.execute(
                 """UPDATE jobs SET state='superseded', updated=?
                 WHERE source=? AND origin_job_id IS NULL AND state IN ('seen','ready') AND attempt=0
@@ -465,7 +535,7 @@ def scan(db, settings, now=None, *, inspect=inspect_folders):
                 SELECT ?,?,?,?,?,?,? WHERE NOT EXISTS (
                     SELECT 1 FROM jobs WHERE source=? AND size=? AND mtime_ns=? AND origin_job_id IS NULL
                 )""",
-                (*candidate, str(completed), snapshot, now, now, *candidate),
+                (*candidate, destination, snapshot, now, now, *candidate),
             )
             db.execute(
                 """UPDATE jobs SET state='seen', detected=?, updated=?
@@ -478,6 +548,87 @@ def scan(db, settings, now=None, *, inspect=inspect_folders):
                 (now, *candidate, now - settings["interval_seconds"]),
             )
     service_state(db, "active")
+    return warning
+
+
+def enqueue_folders(db, settings, folders):
+    """Queue fixed file versions without subscribing to their directories."""
+    queued = skipped = 0
+    pending = False
+    warnings = []
+    for folder in dict.fromkeys(folders):
+        source_settings = {
+            **folder_profile(settings, folder),
+            "monitoring": True,
+            "include_subfolders": True,
+            "create_output_subfolder": False,
+            "probe_write": False,
+        }
+        try:
+            validate_folder_path(folder)
+            root, _, versions, warning = inspect_folders_with_deadline(source_settings)
+        except (OSError, ValueError) as error:
+            warnings.append(f"{folder}: {error}")
+            continue
+        if warning:
+            warnings.append(f"{folder}: {warning}")
+
+        now = time.time()
+        with db:
+            db.execute("BEGIN IMMEDIATE")
+            for candidate in versions:
+                source = candidate[0]
+                parent = str(Path(source).parent)
+                previous = db.execute(
+                    """SELECT * FROM jobs WHERE origin_job_id IS NULL
+                    AND source=? AND size=? AND mtime_ns=?""",
+                    candidate,
+                ).fetchone()
+                if previous and previous["state"] == "done":
+                    skipped += 1
+                    continue
+
+                original = json.loads(previous["settings"]) if previous else {}
+                profile = folder_profile(settings, root)
+                active = previous and previous["state"] in (
+                    "copying", "transcribing", "exporting"
+                )
+                if previous and (active or previous["text_hash"]):
+                    profile = original
+                if previous and previous["publication_started"] and moves_media(original):
+                    warnings.append(f"Archivexport bereits begonnen: {source}")
+                    continue
+                if previous and original.get("folder_drop") and (
+                    active or previous["state"] == "ready"
+                ):
+                    skipped += 1
+                    pending = True
+                    continue
+                profile.update(
+                    watch_path=root,
+                    folder_drop=True,
+                    include_subfolders=True,
+                    create_output_subfolder=False,
+                    move_media=False,
+                )
+                snapshot = json.dumps(profile, ensure_ascii=False)
+                if previous:
+                    db.execute(
+                        """UPDATE jobs SET completed_dir=?,settings=?,updated=?,
+                        state=?,error=NULL WHERE id=?""",
+                        (
+                            parent, snapshot, now,
+                            previous["state"] if active else "ready", previous["id"],
+                        ),
+                    )
+                else:
+                    db.execute(
+                        """INSERT INTO jobs(source,size,mtime_ns,completed_dir,settings,
+                        detected,updated,state) VALUES (?,?,?,?,?,?,?,'ready')""",
+                        (*candidate, parent, snapshot, now, now),
+                    )
+                queued += 1
+    return {"queued": queued, "skipped": skipped, "pending": pending, "warnings": warnings}
 
 
 @lru_cache(maxsize=1)
@@ -566,7 +717,9 @@ def targets(job):
 
 
 def moves_media(settings):
-    return not settings.get("watch_path") or settings.get("move_media", False)
+    return not settings.get("include_subfolders") and (
+        not settings.get("watch_path") or settings.get("move_media", False)
+    )
 
 
 def matches(path, expected):
@@ -702,15 +855,26 @@ def publish_text_exclusive(transcript, text, expected):
             temporary.unlink(missing_ok=True)
 
 
+def reserve_archive_export(db, job):
+    if job["publication_started"]:
+        return job
+    media, text = targets(job)
+    occupied = os.path.lexists(media) or os.path.lexists(text)
+    with db:
+        db.execute("BEGIN IMMEDIATE")
+        latest = db.execute("SELECT * FROM jobs WHERE id=?", (job["id"],)).fetchone()
+        if json.loads(latest["settings"]).get("folder_drop"):
+            return latest
+        if occupied:
+            raise FileExistsError("Medium oder TXT existiert bereits im Zielordner.")
+        db.execute("UPDATE jobs SET publication_started=1 WHERE id=?", (job["id"],))
+    return db.execute("SELECT * FROM jobs WHERE id=?", (job["id"],)).fetchone()
+
+
 def publish_job(db, job, transcript, staged, *, text_first=False):
     source = Path(job["source"])
     media, text = targets(job)
     directory = retirement_dir(db, job)
-    if not job["publication_started"]:
-        if os.path.lexists(media) or os.path.lexists(text):
-            raise FileExistsError("Medium oder TXT existiert bereits im Zielordner.")
-        with db:
-            db.execute("UPDATE jobs SET publication_started=1 WHERE id=?", (job["id"],))
     if not os.path.lexists(source):
         if matches(media, job["media_hash"]) and matches(text, job["text_hash"]):
             finish_retirement(directory, source, job["media_hash"])
@@ -781,14 +945,14 @@ def publish_transcript_only(db, job, transcript):
 
 
 def job_folders(job, settings):
+    parent = Path(job["source"]).parent
     if job["origin_job_id"] is not None:
-        parent = Path(job["source"]).parent
         completed = Path(job["completed_dir"])
         if parent == completed:
             return probe_job_paths(
                 {"watch_path": str(parent), "create_output_subfolder": False}
             )
-        incoming, output, _ = inspect_folders_with_deadline(
+        incoming, output, _, _ = inspect_folders_with_deadline(
             {
                 "input_dir": str(parent),
                 "completed_dir": str(completed),
@@ -799,41 +963,86 @@ def job_folders(job, settings):
         )
         return Path(incoming), Path(output)
     return (
-        probe_job_paths(settings)
+        probe_job_paths(settings, parent=parent)
         if settings.get("watch_path")
         else active_folders(settings)
     )
 
 
+def keep_transcript_beside_source(db, job, settings, config):
+    parent = str(Path(job["source"]).parent)
+    if config is None or parent == job["completed_dir"]:
+        return job
+    if not read_settings(config).get("include_subfolders"):
+        return job
+    if job["publication_started"]:
+        raise FileExistsError(
+            "Ein früherer Export wurde bereits begonnen. Wähle „Neu transkribieren“."
+        )
+    settings.update(
+        include_subfolders=True, create_output_subfolder=False, move_media=False
+    )
+    if job["origin_job_id"] is None and not settings.get("watch_path"):
+        settings["watch_path"] = settings["input_dir"]
+    with db:
+        db.execute(
+            """UPDATE jobs SET completed_dir=?, settings=?
+            WHERE id=? AND settings=? AND publication_started=0""",
+            (parent, json.dumps(settings, ensure_ascii=False), job["id"], job["settings"]),
+        )
+    return db.execute("SELECT * FROM jobs WHERE id=?", (job["id"],)).fetchone()
+
+
 def next_job(
-    db, state, engine=run_transcription, *, available_only=False, allow_automatic=True
+    db,
+    state,
+    engine=run_transcription,
+    *,
+    available_only=False,
+    allow_automatic=True,
+    config=None,
 ):
     selection = (
-        """AND (origin_job_id IS NOT NULL OR
+        """AND (origin_job_id IS NOT NULL OR json_extract(settings,'$.folder_drop')=1 OR
         COALESCE(json_extract(settings,'$.watch_path'),json_extract(settings,'$.input_dir'))
         IN (SELECT path FROM folder_status WHERE available=1))"""
         if available_only
         else ""
     )
     if not allow_automatic:
-        selection = "AND origin_job_id IS NOT NULL"
+        selection = "AND (origin_job_id IS NOT NULL OR json_extract(settings,'$.folder_drop')=1)"
     job = db.execute(
         f"SELECT * FROM jobs WHERE state='ready' {selection} ORDER BY detected, id LIMIT 1"
     ).fetchone()
     if job is None:
         return False
     settings = json.loads(job["settings"])
+    try:
+        job = keep_transcript_beside_source(db, job, settings, config)
+    except FileExistsError as error:
+        error_state(db, job["id"], "blocked", str(error))
+        return True
+    settings = json.loads(job["settings"])
     watch_path = settings.get("watch_path")
     manual = job["origin_job_id"] is not None
-    if watch_path and settings["create_output_subfolder"]:
+    if (
+        watch_path
+        and settings["create_output_subfolder"]
+        and not settings.get("include_subfolders")
+    ):
         settings["move_media"] = True
     if manual:
         incoming, completed = Path(job["source"]).parent, Path(job["completed_dir"])
     elif available_only or watch_path:
         try:
-            incoming, completed = probe_job_paths(settings)
+            incoming, completed = probe_job_paths(
+                settings, parent=Path(job["source"]).parent
+            )
         except (OSError, ValueError) as error:
-            record_folder(db, watch_path or settings["input_dir"], str(error))
+            if settings.get("include_subfolders"):
+                error_state(db, job["id"], "failed", str(error))
+            else:
+                record_folder(db, watch_path or settings["input_dir"], str(error))
             return True
     else:
         incoming, completed = active_folders(settings)
@@ -856,8 +1065,8 @@ def next_job(
     with db:
         claimed = db.execute(
             """UPDATE jobs SET state=?, attempt=attempt+1, started=?, updated=?, finished=NULL,
-            error=NULL, settings=? WHERE id=? AND state='ready'""",
-            (phase, now, now, json.dumps(settings, ensure_ascii=False), job_id),
+            error=NULL, settings=? WHERE id=? AND state='ready' AND settings=?""",
+            (phase, now, now, json.dumps(settings, ensure_ascii=False), job_id, job["settings"]),
         ).rowcount
     if not claimed:
         return False
@@ -951,11 +1160,23 @@ def next_job(
                         ),
                     )
             job = db.execute("SELECT * FROM jobs WHERE id=?", (job_id,)).fetchone()
-        resolved = job_folders(job, settings)
-        if resolved != (incoming, completed):
+        job = db.execute("SELECT * FROM jobs WHERE id=?", (job_id,)).fetchone()
+        settings = json.loads(job["settings"])
+        job = keep_transcript_beside_source(db, job, settings, config)
+        settings = json.loads(job["settings"])
+        completed = Path(job["completed_dir"])
+        if job_folders(job, settings) != (incoming, completed):
             raise OSError(
                 "Die Auftragsordner haben sich während der Verarbeitung geändert."
             )
+        if not manual and moves_media(settings):
+            job = reserve_archive_export(db, job)
+            settings = json.loads(job["settings"])
+            completed = Path(job["completed_dir"])
+            if settings.get("folder_drop") and job_folders(job, settings) != (
+                incoming, completed
+            ):
+                raise OSError("Der Quellordner des abgelegten Auftrags hat sich geändert.")
         if not manual and moves_media(settings):
             if watch_path:
                 completed.mkdir(exist_ok=True)
@@ -1061,7 +1282,7 @@ def retranscribe(db, job_id, settings):
     media, metadata = available[0]
 
     destination = Path(job["completed_dir"])
-    if not destination.is_dir():
+    if settings.get("include_subfolders") or not destination.is_dir():
         destination = media.parent
     profile = {**settings, "original_media_hash": job["media_hash"]}
     origin = job["origin_job_id"] or job_id
@@ -1149,7 +1370,7 @@ def scan_once(db, settings):
     return True
 
 
-def record_folder(db, path, error=None):
+def record_folder(db, path, error=None, *, partial=False):
     incident = uuid.uuid4().hex if error is not None else None
     with db:
         db.execute(
@@ -1158,16 +1379,17 @@ def record_folder(db, path, error=None):
                 error=excluded.error,
                 incident=CASE WHEN excluded.available THEN NULL
                               ELSE COALESCE(folder_status.incident,excluded.incident) END""",
-            (path, time.time(), error is None, error, incident),
+            (path, time.time(), error is None or partial, error, incident),
         )
 
 
-def probe_job_paths(settings):
-    incoming, completed, _ = inspect_folders_with_deadline(
+def probe_job_paths(settings, *, parent=None):
+    incoming, completed, _, _ = inspect_folders_with_deadline(
         {
             **settings,
             "monitoring": False,
             "probe_write": False,
+            "source_parent": str(parent) if parent is not None else None,
         }
     )
     return Path(incoming), Path(completed)
@@ -1198,7 +1420,7 @@ def probe_pending_folders(db, settings, deadlines, retries):
                 path = checking[task]
                 delay = settings["interval_seconds"]
                 try:
-                    scan(
+                    warning = scan(
                         db,
                         folder_profile(settings, path),
                         inspect=lambda _, result=task: result.result(),
@@ -1209,7 +1431,7 @@ def probe_pending_folders(db, settings, deadlines, retries):
                         retries.setdefault(path, iter(STARTUP_RETRY_DELAYS)), delay
                     )
                 else:
-                    record_folder(db, path)
+                    record_folder(db, path, warning, partial=warning is not None)
                     retries[path] = iter(())
                 deadlines[path] = time.monotonic() + delay
     active = set(paths)
@@ -1262,7 +1484,7 @@ def poll_config(db, config, stop, connected, multiple=None):
                         else:
                             # Recheck changed settings before accepting new jobs.
                             db.execute(
-                                "UPDATE folder_status SET available=0 WHERE path=? AND error IS NULL",
+                                "UPDATE folder_status SET available=0 WHERE path=?",
                                 (row["path"],),
                             )
                 folder_deadlines.clear()
@@ -1342,6 +1564,7 @@ def run(state, config, *, once):
                     state,
                     available_only=multiple.is_set(),
                     allow_automatic=available,
+                    config=config,
                 )
             except (OSError, ValueError) as error:
                 service_state(db, "unavailable", str(error))
@@ -1356,6 +1579,7 @@ def run(state, config, *, once):
                         state,
                         available_only=multiple.is_set(),
                         allow_automatic=connected.is_set(),
+                        config=config,
                     ):
                         continue
                 except (OSError, ValueError) as error:
@@ -1451,6 +1675,7 @@ def main(argv=None):
     rerun.add_argument("job_id", type=int)
     rerun.add_argument("config", type=Path)
     commands.add_parser("clear-history")
+    commands.add_parser("enqueue-folders").add_argument("config", type=Path)
     args = cli.parse_args(argv)
     try:
         if args.command == "prepare-app-data":
@@ -1501,7 +1726,7 @@ def main(argv=None):
                             )
                 print(json.dumps(checks, ensure_ascii=False))
                 return 0
-            incoming, completed, _ = inspect_folders_with_deadline(settings)
+            incoming, completed, _, _ = inspect_folders_with_deadline(settings)
             print(f"Eingang: {incoming}\nFertiggestellt: {completed}")
             return 0
         if args.command == "inspect-folders":
@@ -1535,7 +1760,17 @@ def main(argv=None):
                 login_agent.update(args.mode == "on", definition)
             return 0
         with closing(database(state)) as db:
-            if args.command == "retry":
+            if args.command == "enqueue-folders":
+                settings = read_settings(args.config)
+                folders = json.loads(args.config.read_text(encoding="utf-8")).get(
+                    "dropped_folders"
+                )
+                if not isinstance(folders, list) or not all(
+                    isinstance(folder, str) for folder in folders
+                ):
+                    raise ValueError("Eine Liste abgelegter Ordner ist erforderlich.")
+                print(json.dumps(enqueue_folders(db, settings, folders), ensure_ascii=True))
+            elif args.command == "retry":
                 retry(db, args.job_id)
             elif args.command == "retranscribe":
                 print(retranscribe(db, args.job_id, read_settings(args.config)))

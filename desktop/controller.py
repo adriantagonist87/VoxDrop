@@ -45,6 +45,8 @@ CONFIG = PROFILE / "config.json"
 DESKTOP_LOG = PROFILE / "service/desktop.log"
 GPU = "metal" if sys.platform == "darwin" else "cuda"
 GPU_NAME = {"metal": "Apple-GPU (Metal)", "cuda": "NVIDIA-GPU (CUDA)"}
+TRAY_CONNECTED = "#199d61"
+TRAY_DISCONNECTED = "#e14945"
 
 MODELS = {
     "qwen3-asr-1.7b": "Qwen3-ASR 1.7B",
@@ -67,6 +69,7 @@ STATES = {
 }
 DEFAULTS = {
     "folders": [],
+    "include_subfolders": False,
     "create_output_subfolder": False,
     "output_subfolder": "_FERTIGGESTELLT",
     "interval_seconds": 30,
@@ -87,6 +90,8 @@ def read_settings():
     saved = json.loads(CONFIG.read_text(encoding="utf-8"))
     if "folders" not in saved and (path := saved.get("input_dir")):
         saved["folders"] = [path]
+    if saved.get("include_subfolders"):
+        saved["create_output_subfolder"] = False
     return {**DEFAULTS, **saved}
 
 
@@ -306,6 +311,8 @@ class Controller(QObject):
         self.downloading = False
         self.message = ""
         self.message_error = False
+        self.drop_message = ""
+        self.drop_error = False
         self.refreshing = False
         self.checking = False
         self.next_probe = 0
@@ -351,6 +358,8 @@ class Controller(QObject):
             "serviceError": service.get("error") or "",
             "current": current,
             "waiting": self.snapshot.get("waiting", 0),
+            "dropMessage": self.drop_message,
+            "dropError": self.drop_error,
             "checked": checked,
             "warnings": [
                 checked[path]
@@ -500,7 +509,11 @@ class Controller(QObject):
     @Slot(str, "QVariant")
     def setSetting(self, key, value):
         if key in DEFAULTS and key != "folders":
+            if key == "create_output_subfolder" and self.draft["include_subfolders"]:
+                return
             self.draft[key] = value
+            if key == "include_subfolders" and value:
+                self.draft["create_output_subfolder"] = False
             self.changed.emit()
 
     @Slot()
@@ -538,6 +551,74 @@ class Controller(QObject):
             "folders": [path.strip() for path in self.paths if path.strip()],
             "output_subfolder": self.draft["output_subfolder"].strip(),
         }
+
+    @Slot("QVariantList")
+    def enqueueFolders(self, urls):
+        if not self.ready or self.busy:
+            return
+        files = [url if isinstance(url, QUrl) else QUrl(url) for url in urls]
+        paths = [url.toLocalFile() for url in files if url.isLocalFile()]
+        if not paths or not self.models_present():
+            self.drop_message = (
+                "Lade zuerst die Modelle für die gewählte Konfiguration herunter."
+                if paths
+                else "Lege einen Ordner aus dem Dateimanager ab."
+            )
+            self.drop_error = True
+            self.changed.emit()
+            return
+
+        settings = {
+            **self.draft,
+            "folders": [],
+            "monitoring": False,
+            "include_subfolders": True,
+            "create_output_subfolder": False,
+            "dropped_folders": paths,
+        }
+        self.busy = True
+        self.drop_message = "Ordner werden für die Warteschlange durchsucht …"
+        self.drop_error = False
+        self.changed.emit()
+
+        def queue():
+            result = with_settings(
+                settings, lambda file: json.loads(command("enqueue-folders", file))
+            )
+            if result["queued"] or result["pending"]:
+                if not CONFIG.exists():
+                    save_settings(DEFAULTS)
+                command("start", CONFIG)
+            return result
+
+        def queued(result, error):
+            self.busy = False
+            if error:
+                self.drop_message, self.drop_error = error, True
+            else:
+                count, skipped = result["queued"], result["skipped"]
+                parts = []
+                if count:
+                    parts.append(
+                        "1 Aufnahme eingereiht."
+                        if count == 1 else f"{count} Aufnahmen eingereiht."
+                    )
+                if skipped:
+                    parts.append(
+                        "1 Aufnahme war bereits erfasst."
+                        if skipped == 1 else f"{skipped} Aufnahmen waren bereits erfasst."
+                    )
+                warnings = result["warnings"]
+                if warnings:
+                    parts.append(warnings[0])
+                    if len(warnings) > 1:
+                        parts.append(f"Weitere Meldungen: {len(warnings) - 1}.")
+                self.drop_message = "\n".join(parts) or "Keine Mediendateien gefunden."
+                self.drop_error = bool(warnings)
+            self.changed.emit()
+            self.refresh()
+
+        self.submit(queue, queued)
 
     @Slot(bool)
     def save(self, start):
@@ -711,7 +792,7 @@ class Controller(QObject):
     def init_tray(self):
         if self.preview or not QSystemTrayIcon.isSystemTrayAvailable():
             return
-        self.tray = QSystemTrayIcon(waveform("#ad2828"), self)
+        self.tray = QSystemTrayIcon(waveform(TRAY_DISCONNECTED), self)
         self.menu = QMenu()
         self.status_action = self.menu.addAction("VoxDrop")
         self.status_action.setEnabled(False)
@@ -735,7 +816,9 @@ class Controller(QObject):
     def update_status(self):
         if self.tray:
             paths = [self.folder_status(path) for path in self.paths if path.strip()]
-            available = bool(paths) and all(path.get("available") for path in paths)
+            available = bool(paths) and all(
+                path.get("available") and not path.get("error") for path in paths
+            )
             label = (
                 "Alle Ordner verfügbar"
                 if available
@@ -743,7 +826,7 @@ class Controller(QObject):
             )
             self.status_action.setText(label)
             self.tray.setToolTip(f"VoxDrop – {label}")
-            self.tray.setIcon(waveform("#13904f" if available else "#ad2828"))
+            self.tray.setIcon(waveform(TRAY_CONNECTED if available else TRAY_DISCONNECTED))
             running = self.snapshot.get("running")
             self.monitor_action.setText(
                 (

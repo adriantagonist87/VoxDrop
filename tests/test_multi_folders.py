@@ -1,5 +1,6 @@
 import errno
 import json
+import os
 import tempfile
 import unittest
 from contextlib import closing
@@ -8,6 +9,7 @@ from unittest.mock import Mock, patch
 
 from watch_service import (
     database,
+    enqueue_folders,
     initialise,
     inspect_folders,
     next_job,
@@ -15,6 +17,7 @@ from watch_service import (
     read_settings,
     recover,
     rename_exclusive,
+    reserve_archive_export,
     retry,
 )
 
@@ -36,12 +39,13 @@ class MultiFolderTests(unittest.TestCase):
         self.deadlines = {}
         self.retries = {}
 
-    def settings(self, *, subfolder=False):
+    def settings(self, *, subfolder=False, recursive=False):
         config = self.root / "config.json"
         config.write_text(
             json.dumps(
                 {
                     "folders": [str(self.missing), str(self.first), str(self.second)],
+                    "include_subfolders": recursive,
                     "create_output_subfolder": subfolder,
                     "output_subfolder": "_FERTIGGESTELLT",
                     "monitoring": True,
@@ -272,3 +276,182 @@ class MultiFolderTests(unittest.TestCase):
                 next_job(self.db, self.state, self.engine, available_only=True)
             )
         self.engine.assert_called_once()
+
+    def test_recursive_scan_exports_each_transcript_beside_its_media(self):
+        lesson = self.first / "Schulung" / "Modul"
+        lesson.mkdir(parents=True)
+        outside = self.root / "Extern"
+        outside.mkdir()
+        (outside / "Extern.wav").write_bytes(b"outside")
+        (lesson / "Verweis").symlink_to(outside, target_is_directory=True)
+        (lesson / "Link.wav").symlink_to(outside / "Extern.wav")
+        sources = {
+            self.first / "Video.wav": b"root",
+            lesson / "Video.wav": b"lesson",
+            self.second / "Video.wav": b"other",
+        }
+        for source, content in sources.items():
+            source.write_bytes(content)
+
+        self.scan(self.settings(), 100)
+        self.assertIsNone(
+            self.db.execute(
+                "SELECT 1 FROM jobs WHERE source=?", (str(lesson / "Video.wav"),)
+            ).fetchone()
+        )
+        settings = self.settings(subfolder=True, recursive=True)
+        self.assertFalse(settings["create_output_subfolder"])
+        self.scan(settings, 130)
+        self.scan(settings, 160)
+        with patch(
+            "watch_service.inspect_folders_with_deadline", side_effect=inspect_folders
+        ):
+            for _ in sources:
+                self.assertTrue(
+                    next_job(self.db, self.state, self.engine, available_only=True)
+                )
+            self.scan(settings, 190)
+            self.assertFalse(
+                next_job(self.db, self.state, self.engine, available_only=True)
+            )
+        for source, content in sources.items():
+            self.assertEqual(source.read_bytes(), content)
+            self.assertEqual(source.with_suffix(".txt").read_text(), "Testtranskript\n")
+            self.assertFalse((source.parent / "_FERTIGGESTELLT").exists())
+        self.assertFalse((outside / "Extern.txt").exists())
+        self.assertFalse((lesson / "Link.txt").exists())
+        self.assertEqual(self.engine.call_count, len(sources))
+
+    def test_unreadable_subfolder_leaves_readable_siblings_eligible(self):
+        inaccessible = self.first / "Gesperrt"
+        readable = self.first / "Erreichbar"
+        for folder in (inaccessible, readable):
+            folder.mkdir()
+            (folder / "Modul.wav").write_bytes(b"media")
+        scandir = os.scandir
+
+        def check_access(path):
+            if path == inaccessible:
+                raise PermissionError(errno.EACCES, "Zugriff verweigert", path)
+            return scandir(path)
+
+        settings = self.settings(recursive=True)
+        with patch("watch_service.os.scandir", side_effect=check_access):
+            self.scan(settings, 100)
+            self.scan(settings, 130)
+        row = self.db.execute(
+            "SELECT available,error FROM folder_status WHERE path=?", (str(self.first),)
+        ).fetchone()
+        self.assertEqual(row["available"], 1)
+        self.assertIn(str(inaccessible), row["error"])
+        with patch(
+            "watch_service.inspect_folders_with_deadline", side_effect=inspect_folders
+        ):
+            self.assertTrue(
+                next_job(self.db, self.state, self.engine, available_only=True)
+            )
+        self.assertTrue((readable / "Modul.txt").is_file())
+        self.assertFalse((inaccessible / "Modul.txt").exists())
+
+    def test_enabling_recursive_mode_retargets_active_and_queued_archive_jobs(self):
+        sources = [self.first / "Teil 1.wav", self.first / "Teil 2.wav"]
+        for source in sources:
+            source.write_bytes(b"media")
+        settings = self.settings(subfolder=True)
+        self.scan(settings, 100)
+        self.scan(settings, 130)
+
+        def enable_recursion(*args, **kwargs):
+            self.settings(subfolder=True, recursive=True)
+            return self.engine(*args, **kwargs)
+
+        config = self.root / "config.json"
+        with patch(
+            "watch_service.inspect_folders_with_deadline", side_effect=inspect_folders
+        ):
+            self.assertTrue(
+                next_job(
+                    self.db, self.state, enable_recursion, available_only=True, config=config
+                )
+            )
+            self.assertTrue(
+                next_job(
+                    self.db, self.state, self.engine, available_only=True, config=config
+                )
+            )
+        for source in sources:
+            self.assertEqual(source.read_bytes(), b"media")
+            self.assertEqual(source.with_suffix(".txt").read_text(), "Testtranskript\n")
+        self.assertFalse((self.first / "_FERTIGGESTELLT").exists())
+        self.assertEqual(self.engine.call_count, 2)
+
+    def test_dropped_folders_run_once_when_monitoring_is_paused(self):
+        dropped = self.root / "Schulungen"
+        nested = dropped / "Kurs" / "Modul"
+        nested.mkdir(parents=True)
+        source = nested / "Lektion.wav"
+        source.write_bytes(b"media")
+        settings = self.settings(subfolder=True)
+        settings["monitoring"] = False
+        config = self.root / "config.json"
+        before = config.read_bytes()
+        with patch(
+            "watch_service.inspect_folders_with_deadline", side_effect=inspect_folders
+        ):
+            result = enqueue_folders(self.db, settings, [str(dropped), str(nested)])
+            self.assertEqual((result["queued"], result["skipped"]), (1, 1))
+            self.assertTrue(result["pending"])
+            self.assertFalse(result["warnings"])
+            self.assertTrue(
+                next_job(
+                    self.db, self.state, self.engine,
+                    available_only=True, allow_automatic=False,
+                )
+            )
+            (nested / "Später.wav").write_bytes(b"later")
+            self.scan(settings, 160)
+            self.assertFalse(
+                next_job(
+                    self.db, self.state, self.engine,
+                    available_only=True, allow_automatic=False,
+                )
+            )
+        self.assertEqual(config.read_bytes(), before)
+        self.assertEqual(source.read_bytes(), b"media")
+        self.assertEqual(source.with_suffix(".txt").read_text(), "Testtranskript\n")
+        self.assertFalse((nested / "Später.txt").exists())
+        self.assertFalse((nested / "_FERTIGGESTELLT").exists())
+
+    def test_folder_drop_preempts_archive_before_publication(self):
+        archive = self.settings(subfolder=True)
+        queued = self.first / "Wartend.wav"
+        active = self.first / "Aktiv.wav"
+        for source in (queued, active):
+            source.write_bytes(b"media")
+        self.scan(archive, 100)
+        self.scan(archive, 130)
+
+        def drop_before_export(db, job):
+            report = enqueue_folders(db, archive, [str(self.first)])
+            self.assertEqual(report["queued"], 2)
+            return reserve_archive_export(db, job)
+
+        with (
+            patch("watch_service.inspect_folders_with_deadline", side_effect=inspect_folders),
+            patch("watch_service.reserve_archive_export", side_effect=drop_before_export) as reserve,
+        ):
+            self.assertTrue(
+                next_job(self.db, self.state, self.engine, available_only=True)
+            )
+            self.assertTrue(
+                next_job(
+                    self.db, self.state, self.engine,
+                    available_only=True, allow_automatic=False,
+                )
+            )
+            reserve.assert_called_once()
+        for source in (queued, active):
+            self.assertEqual(source.read_bytes(), b"media")
+            self.assertEqual(source.with_suffix(".txt").read_text(), "Testtranskript\n")
+        self.assertFalse((self.first / "_FERTIGGESTELLT").exists())
+        self.assertEqual(self.db.execute("SELECT count(*) FROM jobs").fetchone()[0], 2)
