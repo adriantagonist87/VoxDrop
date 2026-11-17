@@ -480,6 +480,18 @@ ApplicationWindow {
                         visible: viewState.downloading
                         indeterminate: true
                     }
+                    Muted {
+                        Layout.fillWidth: true
+                        visible: viewState.waitingForNetwork
+                        color: warningColor
+                        text: "Warte auf Windows-Netzwerkfreigabe. Bestätige den Firewall-Dialog selbst. Der Download wird automatisch erneut geprüft."
+                    }
+                    Action {
+                        Layout.fillWidth: true
+                        visible: viewState.waitingForNetwork
+                        text: "Warten abbrechen"
+                        onClicked: api.cancelNetworkWait()
+                    }
                     RowLayout {
                         Layout.fillWidth: true
                         Copy { text: "Sprache"; Layout.fillWidth: true }

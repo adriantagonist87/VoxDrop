@@ -8,9 +8,11 @@ from contextlib import suppress
 from datetime import datetime
 from pathlib import Path
 from tempfile import NamedTemporaryFile
+from threading import Event
 from time import time
 
 from model_storage import data_directory
+from network_wait import NetworkPermissionError, retry_network_permission
 from PySide6.QtCore import (
     Property,
     QObject,
@@ -121,18 +123,20 @@ def command(*arguments):
     )
     if result.returncode:
         details = result.stderr.strip() or result.stdout.strip()
-        if "Traceback (most recent call last):" in details:
+        traceback = "Traceback (most recent call last):" in details
+        if traceback or arguments[0] == "setup-models":
             with suppress(OSError):
                 DESKTOP_LOG.parent.mkdir(parents=True, exist_ok=True)
                 with DESKTOP_LOG.open("a", encoding="utf-8") as log:
                     log.write(
                         f"\n{datetime.now().isoformat(timespec='seconds')} · {arguments[0]}\n{details}\n"
                     )
+        if arguments[0] == "setup-models" and "WinError 10013" in details:
+            raise NetworkPermissionError(
+                "Für den Modell-Download wurde die Netzwerkverbindung verweigert (Windows-Fehler 10013)."
+            )
+        if traceback:
             if arguments[0] == "setup-models":
-                if "WinError 10013" in details:
-                    raise RuntimeError(
-                        "Für den Modell-Download wurde die Netzwerkverbindung verweigert (Windows-Fehler 10013)."
-                    )
                 raise RuntimeError("Die Modelle konnten nicht heruntergeladen werden.")
             raise RuntimeError(
                 "Der VoxDrop-Dienst konnte die Aktion nicht abschließen."
@@ -289,6 +293,7 @@ class Controller(QObject):
     historyChanged = Signal()
     detailsOpened = Signal()
     windowRequested = Signal()
+    networkPermissionChanged = Signal(bool)
     logo = Property(QUrl, lambda self: QUrl.fromLocalFile(str(LOGO)), constant=True)
     modelLocation = Property(str, lambda self: str(MODEL_DATA), constant=True)
     gpuName = Property(str, lambda self: GPU_NAME[GPU], constant=True)
@@ -312,6 +317,10 @@ class Controller(QObject):
         self.ready = preview
         self.busy = False
         self.downloading = False
+        self.waiting_for_network = False
+        self.network_cancel = Event()
+        self.networkPermissionChanged.connect(self.network_permission_changed)
+        QApplication.instance().aboutToQuit.connect(self.network_cancel.set)
         self.message = ""
         self.message_error = False
         self.drop_message = ""
@@ -354,6 +363,7 @@ class Controller(QObject):
             "ready": self.ready,
             "busy": self.busy,
             "downloading": self.downloading,
+            "waitingForNetwork": self.waiting_for_network,
             "running": running,
             "service": STATES.get(service.get("state"), "Aktiv")
             if running
@@ -456,11 +466,27 @@ class Controller(QObject):
         self.message_error = error
         self.changed.emit()
 
+    @Slot(bool)
+    def network_permission_changed(self, waiting):
+        self.waiting_for_network = waiting
+        if self.downloading:
+            self.notify(
+                "Warte auf Netzwerkfreigabe. Bestätige den angezeigten Windows-Firewall-Dialog selbst. "
+                "VoxDrop prüft den Download alle fünf Sekunden erneut."
+                if waiting else "Modelle werden heruntergeladen und geprüft …"
+            )
+
+    @Slot()
+    def cancelNetworkWait(self):
+        self.network_cancel.set()
+
     def action(self, operation, success, *, downloading=False):
         if self.busy or not self.ready:
             return
         self.busy = True
         self.downloading = downloading
+        if downloading:
+            self.network_cancel.clear()
         self.notify(
             "Modelle werden heruntergeladen und geprüft …" if downloading else ""
         )
@@ -735,7 +761,11 @@ class Controller(QObject):
                     f"Der Modellspeicher ist nicht beschreibbar: {MODEL_DATA}. "
                     "Installiere den VoxDrop-Ordner in einem beschreibbaren Programme-Ordner."
                 ) from error
-            return command("setup-models", "--model", selected, *flags)
+            return retry_network_permission(
+                lambda: command("setup-models", "--model", selected, *flags),
+                self.network_cancel,
+                self.networkPermissionChanged.emit,
+            )
 
         self.action(
             download,

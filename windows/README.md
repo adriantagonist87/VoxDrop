@@ -13,7 +13,11 @@ Bei abgelegten Ordnern und bei aktiver Option **Unterordner mit einbeziehen** sp
 
 Voraussetzungen sind Windows 11 x64, ein NVIDIA-Treiber für CUDA 12.8 und eine RTX 5060 mit 8 GB VRAM oder eine leistungsfähigere kompatible RTX-Karte. Die Laufzeit verwendet die Microsoft Visual C++ Redistributable für x64. Falls diese auf dem PC fehlt, lässt sie sich separat installieren. [Microsoft Visual C++ Redistributable](https://learn.microsoft.com/cpp/windows/latest-supported-vc-redist)
 
-Modelle, Einstellungen und Verlauf liegen unter **%LOCALAPPDATA%\VoxDrop**. Nach der Einrichtung arbeitet die Transkription lokal. **VoxDrop.exe --diagnose** zeigt an, ob CUDA, der Grafikspeicher und der Hintergrunddienst auf dem Windows-PC erkannt werden.
+Modelle samt Download-Cache liegen im Programmordner unter **Modelle**; Python, CUDA-Laufzeit und uv-Cache unter **Laufzeit**. Den gesamten VoxDrop-Ordner in einem beschreibbaren lokalen Verzeichnis ablegen. Bei Updates diese beiden Unterordner erhalten. Entfernen des Programmordners entfernt die dort gespeicherten großen Downloads. Einstellungen und Verlauf bleiben unter **%LOCALAPPDATA%\VoxDrop**. Alte Pakete haben ihre extern gespeicherten Modelle/Laufzeiten dort weiterhin; ein neues Paket entfernt diese Bestände nicht automatisch.
+
+Falls Windows nach einer Netzwerkfreigabe fragt, diese im Systemdialog selbst bestätigen. Bei der Ersteinrichtung wartet VoxDrop mit **Wiederholen/Abbrechen**; nach der Freigabe **Wiederholen** wählen. Details stehen unter **Laufzeit/setup.log**. Bei einem verweigerten Modelldownload (WinError 10013) wartet die Oberfläche und prüft den Download automatisch erneut. **Warten abbrechen** beendet diesen Versuch, ohne vollständige Downloads zu entfernen.
+
+Nach der Einrichtung arbeitet die Transkription lokal. **VoxDrop.exe --diagnose** zeigt an, ob CUDA, der Grafikspeicher und der Hintergrunddienst auf dem Windows-PC erkannt werden.
 
 ## Paket bauen
 

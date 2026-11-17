@@ -18,6 +18,16 @@ Arbeitsbranch `fix/windows-native-validation`, Ausgangspunkt `4162030e17dc0b6d9a
 
 Gemeinsame Änderungen dieses Branches sind **UNGEPRÜFT unter macOS**. Echte Anmeldung nach Windows-Neustart, erreichbare SMB-Freigabe und physischer Explorer-Drop sind zu diesem Zwischenstand noch **UNGEPRÜFT**.
 
+### Netzwerkfreigabe und nativer Paketstart
+
+Der native Erstbuild `0ea3316220443f8c80ee073066d12fc4df86348f` startete über die EXE zunächst mit einer Einrichtungsfehlermeldung. Der Nutzer bestätigte, dass Windows eine Firewall-Freigabe verlangte, und erteilte sie selbst. Ein protokollierter Wiederholungsversuch richtete danach Python und alle 128 gesperrten Abhängigkeiten erfolgreich unter `VoxDrop/Laufzeit` ein; der erneute normale EXE-Start öffnete die GUI. Das belegt eine notwendige Nutzerentscheidung in diesem Ablauf, aber identifiziert ohne Regel-/Ereignisprüfung keine allgemeine Firewall-Ursache für alle historischen 10013-Fehler.
+
+Der Launcher erhält deshalb eine protokollierte Einrichtung mit Hinweis auf eine mögliche Windows-Netzwerkfreigabe. Bei Fehlern bleibt ein Dialog mit „Wiederholen/Abbrechen“ offen; ein Wiederholungsversuch führt denselben uv-Download aus und verwendet vorhandene Downloads weiter. Das private Protokoll liegt unter `Laufzeit/setup.log`. Es werden keine Schutzregeln oder Zertifikatsprüfungen verändert.
+
+Der Modelldownload erkennt WinError 10013 jetzt auch in CLI-Ausgaben ohne Traceback. Im gemeinsamen GUI erscheint ein Wartezustand mit Hinweis und Abbruchmöglichkeit. Alle fünf Sekunden wird die tatsächliche Modellbereitstellung erneut versucht; erst ihr erfolgreicher Abschluss bestätigt die Verbindung und die vollständigen Modelle. Andere Fehler wie Prüfsummenfehler bleiben Fehler und lösen keine Firewall-Warteschleife aus. Die automatisierten Wiederholungs-/Abbruchprüfungen simulieren die Betriebssystemverweigerung, ändern keine Firewall und beweisen allein keine native Freigabeinteraktion.
+
+Nach diesen Ergänzungen bestanden 74 Tests in 11,561 s mit sieben expliziten Skips unter Windows. Ein vorheriger Fehlversuch des neuen Regressionstests importierte dieselbe Hilfsklasse unter zwei Modulnamen; dieser Testfehler wurde korrigiert. Der direkte erste Whisper-Messlauf verwendete versehentlich `auto` statt des Dienstwerts `auto-detect` und scheiterte erwartungsgemäß. Mit dem unveränderten Dienstwert bestand Whisper samt pyannote in 20,172 s bei 2,19 GiB Spitzen-RSS, GPU 98 % und GPU-Gesamtbelegung 6231 MiB; Originalhash unverändert. Dieses synthetische Mischsprachenbeispiel ist keine vollständige Sprach-/Sprecherqualitätsabnahme.
+
 ## Gemeinsamer Stand
 
 | Gegenstand | Stand |
