@@ -1,6 +1,7 @@
 """Lokaler Einzellauf mit Qwen oder Whisper und aTrain-Sprecherzuordnung."""
 
 import argparse
+import gc
 import os
 import sys
 import tempfile
@@ -308,20 +309,25 @@ def transcribe(
             measurements["speech_seconds"] = time.monotonic() - speech_started
         if not result["segments"]:
             raise ValueError("Das gewählte Modell hat keine Sprache erkannt.")
-        return assign_speakers(
-            audio,
-            result,
-            backend,
-            hardware,
-            speakers,
-            speaker_count,
-            report,
-            measurements,
-            dover_lap=dover_lap,
-        )
     finally:
         if whisper is not None:
             whisper.close()
+            whisper = None
+            gc.collect()
+
+    # The ASR weights must be gone before loading the speaker pipeline.
+    # Qwen already exits its isolated model process before returning above.
+    return assign_speakers(
+        audio,
+        result,
+        backend,
+        hardware,
+        speakers,
+        speaker_count,
+        report,
+        measurements,
+        dover_lap=dover_lap,
+    )
 
 
 def assign_speakers(

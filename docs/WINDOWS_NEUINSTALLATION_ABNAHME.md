@@ -35,6 +35,7 @@ Die tatsächlich verwendeten Eingangs-/Ausgabeordner und Einstellungen gemeinsam
 | Qwen und Forced Aligner | Echte produktive Aufnahme auf CUDA, Text und Zeitmarken inhaltlich prüfen | OFFEN |
 | Whisper | Dieselbe relevante Aufnahme als Vergleich, CUDA-Nutzung und Ergebnis prüfen | OFFEN |
 | Sprecherzuordnung und DOVER-Lap | Aus/ein, Sprecherzahl und drei Fusionsdurchgänge mit den verfügbaren Einstellungen prüfen | OFFEN |
+| Sequenzielle Modellbelegung | Qwen-ASR vor Aligner entladen, Qwen-Prozess vor Sprecherpipeline beendet; Whisper vor Sprecherpipeline entladen. DOVER-Durchgänge seriell mit einer Pipeline. VRAM an Übergängen und nach Abschluss/Abbruch messen; kein fortschreitender Restverbrauch über mehrere Aufträge | OFFEN |
 | Lange Stille | Mit/ohne Überspringen vergleichen; Textvollständigkeit und ursprüngliche Zeitmarken prüfen, WIN-05 gezielt nachstellen | OFFEN |
 | Regelmäßige Überwachung | Neu eintreffende Dateien über mehrere Intervalle und mehrere lokale/SMB-Ordner verarbeiten | OFFEN |
 | Noch laufende Kopie und Dateisperre | Keine vorzeitige Ausgabe; Verarbeitung bzw. Wiederholung nach Freigabe | OFFEN |

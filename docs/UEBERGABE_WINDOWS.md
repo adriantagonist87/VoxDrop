@@ -1,5 +1,9 @@
 # Übergabeauftrag für Codex auf dem Windows-PC
 
+## Nachtrag: Modellphasen zur VRAM-Begrenzung
+
+Der ausdrückliche Nutzerhinweis wurde im Code geprüft: Qwen/Aligner/anschließende Sprecherpipeline bereits getrennt; Whisper blieb dagegen bis nach der Sprecherzuordnung geladen. Whisper wird jetzt vor Eintritt in die Sprecherphase geschlossen und freigegeben. Neue Regressionen reproduzieren die alte Überlappung; 91 Fälle (84 erfolgreich, sieben Skips) bestanden. Native Paket-Gegenmessung wird mit exaktem neuem Code-SHA nachgetragen. Dies bleibt eine Vorprüfung; vollständige GitHub-Neuinstallation und Produktivabnahme finden wie beauftragt nach Rückkehr des Nutzers statt. Auf dem Mac insbesondere Whisper-Entladung/Metal und Sprecherphase gegenprüfen.
+
 ## Nächste Sitzung: verbindliche Endabnahme
 
 Nach Rückkehr des Nutzers die ausdrücklich beauftragte vollständige Deinstallation und Bereinigung durchführen, frisch direkt von GitHub installieren und sämtliche Funktionen über die normale Oberfläche im echten Arbeitsablauf prüfen. **Noch nicht durchgeführt; kein Abschluss allein anhand der Nachtprüfungen.** Konkreter Ablauf und vollständige Prüfliste: [Neuinstallations- und Produktivabnahme](WINDOWS_NEUINSTALLATION_ABNAHME.md). Vor der Bereinigung das passende GitHub-Asset mit Code-SHA und Prüfsumme festlegen; ältere stabile Assets enthalten die neuen Fixes nicht. Originalmedien und produktive Ergebnisse schützen, appbezogene Bestände einzeln zuordnen und Speicherfreigabe nachweisen. Sicherheitsdialoge und Anmeldung bedient der anwesende Nutzer. Nach bestandener Abnahme bleibt die neue Installation produktiv eingerichtet.

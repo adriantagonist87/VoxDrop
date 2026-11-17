@@ -181,6 +181,12 @@ Für einen isolierten Installationstest sind `--applications <Testverzeichnis>` 
 
 Windows-Inferenzprozesse erhalten TMPDIR/TEMP/TMP im lokalen `transcription-*`-Verzeichnis ihres Auftrags. Damit erfasst die Auftragsbereinigung auch Qwen-Numpy-Audiodaten und Bibliotheks-Temporärdateien nach Prozessabbrüchen. Der Test `test_transcription_temp.py` verwendet einen echten kleinen abstürzenden Kindprozess und bestätigt, dass keine dekodierte Audiodatei im sonstigen System-Temp liegen bleibt. Mac-Umgebung unverändert.
 
+## Modellphasen und GPU-Speicher
+
+Die großen Pipelinephasen werden nacheinander ausgeführt: Qwen-ASR → ASR-Gewichte freigeben → Forced Aligner → Qwen-Prozess beenden → Sprecherpipeline; alternativ Whisper → `close()` und Referenzfreigabe/Garbage Collection → Sprecherpipeline. Die drei DOVER-Lap-Durchgänge verwenden dieselbe Sprecherpipeline nacheinander. Der Auftragsprozess endet nach dem Export des Ergebnisses; der Dienst wartet darauf, bevor der nächste Auftrag beginnt. Dadurch bleiben keine Modelle zwischen Aufträgen absichtlich im GPU-Speicher.
+
+`tests/test_model_lifetime.py` prüft Whisper-Entladung vor Eintritt in die Sprecherphase sowie ASR- und Sprecherfehler. Hardwaremessungen müssen an den Phasengrenzen erfolgen und die übrige Desktop-GPU-Belegung berücksichtigen. Cachefreigabe allein ersetzt keine Freigabe der Modellreferenzen. Die echte Neuinstallationsabnahme umfasst beide ASR-Modelle, den Aligner, Sprecherzuordnung/DOVER und VRAM-Rückgang nach Abschluss/Abbruch.
+
 ## Geplante Windows-Endabnahme nach Bereinigung
 
 Für die nächste gemeinsame Sitzung ist die [Neuinstallations- und Produktivabnahme](WINDOWS_NEUINSTALLATION_ABNAHME.md) verbindlich beauftragt: zugeordnete App-/Testbestände samt Modellen, Laufzeiten, Profilen und eigenen Autostarteinträgen bereinigen; Speicherfreigabe belegen; ein passendes SHA-verifiziertes Paket direkt von GitHub vollständig frisch über EXE einrichten; alle Funktionen im tatsächlichen Produktivablauf einschließlich echtem Windows-Neustart prüfen. Keine übernommenen Modelle/Laufzeiten oder lokalen Quellüberlagerungen als saubere Neuinstallation zählen. Aktuell **GEPLANT, NICHT DURCHGEFÜHRT**.
