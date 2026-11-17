@@ -70,7 +70,7 @@ Die produktive Funktion kann bei geschlossenem Hauptfenster weiterlaufen. Die GU
 | Whisper | CTranslate2 4.9.0 aus `metal/`, Gerät `mps`, FP16 | CTranslate2 4.8.0, CUDA FP16, Torch-DLL-Pfad. **UNGEPRÜFT unter Windows**. |
 | Modelle | `qwen-models.json` | `qwen-windows-models.json`, eigener Format-/Dateibestand |
 | DOVER-Lap | Separate `.runtime/dover-packages`, NumPy-2-Anpassung im Bootstrap | Cross-Build übernimmt diese Packages und lädt den unbenutzten nativen DER-Import erst bei Bedarf. **UNGEPRÜFT unter Windows**. |
-| Anmeldestart | `login_agent.py`, `~/Library/LaunchAgents/local.voxdrop.worker.plist`, App-Launcher mit `--background` für Menüleiste und Dienst | HKCU `Software\Microsoft\Windows\CurrentVersion\Run`, Wert `VoxDrop`, EXE mit `--background`. **UNGEPRÜFT unter Windows**. |
+| Anmeldestart | `login_agent.py`, `~/Library/LaunchAgents/local.voxdrop.worker.plist`, App-Launcher mit `--background` für Menüleiste und Dienst | HKCU `Software\Microsoft\Windows\CurrentVersion\Run`, Wert `VoxDrop`, EXE mit `--background`. Registry-Adapter isoliert geprüft; echter Windows-Neustart weiterhin **UNGEPRÜFT**. |
 | SMB | Bereits eingehängte Freigabe, Auflösung über `/sbin/mount -t smbfs` | Netzlaufwerk, UNC oder SMB-URL mit Windows-Zugangsdaten. **UNGEPRÜFT unter Windows**. |
 | Dateischutz | `fcntl`, `O_NOFOLLOW`, exklusives `renamex_np` | `msvcrt`, Reparse-Point-Prüfung, Windows-Prozessflags und Umbenennung. **UNGEPRÜFT unter Windows**. |
 | RAM-Messung | Physischer Footprint über `proc_pid_rusage` | Prozess-RSS über psutil, **UNGEPRÜFT unter Windows**. Die Kennzahl ist plattformabhängig. |
@@ -193,6 +193,8 @@ Reproduzierbare native Ausfallprüfung mit vorhandenen Modellen und einer künst
 
 ```powershell
 & $py -BEs -Xutf8 scripts/check-windows-recovery.py '<App>' '<neues lokales Testverzeichnis>' '<kuenstliche.wav>'
+# Qwen einschließlich tatsächlicher dekodierter Audiodatei und Abbruchbereinigung:
+& $py -BEs -Xutf8 scripts/check-windows-recovery.py '<App>' '<anderes neues lokales Testverzeichnis>' '<kuenstliche.wav>' qwen3-asr-1.7b
 ```
 
 Der Prüfer verwendet ein neues isoliertes Profil, beendet ausschließlich dessen Testprozesse und prüft Dienst-Wiederanlauf, Inferenzbereinigung und Auftragswiederaufnahme. Er startet den PC nicht neu und verändert keinen produktiven Anmeldestart. Windows-CRT-Dateisperren können als errno 13 ohne WinError erscheinen; auch dieser I/O-Fehler erhält einen begrenzten Retry, ohne Rechte zu ändern.
@@ -212,7 +214,7 @@ Nachholen der **UNGEPRÜFTEN echten Windows-Neustartabnahme**, sobald eine passe
 3. Windows tatsächlich neu starten und normal anmelden. VoxDrop dabei nicht manuell öffnen. Sichtbarkeit im Infobereich, genau einen Supervisor/Dienst und die letzte Ordnerprüfung belegen.
 4. Erst nach diesem Nachweis eine neue künstliche Aufnahme ablegen; automatische Verarbeitung, TXT neben Original und unveränderten SHA-256 prüfen. Testregistrierung danach gezielt zurücknehmen und vorherige produktive Einstellungen erhalten.
 
-Der bisherige Registry-Test verwendet stattdessen nur einen temporären HKCU-Testschlüssel und verändert keinen produktiven Run-Wert. Die vorbereitete Prüfanleitung richtet auch keinen zukünftigen Startauftrag ein. Stand `2889268f52c9a69a42a3c4df38a0f029323ac9e8`: 87 Regressionen mit sieben expliziten Skips bestanden.
+Der bisherige Registry-Test verwendet stattdessen nur einen temporären HKCU-Testschlüssel und verändert keinen produktiven Run-Wert. Die vorbereitete Prüfanleitung richtet auch keinen zukünftigen Startauftrag ein. Finales Paket `bfd4e8ade80c2973cb77541571fa99a374977589`: 88 Regressionen mit sieben expliziten Skips bestanden. Der 1803,7-s-Überwachungstest auf `2889268f52c9a69a42a3c4df38a0f029323ac9e8` bestand mit 22 erfolgreichen CUDA-Aufträgen; der finale Qwen-Abbruchtest bestätigte Prozess- und temporäre Audiobereinigung sowie automatische Fertigstellung.
 
 Im Branch `fix/windows-native-validation` liegen heruntergeladene Modelle und Hugging-Face-Cache bei einer Windows-Paketinstallation unter `VoxDrop/Modelle`. `VoxDrop/Laufzeit` enthält Python, die virtuelle CUDA-Umgebung und den uv-Cache. Der gesamte entpackte Programmordner muss beschreibbar sein. Entfernen dieses Ordners entfernt diese großen Bestände; Konfiguration/Verlauf unter `%LOCALAPPDATA%/VoxDrop` bleiben erhalten. Ein Update ersetzt App-Dateien unter Erhalt von `Modelle` und `Laufzeit`. Ältere Pakete verwendeten externe Verzeichnisse; diese werden nicht stillschweigend gelöscht oder als migriert behauptet.
 
