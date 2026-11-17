@@ -2,7 +2,7 @@
 
 ## Nachtrag: Modellphasen zur VRAM-Begrenzung
 
-Der ausdrückliche Nutzerhinweis wurde im Code geprüft: Qwen/Aligner/anschließende Sprecherpipeline bereits getrennt; Whisper blieb dagegen bis nach der Sprecherzuordnung geladen. Whisper wird jetzt vor Eintritt in die Sprecherphase geschlossen und freigegeben. Neue Regressionen reproduzieren die alte Überlappung; 91 Fälle (84 erfolgreich, sieben Skips) bestanden. Native Paket-Gegenmessung wird mit exaktem neuem Code-SHA nachgetragen. Dies bleibt eine Vorprüfung; vollständige GitHub-Neuinstallation und Produktivabnahme finden wie beauftragt nach Rückkehr des Nutzers statt. Auf dem Mac insbesondere Whisper-Entladung/Metal und Sprecherphase gegenprüfen.
+Der ausdrückliche Nutzerhinweis wurde im Code geprüft: Qwen/Aligner/anschließende Sprecherpipeline bereits getrennt; Whisper blieb dagegen bis nach der Sprecherzuordnung geladen. Whisper wird jetzt vor Eintritt in die Sprecherphase geschlossen und freigegeben. Neue Regressionen reproduzieren die alte Überlappung; 91 Fälle (84 erfolgreich, sieben Skips) bestanden. Native Paket-Gegenmessung auf `dbfcf833ef80617929101e321decac3219e76291` bestanden: vor Sprecherladen 4055 → 1943 MiB GPU-Gesamtbelegung, 2112 MiB weniger bei gleicher Desktop-Baseline. Echte Qwen-/Whisper-/DOVER-CUDA-Läufe und erneuter EXE-Wiederanlauf bestanden; Qwen gab ASR/Aligner vor Sprecherladen bis zur Desktop-Baseline frei. Dies bleibt eine Vorprüfung; vollständige GitHub-Neuinstallation und Produktivabnahme finden wie beauftragt nach Rückkehr des Nutzers statt. Auf dem Mac insbesondere Whisper-Entladung/Metal und Sprecherphase gegenprüfen.
 
 ## Nächste Sitzung: verbindliche Endabnahme
 

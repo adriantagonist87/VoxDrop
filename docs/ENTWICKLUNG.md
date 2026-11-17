@@ -187,6 +187,15 @@ Die großen Pipelinephasen werden nacheinander ausgeführt: Qwen-ASR → ASR-Gew
 
 `tests/test_model_lifetime.py` prüft Whisper-Entladung vor Eintritt in die Sprecherphase sowie ASR- und Sprecherfehler. Hardwaremessungen müssen an den Phasengrenzen erfolgen und die übrige Desktop-GPU-Belegung berücksichtigen. Cachefreigabe allein ersetzt keine Freigabe der Modellreferenzen. Die echte Neuinstallationsabnahme umfasst beide ASR-Modelle, den Aligner, Sprecherzuordnung/DOVER und VRAM-Rückgang nach Abschluss/Abbruch.
 
+Reproduzierbare VRAM-Phasenmessung mit vorhandenen lokalen Modellen und synthetischer Aufnahme:
+
+```powershell
+& $py -BEs -Xutf8 scripts/check-windows-model-memory.py '<App>' '<kuenstliche.wav>' '<neuer Messordner>' --model large-v3-turbo
+& $py -BEs -Xutf8 scripts/check-windows-model-memory.py '<App>' '<kuenstliche.wav>' '<anderer neuer Messordner>' --model qwen3-asr-1.7b
+```
+
+Der Prüfer misst synchron vor/nach Whisper-Entladung und vor Sprecherladen bzw. nach Qwen-Prozessende, verwendet tatsächliche CUDA-/DOVER-Verarbeitung und prüft die Phasenreihenfolge. Er zeichnet GPU-Gesamtwerte inklusive Desktop auf, keinen isolierten Modellverbrauch und keinen lückenlosen Inferenzspitzenwert. Native Prüfungen auf `dbfcf833ef80617929101e321decac3219e76291` bestanden; Neuinstallation bleibt separat offen.
+
 ## Geplante Windows-Endabnahme nach Bereinigung
 
 Für die nächste gemeinsame Sitzung ist die [Neuinstallations- und Produktivabnahme](WINDOWS_NEUINSTALLATION_ABNAHME.md) verbindlich beauftragt: zugeordnete App-/Testbestände samt Modellen, Laufzeiten, Profilen und eigenen Autostarteinträgen bereinigen; Speicherfreigabe belegen; ein passendes SHA-verifiziertes Paket direkt von GitHub vollständig frisch über EXE einrichten; alle Funktionen im tatsächlichen Produktivablauf einschließlich echtem Windows-Neustart prüfen. Keine übernommenen Modelle/Laufzeiten oder lokalen Quellüberlagerungen als saubere Neuinstallation zählen. Aktuell **GEPLANT, NICHT DURCHGEFÜHRT**.
