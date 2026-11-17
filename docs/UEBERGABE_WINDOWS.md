@@ -1,5 +1,9 @@
 # Übergabeauftrag für Codex auf dem Windows-PC
 
+## Nächste Sitzung: verbindliche Endabnahme
+
+Nach Rückkehr des Nutzers die ausdrücklich beauftragte vollständige Deinstallation und Bereinigung durchführen, frisch direkt von GitHub installieren und sämtliche Funktionen über die normale Oberfläche im echten Arbeitsablauf prüfen. **Noch nicht durchgeführt; kein Abschluss allein anhand der Nachtprüfungen.** Konkreter Ablauf und vollständige Prüfliste: [Neuinstallations- und Produktivabnahme](WINDOWS_NEUINSTALLATION_ABNAHME.md). Vor der Bereinigung das passende GitHub-Asset mit Code-SHA und Prüfsumme festlegen; ältere stabile Assets enthalten die neuen Fixes nicht. Originalmedien und produktive Ergebnisse schützen, appbezogene Bestände einzeln zuordnen und Speicherfreigabe nachweisen. Sicherheitsdialoge und Anmeldung bedient der anwesende Nutzer. Nach bestandener Abnahme bleibt die neue Installation produktiv eingerichtet.
+
 ## Abschlussstatus und nächster Mac-Lauf
 
 Abschluss der Nachtprüfung am 18.11.2026: **Final geprüfter Paket-Code `bfd4e8ade80c2973cb77541571fa99a374977589`**. 88 Regressionen mit sieben Skips bestanden. EXE-Qwen-Abbruchtest: null verwaiste Inferenzprozesse, temporäres dekodiertes Audio im Auftragsordner anschließend entfernt, automatische Wiederaufnahme bis `done`, TXT und unveränderter Originalhash bestätigt. Der 1803,7-s-EXE-Dauertest auf `2889268f52c9a69a42a3c4df38a0f029323ac9e8` bestand mit 21 Whisper- und einem Qwen-Auftrag sowie erwarteten Fehler-/Kollisionsfällen. Registry-Adapter, normaler EXE-Start mit gespeicherter Pause/Überwachung, 100.000 Verlaufseinträge und 300 QML-/CLI-Aktualisierungen geprüft. Die genauen Reproduktionen, korrigierten Testtreiberfehler und Messwerte stehen im Projektstatus. Keine Schutzregeln oder produktiven Autostarteinträge verändert. Echter Neustart/Anmeldung, Sleep/Resume und wochenlange Echtzeit bleiben **UNGEPRÜFT**; konkrete Neustartanleitung steht in der Entwicklung.

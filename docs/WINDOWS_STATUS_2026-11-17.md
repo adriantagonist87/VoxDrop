@@ -2,6 +2,10 @@
 
 Dieser reine Dokumentationsstatus macht die Windows-Arbeit auf `main` sichtbar. Gemeinsame Codeänderungen bleiben im [Draft-PR #1](https://github.com/adriantagonist87/VoxDrop/pull/1) auf [fix/windows-native-validation](https://github.com/adriantagonist87/VoxDrop/tree/fix/windows-native-validation). Der freigegebene Release v1.3.1 und seine Assets wurden nicht überschrieben.
 
+## Verbindlicher nächster Abschlusstest
+
+Nutzerauftrag nach der Nachtprüfung: Nach Rückkehr des Nutzers vollständig deinstallieren und appbezogene Alt-/Testbestände bereinigen, Speicherfreigabe nachweisen, frisch direkt von GitHub installieren und sämtliche Funktionen 1:1 im produktiven Arbeitsablauf prüfen. **GEPLANT, noch nicht durchgeführt.** Die bisherige Abnahme ist damit eine Vorprüfung. Ein GitHub-Download mit den PR-Fixes muss bereitstehen; das alte stabile v1.3.1 enthält sie noch nicht. Konkreter Ablauf einschließlich Schutz bestehender Medien/Transkripte, frischer Downloads, echter GUI-/Ordner-/SMB-Bedienung, Windows-Neustart, Sleep/Resume und gewünschtem produktivem Endzustand: [verbindliche Neuinstallations-/Produktivabnahme im PR](https://github.com/adriantagonist87/VoxDrop/blob/fix/windows-native-validation/docs/WINDOWS_NEUINSTALLATION_ABNAHME.md).
+
 ## Exakte Prüfstände
 
 | Gegenstand | Vollständiger Commit |

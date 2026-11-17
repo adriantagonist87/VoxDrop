@@ -6,6 +6,10 @@ Stand vom 18. November 2026. Für jede Weiterentwicklung sind zusätzlich die Ar
 
 Zusätzlicher Speicherbefund nach Paket `2889268f52c9a69a42a3c4df38a0f029323ac9e8`: Ein echter isolierter Worker-Absturztest reproduziert temporäre dekodierte Audiodaten außerhalb des Auftragsverzeichnisses. Unter Windows erhalten Inferenzprozesse jetzt TMPDIR/TEMP/TMP innerhalb ihres `transcription-*`-Arbeitsverzeichnisses. Bei regulärem Fehler bereinigt der Elternprozess diesen Ordner; nach Dienstabbruch entfernt ihn die vorhandene sichere Wiederaufnahme. Ein kleiner echter Kindprozess mit hartem `os._exit` prüft Ablage und Bereinigung anhand synthetischer Bytes ohne Modelllauf oder persönliche Medien. Die alte Implementierung scheitert an dieser Regression. Die Mac-Umgebung bleibt unverändert; gemeinsame Datei weiter **UNGEPRÜFT unter macOS**.
 
+## Verbindlicher nächster Abschlusstest
+
+Der Nutzer hat für die nächste Sitzung nach seiner Rückkehr ausdrücklich vollständige Windows-Deinstallation/Bereinigung, frische Installation direkt von GitHub und anschließende 1:1-Abnahme sämtlicher Funktionen im Produktiveinsatz beauftragt. Diese Endabnahme ist **GEPLANT, NICHT DURCHGEFÜHRT**. Die bisherigen Nachtprüfungen bleiben Vorprüfungen. Bestandsaufnahme, Schutz vorhandener Medien/Transkripte, Nachweis der Speicherfreigabe, unveränderter GitHub-Download, frische Modell-/Laufzeiteinrichtung, echte Bedienung, Windows-Neustart und gewünschter produktiver Endzustand sind in der [Neuinstallations- und Produktivabnahme](WINDOWS_NEUINSTALLATION_ABNAHME.md) festgelegt. Der GitHub-Installationskandidat muss die PR-Korrekturen enthalten; das alte stabile v1.3.1-Asset enthält sie noch nicht.
+
 ## Windows-Arbeitsblock vom 17.11.2026
 
 ### Fortführung: unbeaufsichtigter Hintergrundbetrieb
