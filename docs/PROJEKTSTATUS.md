@@ -13,7 +13,7 @@ Stand vom 17. November 2026. Für jede Weiterentwicklung sind zusätzlich die Ar
 | Betriebsmodell | Eigenständige lokale macOS- und Windows-Apps, auch in verschiedenen Netzwerken |
 | Referenzbibliothek | aTrain `ea8a7057857220b4299c0ba0b2aaf6def2f35b87` |
 
-Die ursprüngliche Mac-Historie von v1.2.0 mit Code-Commit `19c8084193ec96717d878e6912334b3c28759c93` ist lokal unter `archive/macos-local-before-shared-github` erhalten. Die aktive Mac-Arbeitskopie verwendet `origin` zum gemeinsamen GitHub-Repository. Ihr `main` verfolgt `origin/main`. Neue Mac- und Windows-Arbeiten beginnen auf dieser gemeinsamen öffentlichen Historie. Plattformübergreifende Übergaben verwenden die vollständigen öffentlichen GitHub-SHAs. [Release 1.3.0](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.0)
+Die ursprüngliche Mac-Historie von v1.2.0 mit Code-Commit `19c8084193ec96717d878e6912334b3c28759c93` war zunächst lokal unter `archive/macos-local-before-shared-github` gesichert. Beim ausdrücklich beauftragten vollständigen Entfernen aller alten VoxDrop-Arbeitskopien am 17.11.2026 wurde auch dieser lokale Sicherungsbranch entfernt. Die aktive Mac-Arbeitskopie wurde anschließend frisch von GitHub geklont. Ihr `main` verfolgt `origin/main`. Neue Mac- und Windows-Arbeiten beginnen auf dieser gemeinsamen öffentlichen Historie. Plattformübergreifende Übergaben verwenden die vollständigen öffentlichen GitHub-SHAs. [Release 1.3.0](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.0)
 
 ### Git-Prüfung zu Beginn der Dokumentationsaufgabe
 
@@ -25,11 +25,24 @@ Die ursprüngliche Mac-Historie von v1.2.0 mit Code-Commit `19c8084193ec96717d87
 
 | Umgebung | Letzter geprüfter öffentlicher Commit | Prüfung und Ergebnis |
 | --- | --- | --- |
-| macOS, Apple Silicon | `abfd597b69dc04054557c9b4af661e3d9f973427` | v1.3.0 Build 22 auf diesem Mac installiert. Frischer Quell-Checkout, vollständig neuer Bootstrap, leeres Testprofil, echte Downloads von Qwen/Aligner/pyannote und Whisper erfolgreich. Beide ASR-Modelle auf Metal mit Sprecherzuordnung geprüft, Qwen zusätzlich mit drei DOVER-Lap-Durchgängen. Alle 58 automatisierten Tests unter macOS 27.2, arm64, Python 3.12.13 bestanden. |
+| macOS, Apple Silicon | `270e3af7ce96bfce8c5daf49236da2fa4d1d05be` (Implementierung unverändert gegenüber `abfd597b69dc04054557c9b4af661e3d9f973427`) | v1.3.0 Build 22 nach vollständigem Entfernen der alten Installation frisch von der öffentlichen GitHub-DMG installiert. Qwen/Aligner/pyannote und Whisper neu heruntergeladen; beide ASR-Modelle auf Metal mit Sprecherzuordnung geprüft, Qwen mit drei DOVER-Lap-Durchgängen. Echter Neustart, automatischer nativer App-/Dienststart und anschließende neue automatische Transkription erfolgreich. Alle 58 automatisierten Tests unter macOS 27.2, arm64, Python 3.12.13 bestanden. |
 | Windows 11 mit NVIDIA | **UNGEPRÜFT unter Windows**, noch kein bestätigter Test-Commit | Der Nutzer meldete eine funktionsgestörte Windows-Ausgabe. Der v1.3.0-Launcher wurde auf dem Mac als PE32+ x86-64 gebaut. ZIP und Lockfile wurden auf dem Mac geprüft. Ein nativer Windows-/CUDA-End-to-End-Test ist offen. |
 | Linux | **UNGEPRÜFT**, Zielport offen | Gemeinsame Qt-Oberfläche vorhanden. Backends, Plattformadapter, Einrichtung und Pakete sind auf macOS/Windows ausgerichtet. |
 
 Der macOS-Testbefehl war `MPLCONFIGDIR=<lokales Testverzeichnis> .runtime/aTrain/.venv/bin/python -m unittest discover -s tests`. Das Ergebnis war `Ran 58 tests … OK`. Dieser Testlauf prüft teilweise gemockte Abläufe. Die zusätzlichen GUI- und Modellprüfungen haben den jeweils unten angegebenen Umfang. Die Ersteinrichtung wurde in einem leeren Profil auf dem vorhandenen Mac geprüft. Die Prüfung auf einem physisch zweiten Mac ist offen.
+
+### Vollständige Neuinstallation aus dem GitHub-Download
+
+Am 17.11.2026 wurden auf Nutzerauftrag sämtliche zuvor erfassten VoxDrop-Installationen, Dienste, Profile, Modelle sowie Build- und Testarbeitskopien entfernt. Originalmedien und Transkripte auf SMB blieben erhalten. Erst danach wurden `main` bei `270e3af7ce96bfce8c5daf49236da2fa4d1d05be` und die öffentliche DMG v1.3.0 neu heruntergeladen.
+
+- Die DMG-Prüfsumme stimmte mit der veröffentlichten Prüfsummendatei und dem GitHub-Asset-Digest überein. Der gesamte Programmordner wurde über den Finder installiert; Fensterstart und Modellspeicher `VoxDrop/Modelle` wurden in der Oberfläche bestätigt.
+- Qwen3-ASR, Forced Aligner, pyannote und Whisper wurden über die unveränderte Modelleinrichtung der installierten App vollständig neu geladen. Modelle samt Cache belegten laut `du` rund 9,6 GiB im Programmordner.
+- Eine neue synthetische Sprachaufnahme von rund 41 Sekunden wurde mit Qwen auf Metal einschließlich drei DOVER-Lap-Durchgängen und mit Whisper auf Metal einschließlich einfacher Sprecherzuordnung verarbeitet. Beide Aufträge endeten erfolgreich. TXT-Dateien lagen neben den Aufnahmen; SHA-256-Vergleiche bestätigten unveränderte Originale.
+- 21 gebündelte Implementierungsdateien waren bytegleich mit dem frischen GitHub-Checkout. Die App-Signatur war nach Downloads und Transkriptionen weiterhin gültig. Alle 58 automatisierten Tests bestanden mit dem installierten Interpreter und dessen separatem DOVER-Paketpfad.
+- Ein tatsächlicher Mac-Neustart am 17.11.2026 um 19:12 Uhr und die anschließende Nutzeranmeldung wurden durchgeführt. `launchd` startete den nativen App-Launcher und den lokalen Verarbeitungsdienst automatisch. Ein vorübergehender Beobachter bestätigte beide laufenden Prozesse, ohne sie selbst zu starten, und legte erst danach eine neue Aufnahme im überwachten Ordner ab. Dieser Auftrag wurde automatisch mit Qwen auf Metal und drei DOVER-Lap-Durchgängen erfolgreich abgeschlossen. TXT neben Original und unveränderter Originalhash wurden erneut bestätigt. Die vorübergehenden Testregistrierungen wurden anschließend entfernt; der produktive Anmeldestart blieb aktiv.
+- Die einmalige Gatekeeper-Freigabe erfolgte durch den Nutzer. Nach dem Neustart war zusätzlich eine macOS-Freigabe für den Testordner unter „Dokumente“ erforderlich. Diese Systemfreigaben wurden nicht umgangen.
+
+Die Modell- und Neustartprüfungen verwendeten ausschließlich einen lokalen Ordner mit künstlichen Testaufnahmen. Zum Abschluss meldete der Dienst für den inzwischen konfigurierten SMB-Eingang einen verfügbaren Ordner ohne Fehler; Überwachung und Anmeldestart waren aktiv. Diese Ordnerkonfiguration wurde beim Abschluss erhalten. Dieser Test belegt eine neue Installation auf dem vorhandenen Mac; ein physisch zweiter Mac und Windows bleiben ungeprüft.
 
 ### Mac-Ersteinrichtung und Modellablage
 
@@ -54,7 +67,7 @@ Der macOS-Testbefehl war `MPLCONFIGDIR=<lokales Testverzeichnis> .runtime/aTrain
 | Verlauf, Duplikatschutz, Retry, Neutranskription und Veröffentlichung | Vorhandene automatisierte Tests auf macOS bestanden | **UNGEPRÜFT unter Windows** |
 | Lange Stille überspringen und Zeitrückrechnung | Vorhandene automatisierte Tests auf macOS bestanden | **UNGEPRÜFT unter Windows** |
 | Dock-Wiederöffnung und farbiges Menüleistensymbol | Cocoa-Probe für verstecktes/minimiertes Fenster und beide Statusfarben erfolgreich. Nutzer meldete anschließend funktionierende App. | Taskleisten-/Infobereichsverhalten **UNGEPRÜFT unter Windows** |
-| Anmeldestart | Registrierung auf App-Launcher mit `--background` umgestellt und übernommen. Neuer tatsächlicher Login mit v1.3.0 noch offen. | **UNGEPRÜFT unter Windows**, HKCU-Run-Anbindung implementiert |
+| Anmeldestart | Nativer App-Launcher mit `--background`: echter Neustart und Anmeldung nach vollständiger GitHub-Neuinstallation geprüft. App und Dienst starteten automatisch; neue Aufnahme wurde nach der einmaligen Ordnerfreigabe automatisch verarbeitet. | **UNGEPRÜFT unter Windows**, HKCU-Run-Anbindung implementiert |
 | Installationspaket | DMG-Prüfsumme, Signatur und Übereinstimmung zum installierten Build geprüft, ad hoc signiert | Auf dem Mac gebautes ZIP und öffentlicher Download geprüft, unsigniert. Installation **UNGEPRÜFT unter Windows**. |
 
 ## Offene Fehler und technische Lücken
