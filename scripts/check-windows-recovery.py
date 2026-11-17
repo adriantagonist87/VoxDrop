@@ -30,7 +30,8 @@ config.write_text(json.dumps(dict(folders=[str(incoming)],monitoring=True,
 env={**os.environ,'VOXDROP_PROFILE':str(profile)}
 subprocess.Popen([str(app/'VoxDrop.exe'),'--background'],env=env)
 state=profile/'service';dbfile=state/'jobs.sqlite3'
-python=app/'Laufzeit/runtime-fc8909c264e4/Scripts/python.exe'
+lock_hash=hashlib.sha256((app/'windows/uv.lock').read_bytes()).hexdigest()[:12]
+python=app/f'Laufzeit/runtime-{lock_hash}/Scripts/python.exe'
 engine=app/'Engine/watch_service.py'
 
 def service_process():
@@ -72,7 +73,7 @@ try:
     report['background_exe_started_service']=True
     service.kill();service.wait(5)
     recovered=wait_for(service_process,20)
-    report['gui_restarted_dead_service']=bool(recovered)
+    report['supervisor_restarted_dead_service']=bool(recovered)
     service=recovered or start_service()
     target=incoming/'Synthetic.wav';shutil.copyfile(audio,target)
     original=hashlib.sha256(target.read_bytes()).hexdigest()
@@ -86,7 +87,7 @@ try:
     for p in reversed(orphans):
         try:p.kill()
         except psutil.Error:pass
-    # Wait for the GUI watchdog, or explicitly restart the baseline worker.
+    # Wait for the supervisor, or explicitly restart the baseline worker.
     recovered=wait_for(service_process,12) or start_service()
     finished=wait_for(lambda: (r if (r:=job()) and r['state'] in ('done','failed','blocked') else None),45)
     report['interrupted_job_final_state']=finished['state'] if finished else (job() or {}).get('state')
@@ -107,3 +108,9 @@ finally:
         except psutil.Error:pass
     (root/'summary.json').write_text(json.dumps(report,indent=2),encoding='utf-8')
     print(json.dumps(report,indent=2),flush=True)
+
+raise SystemExit(not (report.get('background_exe_started_service') and
+    report.get('supervisor_restarted_dead_service') and
+    report.get('orphan_inference_processes_after_service_kill') == 0 and
+    report.get('interrupted_job_final_state') == 'done' and
+    report.get('original_unchanged') and report.get('txt_published')))
