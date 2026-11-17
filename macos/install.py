@@ -169,6 +169,14 @@ def install(source, applications, profile):
         if restart:
             start_service(app, profile, data)
         succeeded = True
+        if profile == native_profile:
+            try:
+                execute(
+                    "/usr/bin/xcrun", "swift",
+                    Path(__file__).with_name("UpdateDock.swift"), app, legacy,
+                )
+            except (OSError, subprocess.CalledProcessError):
+                print("Die bisherige Dock-Verknüpfung konnte nicht aktualisiert werden.")
         print(app)
         return app
     except Exception:
