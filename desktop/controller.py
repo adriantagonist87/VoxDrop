@@ -10,6 +10,7 @@ from pathlib import Path
 from tempfile import NamedTemporaryFile
 from time import time
 
+from model_storage import data_directory
 from PySide6.QtCore import (
     Property,
     QObject,
@@ -41,6 +42,7 @@ NATIVE_PROFILE = (
     else Path(os.environ.get("LOCALAPPDATA", Path.home() / ".local/share"))
 ) / "VoxDrop"
 PROFILE = Path(os.environ.get("VOXDROP_PROFILE", NATIVE_PROFILE))
+MODEL_DATA = data_directory(PROFILE, ROOT)
 CONFIG = PROFILE / "config.json"
 DESKTOP_LOG = PROFILE / "service/desktop.log"
 GPU = "metal" if sys.platform == "darwin" else "cuda"
@@ -108,7 +110,7 @@ def command(*arguments):
             "--state-dir",
             str(PROFILE / "service"),
             "--model-data",
-            str(PROFILE / "data"),
+            str(MODEL_DATA),
             *(str(value) for value in arguments),
         ],
         cwd=ENGINE,
@@ -288,6 +290,7 @@ class Controller(QObject):
     detailsOpened = Signal()
     windowRequested = Signal()
     logo = Property(QUrl, lambda self: QUrl.fromLocalFile(str(LOGO)), constant=True)
+    modelLocation = Property(str, lambda self: str(MODEL_DATA), constant=True)
     gpuName = Property(str, lambda self: GPU_NAME[GPU], constant=True)
     gpuValue = Property(str, lambda self: GPU, constant=True)
 
@@ -675,7 +678,7 @@ class Controller(QObject):
     def models_present(self):
         if self.preview:
             return True
-        model_root = PROFILE / "data/models"
+        model_root = MODEL_DATA / "models"
         selected = self.draft["model"]
         if selected == "large-v3-turbo":
             present = (model_root / selected / "model.bin").is_file()
@@ -710,8 +713,32 @@ class Controller(QObject):
     def downloadModels(self):
         selected = self.draft["model"]
         flags = [] if self.draft["speakers"] else ["--no-speakers"]
+
+        def download():
+            app = ROOT.parent.parent
+            if (
+                sys.platform == "darwin"
+                and PROFILE == NATIVE_PROFILE
+                and app.suffix == ".app"
+                and app.parent.name != "VoxDrop"
+            ):
+                raise RuntimeError(
+                    "Ziehe den gesamten Ordner „VoxDrop“ aus der DMG in den Programme-Ordner "
+                    "und öffne darin VoxDrop.app. Dort werden auch die Modelle gespeichert."
+                )
+            try:
+                MODEL_DATA.mkdir(parents=True, exist_ok=True)
+                with NamedTemporaryFile(dir=MODEL_DATA, prefix=".write-check-"):
+                    pass
+            except OSError as error:
+                raise RuntimeError(
+                    f"Der Modellspeicher ist nicht beschreibbar: {MODEL_DATA}. "
+                    "Installiere den VoxDrop-Ordner in einem beschreibbaren Programme-Ordner."
+                ) from error
+            return command("setup-models", "--model", selected, *flags)
+
         self.action(
-            lambda: command("setup-models", "--model", selected, *flags),
+            download,
             "Modelle sind einsatzbereit.",
             downloading=True,
         )

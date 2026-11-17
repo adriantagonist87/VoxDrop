@@ -4,7 +4,7 @@
 
 1. Lies diese Datei, `docs/PROJEKTSTATUS.md` und `docs/ENTWICKLUNG.md` vollständig. Für Windows-Arbeiten lies zusätzlich `docs/UEBERGABE_WINDOWS.md`. Beachte weitere `AGENTS.md` im betroffenen Verzeichnis und im eingebundenen Upstream-Projekt.
 2. Prüfe `git status --short --branch`, den aktuellen Commit, Branch und Remotes. Erhalte vorhandene Änderungen. Verwende für parallele Arbeiten einen eigenen Branch oder Worktree.
-3. Rufe bei verfügbarer GitHub-Verbindung `git fetch origin` auf und prüfe den Unterschied zu `origin/main` und zum relevanten Übergabebranch. Integriere Änderungen bewusst. Bei fehlender Verbindung dokumentiere den zuletzt bekannten Remote-Stand.
+3. Rufe bei verfügbarer GitHub-Verbindung `git fetch origin` auf und prüfe den Unterschied zu `origin/main`. `main` ist die gemeinsame geprüfte Basis. Neue Aufgaben beginnen auf diesem Stand. Integriere Änderungen bewusst. Bei fehlender Verbindung dokumentiere den zuletzt bekannten Remote-Stand.
 4. Lies die betroffenen Implementierungen und die bestehenden Tests. Trenne implementiertes Verhalten, Nutzermeldungen, Prüfungen auf dem Zielsystem und offene Annahmen im Projektstatus.
 
 ## Produkt und Architektur
@@ -23,6 +23,7 @@
 - Bei regulärer Überwachung ohne rekursive Option darf die aktivierte Zielunterordner-Option Aufnahme und Transkript gemeinsam in den gewählten Unterordner verschieben. Erhalte die vorhandenen Prüfungen, exklusiven Veröffentlichungen und Wiederanlaufpfade.
 - Bestehende Ergebnisse werden geschützt. Neutranskriptionen aus dem Verlauf erhalten eigene Ausgabedateien. Bewahre SQLite-Historie, Dateiversionsschutz und Wiederholbarkeit bei Fehlern.
 - Die Auftragsdatenbank und temporäre Arbeitskopien liegen lokal. SMB ist ein Medien-/Ergebnisordner. Verwende die am jeweiligen Betriebssystem bereits eingerichtete Freigabe und dessen Zugangsdatenverwaltung.
+- Die macOS-Distribution enthält den gemeinsamen Programmordner `VoxDrop` mit `VoxDrop.app` und dem später angelegten Modellspeicher `Modelle`. Modellgewichte und Download-Cache gehören in diesen Speicher. Erhalte bei Updates den vorhandenen Modellspeicher und die Benutzereinstellungen.
 
 ## Entwicklung und Prüfung auf beiden Systemen
 
@@ -41,6 +42,6 @@
 2. Aktualisiere `docs/ENTWICKLUNG.md` bei Änderungen an Architektur, Einrichtung, Start, Build, Tests, Abhängigkeiten oder Konfiguration. Pflege den Windows-Übergabeauftrag bei neuen Windows-Befunden.
 3. Dokumentiere je Fehler Reproduktion, betroffene Plattform und Version, beobachtete Ursache oder Hypothese, Änderung und nachweisbares Testergebnis. Markiere verbleibende Prüfungen.
 4. Verwende bei Prüfständen den tatsächlich getesteten Code-Commit. Bei reinen Dokumentationscommits bleibt der letzte funktional geprüfte Code-Commit bestehen. Neue Fixes erhalten den exakten getesteten SHA in einem anschließenden Statusupdate.
-5. Übergib den Branch, die Commits, betroffene Plattformen, Tests und offenen Punkte. Nutze vorhandene Nutzerautorisierungen für Push, Installation und Veröffentlichung. Führe die beauftragte Übergabe auf einem eigenen Branch aus.
+5. Übergib den Branch, die Commits, betroffene Plattformen, Tests und offenen Punkte. Nutze vorhandene Nutzerautorisierungen für Push, Installation und Veröffentlichung. Führe geprüfte Änderungen im beauftragten Umfang auf `main` zusammen.
 
 Gemeinsame Änderungen werden über GitHub-Commits und diese Dokumentation abgeglichen. Der nächste Codex-Lauf liest und prüft diesen Stand vor seiner Aufgabe.

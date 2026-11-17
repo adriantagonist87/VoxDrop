@@ -10,16 +10,17 @@ Das gemeinsame Repository ist `https://github.com/adriantagonist87/VoxDrop.git`.
 git clone https://github.com/adriantagonist87/VoxDrop.git
 cd VoxDrop
 git fetch origin
-git switch --track origin/docs/codex-macos-windows-handoff
+git switch main
 git status --short --branch
 git rev-parse HEAD
 ```
 
-Der Übergabebranch ist die Basis für den ersten Windows-Diagnosebranch. Nach seiner Integration starten neue Aufgaben auf dem dann aktuellen `origin/main`. Vorhandene Branches werden regulär ausgecheckt. In gemeinsam genutzten Arbeitskopien prüft Codex vor dem Wechsel lokale Änderungen.
+`main` ist die gemeinsame geprüfte Basis für macOS und Windows. Neue Aufgaben beginnen auf dem aktuellen `origin/main`. Vorhandene Branches werden regulär ausgecheckt. In gemeinsam genutzten Arbeitskopien prüft Codex vor dem Wechsel lokale Änderungen.
 
 ```sh
 git fetch origin
-git log --oneline --left-right HEAD...origin/main
+git switch main
+git merge --ff-only origin/main
 git switch -c fix/windows-start-diagnose
 ```
 
@@ -68,7 +69,7 @@ Die produktive Funktion kann bei geschlossenem Hauptfenster weiterlaufen. Die GU
 | Whisper | CTranslate2 4.9.0 aus `metal/`, Gerät `mps`, FP16 | CTranslate2 4.8.0, CUDA FP16, Torch-DLL-Pfad. **UNGEPRÜFT unter Windows**. |
 | Modelle | `qwen-models.json` | `qwen-windows-models.json`, eigener Format-/Dateibestand |
 | DOVER-Lap | Separate `.runtime/dover-packages`, NumPy-2-Anpassung im Bootstrap | Cross-Build übernimmt diese Packages und lädt den unbenutzten nativen DER-Import erst bei Bedarf. **UNGEPRÜFT unter Windows**. |
-| Anmeldestart | `login_agent.py`, `~/Library/LaunchAgents/local.voxdrop.worker.plist` | HKCU `Software\Microsoft\Windows\CurrentVersion\Run`, Wert `VoxDrop`, EXE mit `--background`. **UNGEPRÜFT unter Windows**. |
+| Anmeldestart | `login_agent.py`, `~/Library/LaunchAgents/local.voxdrop.worker.plist`, App-Launcher mit `--background` für Menüleiste und Dienst | HKCU `Software\Microsoft\Windows\CurrentVersion\Run`, Wert `VoxDrop`, EXE mit `--background`. **UNGEPRÜFT unter Windows**. |
 | SMB | Bereits eingehängte Freigabe, Auflösung über `/sbin/mount -t smbfs` | Netzlaufwerk, UNC oder SMB-URL mit Windows-Zugangsdaten. **UNGEPRÜFT unter Windows**. |
 | Dateischutz | `fcntl`, `O_NOFOLLOW`, exklusives `renamex_np` | `msvcrt`, Reparse-Point-Prüfung, Windows-Prozessflags und Umbenennung. **UNGEPRÜFT unter Windows**. |
 | RAM-Messung | Physischer Footprint über `proc_pid_rusage` | Prozess-RSS über psutil, **UNGEPRÜFT unter Windows**. Die Kennzahl ist plattformabhängig. |
@@ -78,14 +79,14 @@ Linux ist eine offene Portierungsaufgabe. Die aktuelle Hardwareauswahl und mehre
 
 ## Daten und Konfiguration
 
-Das Desktop-Standardprofil liegt unter `~/Library/Application Support/VoxDrop` beziehungsweise `%LOCALAPPDATA%\VoxDrop`. Ein für die GUI gesetztes `VOXDROP_PROFILE` wählt ein isoliertes Profil. CLI-Werkzeuge erhalten die Pfade ausdrücklich über `--state-dir`, `--model-data` oder `--data-dir`.
+Das Desktop-Standardprofil liegt unter `~/Library/Application Support/VoxDrop` beziehungsweise `%LOCALAPPDATA%\VoxDrop`. Unter macOS liegen in einer Ordnerinstallation Modellgewichte und Download-Cache im gemeinsamen Programmordner unter `VoxDrop/Modelle`. Einstellungen, Verlauf und temporäre Medien bleiben im Benutzerprofil. Ein für die GUI gesetztes `VOXDROP_PROFILE` wählt ein isoliertes Profil samt eigenem Modellspeicher. `VOXDROP_MODEL_DATA` kann für einen gezielten Installationstest einen separaten Modellspeicher wählen. CLI-Werkzeuge erhalten die Pfade ausdrücklich über `--state-dir`, `--model-data` oder `--data-dir`.
 
 | Pfad im Profil | Inhalt |
 | --- | --- |
 | `config.json` | Ordner und Verarbeitungseinstellungen |
 | `layout.ini` | Spaltenbreiten und weitere GUI-Einstellungen |
-| `data/models/` | Modellgewichte nach Setup |
-| `data/huggingface/` | Modell-Cache |
+| `data/models/` | Modellgewichte bei Windows und isolierten Profilen |
+| `data/huggingface/` | Modell-Cache bei Windows und isolierten Profilen |
 | `service/jobs.sqlite3` | Historie und Warteschlange, SQLite mit WAL |
 | `service/jobs/<id>/` | Temporäre Medien-/Transkript-Arbeitsdateien |
 | `service/service.log` | Dienstdiagnose |
@@ -97,7 +98,7 @@ Die zentrale Konfiguration enthält `folders`, `include_subfolders`, `create_out
 
 Abgelegte Ordner lösen einen einmaligen Scan aus und erzeugen persistente Aufträge mit `folder_drop` in ihren gespeicherten Einstellungen. Die dauerhafte Konfiguration behält ihre bisherigen Ordner. Für die Ablage gilt stets TXT neben Original. Bei rekursiver Überwachung sperrt die GUI den Zielunterordner, und der Dienst erzwingt dieselbe Regel. Versteckte Ordner, Symlinks/Reparse-Points und abweichende Dateisystemgeräte werden beim rekursiven Scan übersprungen.
 
-Modell-Downloads benötigen Internet. Die eigentliche Verarbeitung schaltet Hugging Face in den Offline-Modus. SMB-Verbindungen werden durch das Betriebssystem bereitgestellt.
+Modell-Downloads benötigen Internet. Die eigentliche Verarbeitung schaltet Hugging Face in den Offline-Modus. SMB-Verbindungen werden durch das Betriebssystem bereitgestellt. Die Mac-Installation legt Downloads unter `VoxDrop/Modelle/models` und `VoxDrop/Modelle/huggingface` ab. Beim beauftragten Update übernimmt `macos/install.py` die bisherigen Modelle aus dem Benutzerprofil und setzt dort einen Kompatibilitätsverweis auf den neuen Speicher.
 
 ## macOS einrichten und starten
 
@@ -146,13 +147,17 @@ sh scripts/build-app.sh
 codesign --verify --deep --strict .runtime/package/VoxDrop.app
 sh scripts/build-dmg.sh
 cd .runtime/package
-shasum -a 256 VoxDrop-1.2.0-macOS-arm64.dmg > VoxDrop-1.2.0-macOS-arm64.dmg.sha256
-shasum -a 256 -c VoxDrop-1.2.0-macOS-arm64.dmg.sha256
+shasum -a 256 VoxDrop-1.3.0-macOS-arm64.dmg > VoxDrop-1.3.0-macOS-arm64.dmg.sha256
+shasum -a 256 -c VoxDrop-1.3.0-macOS-arm64.dmg.sha256
 ```
 
-Für andere Versionen die aus `macos/Info.plist` erzeugten Dateinamen verwenden. Das DMG enthält App, Applications-Link und den aTrain-Quellstand. Die App ist ad hoc signiert. Der zugehörige Qt-/PySide-Quellcode wird als separates Release-Asset bereitgestellt.
+Für andere Versionen die aus `macos/Info.plist` erzeugten Dateinamen verwenden. Das DMG enthält den Programmordner `VoxDrop`, einen Applications-Link und den aTrain-Quellstand. Bei einer Neuinstallation wird der ganze VoxDrop-Ordner nach Programme gezogen. Bei einem manuellen Update wird die App innerhalb des bestehenden VoxDrop-Ordners ersetzt, sodass der Modellspeicher erhalten bleibt. Der zugehörige Qt-/PySide-Quellcode wird als separates Release-Asset bereitgestellt.
 
-Für ein beauftragtes Update laufende Aufträge abschließen lassen, GUI und vorhandenen Dienst geordnet beenden, Konfiguration/Historie erhalten, Bundle austauschen und App/Dienst wieder prüfen. `scripts/install-app.sh` ist eine historische Hilfe für lokale Modelle und Datenmigration. Die offene Einschränkung steht unter MAC-01 im Projektstatus. [Projektstatus](PROJEKTSTATUS.md)
+Die Distribution ist ad hoc signiert. Der Nutzer hat die Verwendung eines kostenpflichtigen Apple-Developer-Kontos abgelehnt. Auf einem neuen Mac gehört daher die einmalige Bestätigung unter „Systemeinstellungen → Datenschutz & Sicherheit → Dennoch öffnen“ zum Installationsablauf. [Apples Anleitung](https://support.apple.com/de-de/102445)
+
+Für ein beauftragtes Update aus der Entwicklungsumgebung dient `sh scripts/install-app.sh`. Das Script ruft den Installer `macos/install.py` auf. Er prüft das Bundle, beendet die eigenen App-/Dienstprozesse geordnet, wartet auf laufende Aufträge, übernimmt Modelle, erhält Konfiguration/Historie und aktualisiert eine vorhandene eigene Anmelderegistrierung. Danach lässt sich die ausgegebene App öffnen.
+
+Für einen isolierten Installationstest sind `--applications <Testverzeichnis>` und `--profile <Testprofil>` verfügbar. Zum Entfernen aller Modelle wird der gesamte installierte VoxDrop-Ordner gelöscht. Einstellungen, Verlauf und eine eingerichtete Anmelderegistrierung werden gesondert im Benutzerkonto verwaltet.
 
 ## Windows einrichten und starten
 
@@ -224,4 +229,4 @@ Ein nativer Windows-Buildweg ist als BUILD-01 offen. Änderungen am Windows-Code
 
 Nach relevanten Änderungen Projektstatus und betroffene Anleitung aktualisieren. Für Plattformtests jeweils den vollständigen getesteten Code-SHA erfassen. Die Lizenzhinweise und erforderlichen Quellcode-Assets bleiben Teil des Releaseumfangs. [Qt-Lizenzhinweise](../desktop/Qt-Lizenzen.md)
 
-Bei dieser Dokumentationsübergabe werden Branch und Dokumente veröffentlicht. Das bestehende Release bleibt auf dem funktional geprüften v1.2.0-Stand.
+Quellcode, gemeinsame Dokumentation und der geprüfte Mac-Build werden auf `main` zusammengeführt. Windows-Prüfstände bleiben nach tatsächlich durchgeführten Tests gekennzeichnet.

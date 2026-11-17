@@ -8,6 +8,19 @@ import login_agent
 
 
 class LoginAgentTests(unittest.TestCase):
+    def test_bundled_app_starts_menu_bar_and_worker_through_the_launcher(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            app = root / "VoxDrop/VoxDrop.app"
+            launcher = app / "Contents/MacOS/VoxDrop"
+            launcher.parent.mkdir(parents=True)
+            launcher.touch()
+            registration = login_agent.definition(
+                app / "Contents/Resources/Engine/watch_service.py",
+                root / "config.json", root / "service", root / "VoxDrop/Modelle",
+            )
+            self.assertEqual(registration["ProgramArguments"], [str(launcher), "--background"])
+
     def test_configuration_roundtrips_and_disables_without_touching_foreign_plist(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

@@ -471,6 +471,10 @@ ApplicationWindow {
                         enabled: viewState.ready && !viewState.busy
                         onClicked: api.downloadModels()
                     }
+                    Muted {
+                        Layout.fillWidth: true
+                        text: "Modellspeicher: " + api.modelLocation
+                    }
                     TaskProgress {
                         Layout.fillWidth: true
                         visible: viewState.downloading

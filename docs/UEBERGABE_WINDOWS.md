@@ -2,16 +2,15 @@
 
 ## Auftrag und Ausgangspunkt
 
-Untersuche und behebe die vom Nutzer gemeldete funktionsgestörte Windows-Ausgabe von VoxDrop. Verwende zuerst das aktuelle Windows-Paket v1.2.0 und halte den Fehler mit Umgebung und Logs reproduzierbar fest. Arbeite anschließend auf einem eigenen Fix-Branch weiter und aktualisiere die gemeinsame Dokumentation.
+Untersuche und behebe die vom Nutzer gemeldete funktionsgestörte Windows-Ausgabe von VoxDrop. Verwende zuerst das aktuelle Windows-Paket v1.3.0 und halte den Fehler mit Umgebung und Logs reproduzierbar fest. Arbeite anschließend auf einem eigenen Fix-Branch von `main` weiter und aktualisiere die gemeinsame Dokumentation.
 
 Lies vor Beginn `AGENTS.md`, `docs/PROJEKTSTATUS.md` und `docs/ENTWICKLUNG.md`. Dieser Auftrag gilt für eine eigenständige Windows-App mit lokaler KI auf dem Büro-PC, auch in einem anderen Netzwerk als der Mac mini.
 
 | Ausgangspunkt | Wert |
 | --- | --- |
 | Repository | `https://github.com/adriantagonist87/VoxDrop.git` |
-| Übergabebranch | `docs/codex-macos-windows-handoff` |
-| Funktionale Basis | `140eb934ae78ebcbc5b5c608ece7f0487ef81b38`, Tag `v1.2.0` |
-| Windows-Asset | `VoxDrop-1.2.0-Windows-x64.zip` plus gleichnamige `.sha256` |
+| Gemeinsame Basis | Aktueller `origin/main`, Tag `v1.3.0`. Letzter getesteter Code-SHA gemäß Projektstatus. |
+| Windows-Asset | `VoxDrop-1.3.0-Windows-x64.zip` plus gleichnamige `.sha256` |
 | Zielgerät | Windows 11 x64, NVIDIA RTX 5060 mit 8 GB oder kompatibel leistungsfähiger |
 | Bisherige Windows-Prüfung | **UNGEPRÜFT unter Windows**. EXE-Cross-Build, Archivprüfung und Lockfile-Prüfung auf dem Mac durchgeführt. |
 | Bekannte Nutzermeldung | Frühere Ausgabe mit Darstellungsfehlern und Modell-Setup-Abbruch bei `speaker-detection`, `httpcore.ConnectError`, `WinError 10013`. Genaue Testversion offen. |
@@ -19,7 +18,7 @@ Lies vor Beginn `AGENTS.md`, `docs/PROJEKTSTATUS.md` und `docs/ENTWICKLUNG.md`. 
 ## 1. Stand erfassen
 
 1. Im vorhandenen Clone zuerst `git status --short --branch`, `git remote -v` und `git rev-parse HEAD` erfassen. Lokale Änderungen erhalten.
-2. `git fetch origin` ausführen und den Übergabebranch auschecken. Einen Fix-Branch wie `fix/windows-start-diagnose` darauf anlegen.
+2. `git fetch origin` ausführen, `main` auschecken und mit `git merge --ff-only origin/main` aktualisieren. Einen Fix-Branch wie `fix/windows-start-diagnose` darauf anlegen.
 3. Windows-Version/Build, PowerShell-Version, GPU, Treiber, Benutzer-/Installationspfad und tatsächlich verwendetes Paket erfassen. Öffentlich geteilte Pfade anonymisieren.
 
 ```powershell

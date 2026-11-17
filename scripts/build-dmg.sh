@@ -11,10 +11,10 @@ output="$runtime/package/VoxDrop-$version-macOS-arm64.dmg"
 stage=$(mktemp -d "$runtime/package/.dmg.XXXXXX")
 trap 'rm -rf "$stage"' EXIT
 contents="$stage/contents"
-mkdir -p "$contents/Quellcode"
+mkdir -p "$contents/Quellcode" "$contents/VoxDrop"
 
 /usr/bin/codesign --verify --strict "$bundle"
-/usr/bin/ditto "$bundle" "$contents/VoxDrop.app"
+/usr/bin/ditto "$bundle" "$contents/VoxDrop/VoxDrop.app"
 ln -s /Applications "$contents/Applications"
 /usr/bin/git -C "$runtime/aTrain" archive --format=tar.gz \
     --prefix="aTrain-$reference/" -o "$contents/Quellcode/aTrain-$reference.tar.gz" "$reference"
@@ -24,7 +24,8 @@ Automatic Media Transcription
 
 Voraussetzung ist ein Mac mit Apple Silicon und macOS $minimum oder neuer.
 
-1. VoxDrop in den Programme-Ordner ziehen und dort öffnen.
+1. Den gesamten Ordner „VoxDrop“ in den Programme-Ordner ziehen.
+   Darin „VoxDrop.app“ öffnen.
 2. Unter Modell auf „Modelle herunterladen“ klicken.
 3. Für eine einmalige Transkription Ordner ins Fenster ziehen. Für die
    laufende Überwachung Ordner hinzufügen, die Ordnerüberwachung einschalten
@@ -32,6 +33,18 @@ Voraussetzung ist ein Mac mit Apple Silicon und macOS $minimum oder neuer.
 
 Der einmalige Modell-Download benötigt Internet. Die Transkription und
 Sprecherzuordnung erfolgen anschließend lokal auf dem Mac.
+
+Die Modelle und der Download-Cache liegen danach unter
+VoxDrop/Modelle, neben VoxDrop.app. Zum Entfernen der App samt Modellen
+den gesamten Programmordner „VoxDrop“ löschen.
+Persönliche Einstellungen und Verlauf liegen im Benutzerordner unter
+Library/Application Support/VoxDrop.
+
+macOS fragt beim ersten Start möglicherweise nach einer Freigabe.
+Nach dem ersten Öffnungsversuch in Systemeinstellungen unter
+Datenschutz & Sicherheit die App über „Dennoch öffnen“ bestätigen.
+Der Build ist lokal signiert und besitzt keine Apple-Notarisierung.
+https://support.apple.com/de-de/102445
 
 Quellcode und Build-Anleitung
 https://github.com/adriantagonist87/VoxDrop

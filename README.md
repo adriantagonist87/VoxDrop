@@ -8,6 +8,10 @@ VoxDrop ist eine kostenlose App für macOS und Windows auf Basis von aTrain. Sie
 
 Voraussetzung für die Mac-Version ist ein Mac mit Apple Silicon und macOS 26.2 oder neuer.
 
+Die DMG öffnen, den gesamten Ordner **VoxDrop** nach **Programme** ziehen und darin **VoxDrop.app** öffnen. Beim ersten Start kann macOS eine Bestätigung unter **Systemeinstellungen → Datenschutz & Sicherheit → Dennoch öffnen** verlangen. Der Download ist ad hoc signiert. [Apples Anleitung](https://support.apple.com/de-de/102445)
+
+Über **Modelle herunterladen** werden die gewünschten Modelle und ihr Download-Cache im Programmordner unter **VoxDrop/Modelle** eingerichtet. Zum Entfernen der App samt Modellen den gesamten Ordner **VoxDrop** löschen. Bei Updates die neue **VoxDrop.app** in den vorhandenen VoxDrop-Ordner kopieren. Einstellungen und Verlauf liegen im Benutzerordner unter **Library/Application Support/VoxDrop**.
+
 Die Windows-Ausgabe richtet sich an Windows 11 x64 mit NVIDIA-RTX-GPU. [VoxDrop für Windows](windows/README.md)
 
 Für die gemeinsame Weiterentwicklung gelten die Arbeitsregeln sowie Projektstatus und Entwicklungsanleitung. [AGENTS.md](AGENTS.md) · [Projektstatus](docs/PROJEKTSTATUS.md) · [Entwicklung](docs/ENTWICKLUNG.md) · [Windows-Übergabe](docs/UEBERGABE_WINDOWS.md)

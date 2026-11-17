@@ -16,20 +16,20 @@ def agent_path():
 
 def definition(worker, config, state, model_data, *, python=None):
     log = str(state / "service.log")
+    arguments = [
+        str(python) if python is not None else sys.executable,
+        "-BEs", str(worker), "--state-dir", str(state),
+        "--model-data", str(model_data), "run", str(config),
+    ]
+    if len(worker.parents) > 3:
+        app = worker.parents[3]
+        launcher = app / "Contents/MacOS/VoxDrop"
+        if app.suffix == ".app" and launcher.is_file():
+            arguments = [str(launcher), "--background"]
     return {
         "Label": LABEL,
         "AssociatedBundleIdentifiers": [BUNDLE_IDENTIFIER],
-        "ProgramArguments": [
-            str(python) if python is not None else sys.executable,
-            "-BEs",
-            str(worker),
-            "--state-dir",
-            str(state),
-            "--model-data",
-            str(model_data),
-            "run",
-            str(config),
-        ],
+        "ProgramArguments": arguments,
         "RunAtLoad": True,
         "StandardOutPath": log,
         "StandardErrorPath": log,
