@@ -20,6 +20,10 @@ Der Windows-Supervisor begrenzt `service.log` auf rund 4 MiB plus zwei Sicherung
 
 Zwischenstand: 85 Regressionen bestanden mit sieben expliziten Skips; der anschließende Schutz gegen rekursive Logfehler bei vollem Datenträger wird zusätzlich geprüft. Tatsächliche Paket-Ausfallprüfung und längerer Überwachungslauf folgen im nächsten Statusupdate. Eine wochenlange Echtzeitabnahme oder ein tatsächlicher Neustart wird damit nicht behauptet.
 
+Paket-Code `528705351cd037c2c1ea7bb189e154876ba292eb`: 86 Regressionen bestanden (sieben Skips). Dieselbe echte Ausfallprüfung bestand anschließend: automatischer Dienst-Wiederanlauf, null verwaiste Inferenzprozesse, unterbrochener Auftrag automatisch `done`, TXT veröffentlicht, Originalhash unverändert. Der erste längere Prüflauf wurde nach 40 Sekunden durch einen Fehler im privaten Testtreiber beendet (`event`-Argument doppelt benannt); dies war kein Appfehler und kein bestandener Dauertest. Der Testtreiber wurde korrigiert.
+
+Ein zusätzlicher echter Windows-Dateisperrversuch zeigte `PermissionError`, errno 13, ohne `winerror`. Die CRT verdeckt dabei den ursprünglichen Sharing-Lock-Code. Der Windows-I/O-Retry berücksichtigt deshalb auch diese Form des Zugriffsfehlers mit begrenztem Abstand; er ändert keine Zugriffsrechte. Ergebnis-Kollisionen und ASR-Fehler bleiben weiterhin von automatischen Wiederholungen ausgeschlossen. Die erneute Paket-/Dauerprüfung folgt auf diesem Stand.
+
 Arbeitsbranch `fix/windows-native-validation`, Ausgangspunkt `4162030e17dc0b6d9a95a0356e6cd0dfac2a16c9`. Der unveränderte öffentliche Download v1.3.1 wurde vor Codeänderungen über `VoxDrop.exe` mit isoliertem Profil gestartet. ZIP-SHA-256: `b6ab4c819d9fe48db52633ab80eccf4829750e1384ae215582e2503c1ba2b897`. Die bisherigen Mac-Prüfstände unten bleiben erhalten. Der abschließende Windows-Code-SHA und weitere Abnahmen folgen im Statuscommit nach den Paketprüfungen.
 
 - Umgebung: Windows 11 Pro 25H2, Build 26200.9457, x64; RTX 5060, 8151 MiB, Treiber 596.36; Python 3.12.13, Torch 2.9.1+cu128. Der Registry-Altname „Windows 10 Pro“ ist kein Nachweis für Windows 10.

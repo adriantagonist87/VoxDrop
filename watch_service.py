@@ -1235,6 +1235,9 @@ def transient_file_error(error):
     return isinstance(error, OSError) and (
         error.errno in {errno.EBUSY, errno.ETIMEDOUT, errno.ENOSPC,
                         errno.ENETDOWN, errno.ENETUNREACH, errno.ECONNRESET}
+        # The Windows CRT reports an exclusive sharing lock as errno 13
+        # without preserving WinError 32. Retry without changing any rights.
+        or (WINDOWS and error.errno == errno.EACCES)
         or getattr(error, "winerror", None) in {32, 33, 53, 54, 55, 59, 64, 67, 121, 1231, 1232}
     )
 

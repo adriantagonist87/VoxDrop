@@ -187,6 +187,14 @@ Für den unbeaufsichtigten Windows-Betrieb startet `start` jetzt einen lokalen S
 
 `service.log` rotiert im laufenden Windows-Supervisor bei rund 4 MiB mit zwei Sicherungen. `bootstrap.log` enthält frühe Startfehler. `runtime_logs.py` ist Bestandteil beider Paketbuilder. Das bisherige Mac-Startverfahren bleibt erhalten. Tests für Windows-Job-Objects verwenden echte eigene Kind-/Enkelprozesse und benötigen keine neuen Systemfreigaben. Ein Ausfalltest ist keine Abnahme eines tatsächlichen Windows-Neustarts.
 
+Reproduzierbare native Ausfallprüfung mit vorhandenen Modellen und einer künstlichen WAV-Datei:
+
+```powershell
+& $py -BEs -Xutf8 scripts/check-windows-recovery.py '<App>' '<neues lokales Testverzeichnis>' '<kuenstliche.wav>'
+```
+
+Der Prüfer verwendet ein neues isoliertes Profil, beendet ausschließlich dessen Testprozesse und prüft Dienst-Wiederanlauf, Inferenzbereinigung und Auftragswiederaufnahme. Er startet den PC nicht neu und verändert keinen produktiven Anmeldestart. Windows-CRT-Dateisperren können als errno 13 ohne WinError erscheinen; auch dieser I/O-Fehler erhält einen begrenzten Retry, ohne Rechte zu ändern.
+
 Im Branch `fix/windows-native-validation` liegen heruntergeladene Modelle und Hugging-Face-Cache bei einer Windows-Paketinstallation unter `VoxDrop/Modelle`. `VoxDrop/Laufzeit` enthält Python, die virtuelle CUDA-Umgebung und den uv-Cache. Der gesamte entpackte Programmordner muss beschreibbar sein. Entfernen dieses Ordners entfernt diese großen Bestände; Konfiguration/Verlauf unter `%LOCALAPPDATA%/VoxDrop` bleiben erhalten. Ein Update ersetzt App-Dateien unter Erhalt von `Modelle` und `Laufzeit`. Ältere Pakete verwendeten externe Verzeichnisse; diese werden nicht stillschweigend gelöscht oder als migriert behauptet.
 
 `VOXDROP_PROFILE` isoliert Konfiguration/Verlauf. Beim neuen Windows-Paket bleiben Modelle trotzdem neben der EXE. `VOXDROP_MODEL_DATA` ist die ausdrückliche Überschreibung für Entwicklerprüfungen. Quellstarts ohne Paketmarker behalten ihren bisherigen Profilspeicher. Der Mac-Speicherpfad bleibt unverändert; Gegenprüfung **UNGEPRÜFT unter macOS**.

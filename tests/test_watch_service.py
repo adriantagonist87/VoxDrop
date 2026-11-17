@@ -390,6 +390,17 @@ class WatchServiceTests(unittest.TestCase):
         self.assertEqual(self.job()["state"], "failed")
         self.assertFalse(self.db.execute("SELECT 1 FROM job_retries").fetchone())
 
+    @unittest.skipUnless(WINDOWS, "Windows CRT sharing lock")
+    def test_windows_crt_lock_without_winerror_is_retried(self):
+        self.queue()
+        self.engine.side_effect = [PermissionError(errno.EACCES, "sharing lock"), TRANSCRIPT]
+        next_job(self.db, self.state, self.engine)
+        self.assertTrue(self.db.execute("SELECT 1 FROM job_retries").fetchone())
+        with self.db:
+            self.db.execute("UPDATE job_retries SET retry_at=0")
+        next_job(self.db, self.state, self.engine)
+        self.assertEqual(self.job()["state"], "done")
+
     def test_unavailable_folder_is_a_service_status_then_recovers(self):
         moved = self.root / "offline"
         self.completed.rename(moved)
