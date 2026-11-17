@@ -8,6 +8,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from voxdrop import (
+    DEFAULT_HARDWARE,
     DEFAULT_MODEL,
     decode_media,
     format_transcript,
@@ -83,7 +84,7 @@ class LocalJobTests(unittest.TestCase):
             language="de",
             speakers=True,
             speaker_count=2,
-            hardware="metal",
+            hardware=DEFAULT_HARDWARE,
             model=DEFAULT_MODEL,
             skip_silence=False,
             dover_lap=False,

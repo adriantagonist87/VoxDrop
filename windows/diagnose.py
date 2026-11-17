@@ -39,5 +39,8 @@ def main():
 if __name__ == "__main__":
     result = main()
     if sys.stdin.isatty():
-        input("\nEnter zum Schließen …")
+        try:
+            input("\nEnter zum Schließen …")
+        except (EOFError, OSError):
+            pass  # A detached console or captured automation may have no input.
     raise SystemExit(result)

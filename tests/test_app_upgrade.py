@@ -1,15 +1,18 @@
 import plistlib
 import sqlite3
+import sys
 import unittest
 from pathlib import Path
 from subprocess import CompletedProcess
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
-import app_upgrade
+if sys.platform == "darwin":
+    import app_upgrade
 import login_agent
 
 
+@unittest.skipUnless(sys.platform == "darwin", "macOS profile migration")
 class AppUpgradeTest(unittest.TestCase):
     def test_moves_support_and_updates_existing_login_registration(self):
         with (

@@ -405,7 +405,6 @@ class WatchServiceTests(unittest.TestCase):
         self.assertEqual(startup_checks(10), [0, 10, 40, 70, 100, 130])
 
     def test_scan_ignores_symlinks_hidden_partials_and_txt(self):
-        os.symlink(self.source, self.incoming / "link.mp4")
         (self.incoming / ".temp.wav").write_bytes(b"partial")
         (self.incoming / "recording.wav.partial").write_bytes(b"partial")
         (self.incoming / "recording.txt").write_text("transcript")
@@ -414,6 +413,16 @@ class WatchServiceTests(unittest.TestCase):
             self.db.execute("SELECT source FROM jobs").fetchall()[0][0],
             str(self.source),
         )
+        self.assertEqual(self.db.execute("SELECT COUNT(*) FROM jobs").fetchone()[0], 1)
+
+    def test_scan_ignores_symlinks(self):
+        try:
+            os.symlink(self.source, self.incoming / "link.mp4")
+        except OSError as error:
+            if getattr(error, "winerror", None) == 1314:
+                self.skipTest("Windows symlink privilege is unavailable (WinError 1314)")
+            raise
+        self.queue()
         self.assertEqual(self.db.execute("SELECT COUNT(*) FROM jobs").fetchone()[0], 1)
 
     def test_unsupported_exclusive_rename_copies_and_verifies_before_removing_input(
@@ -492,6 +501,7 @@ class WatchServiceTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Arbeitsbereichs"):
             active_folders({**self.settings, "scope_dir": str(self.completed)})
 
+    @patch("smb_paths.WINDOWS", False)
     def test_smb_uri_resolves_mount_without_accepting_credentials_or_traversal(self):
         mounts = [("nas.example", "share", self.root)]
         self.assertEqual(
