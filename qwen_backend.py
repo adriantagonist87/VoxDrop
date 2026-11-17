@@ -10,7 +10,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-from platform_io import WINDOWS, process_options
+from platform_io import WINDOWS, child_process, process_options
 
 ASR = "qwen3-asr-1.7b"
 ALIGNER = "qwen3-forced-aligner-0.6b"
@@ -138,7 +138,7 @@ def transcribe(audio, *, data_dir, hardware, language, report):
         ]
         env = {**os.environ, "HF_HUB_OFFLINE": "1", "TRANSFORMERS_OFFLINE": "1"}
         detail = None
-        with subprocess.Popen(
+        with child_process(
             command,
             stdout=subprocess.PIPE,
             text=True,

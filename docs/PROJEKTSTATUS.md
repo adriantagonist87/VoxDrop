@@ -6,6 +6,20 @@ Stand vom 17. November 2026. Für jede Weiterentwicklung sind zusätzlich die Ar
 
 ## Windows-Arbeitsblock vom 17.11.2026
 
+### Fortführung: unbeaufsichtigter Hintergrundbetrieb
+
+Der Nutzer beauftragte anschließend Robustheitsprüfungen für wochenlangen Hintergrundbetrieb und kann währenddessen keine weiteren Freigaben erteilen. Es werden ausschließlich vorhandene Laufzeit/Modelle und isolierte Profile verwendet. Kein unbeaufsichtigter Rechnerneustart und keine neue Firewall-/Anmeldeänderung.
+
+Eine echte Ausfallprüfung des bisherigen EXE-Pakets bestätigte drei Lücken: `--background` startete den Dienst, aber nach gezieltem Beenden des eigenen Testdienstes startete er innerhalb von 20 Sekunden nicht neu. Beim Abbruch eines aktiven Auftrags blieben drei Inferenzprozesse zurück. Ein anschließender Dienststart setzte den unterbrochenen Auftrag auf `failed`; ohne manuelle Wiederholung entstand kein TXT. Der Originalhash blieb erhalten.
+
+Die Korrektur ergänzt unter Windows einen eigenen lokalen `supervise`-Prozess mit Installations-unabhängiger Dienstsperre, begrenztem Neustart-Backoff und Wiederaufnahme aktiver Aufträge. Die GUI muss dafür nicht geöffnet bleiben. Unter Windows starten Kindprozesse zunächst angehalten, werden einem Job Object mit `KILL_ON_JOB_CLOSE` zugeordnet und erst danach fortgesetzt; auch der schnelle Python-Redirector kann dadurch keine ungebundenen Enkelprozesse erzeugen. Grundlage: [Microsoft Job Objects](https://learn.microsoft.com/en-us/windows/win32/procthread/job-objects), [CREATE_SUSPENDED](https://learn.microsoft.com/en-us/windows/win32/procthread/process-creation-flags). Echte Regressionen prüfen Besitzerabsturz, Kind-/Enkelprozessende und unveränderte Ausgaben/Exitcodes.
+
+Vorübergehende Dateisperren, Zeitüberschreitungen, bekannte Windows-Netzwerkfehler und voller Datenträger erhalten persistierte Wiederholungen mit 10 Sekunden Anfangsabstand bis maximal 15 Minuten. Ergebnis-Kollisionen und dauerhafte ASR-Fehler werden nicht automatisch wiederholt. Unterbrochene Exporte nutzen verifizierte Arbeitsstände weiter. Scanner-Ausnahmen beenden die Überwachung nicht mehr dauerhaft; Verbindungen werden neu geöffnet. Atomare Konfigurationsdateien werden vor der Veröffentlichung zusätzlich synchronisiert.
+
+Der Windows-Supervisor begrenzt `service.log` auf rund 4 MiB plus zwei Sicherungen; lange Einzelmeldungen werden gekürzt. SQLite erhält Indizes für Warteschlange und Verlauf. Leere Auftragsverzeichnisse werden entfernt, fehlerhafte Aufträge mit Cache bleiben erhalten. Mac-Anmeldestart und manuelle Wiederaufnahme nach Unterbrechung bleiben im bisherigen Pfad; gemeinsame Code-/Paketänderungen sind weiterhin **UNGEPRÜFT unter macOS**.
+
+Zwischenstand: 85 Regressionen bestanden mit sieben expliziten Skips; der anschließende Schutz gegen rekursive Logfehler bei vollem Datenträger wird zusätzlich geprüft. Tatsächliche Paket-Ausfallprüfung und längerer Überwachungslauf folgen im nächsten Statusupdate. Eine wochenlange Echtzeitabnahme oder ein tatsächlicher Neustart wird damit nicht behauptet.
+
 Arbeitsbranch `fix/windows-native-validation`, Ausgangspunkt `4162030e17dc0b6d9a95a0356e6cd0dfac2a16c9`. Der unveränderte öffentliche Download v1.3.1 wurde vor Codeänderungen über `VoxDrop.exe` mit isoliertem Profil gestartet. ZIP-SHA-256: `b6ab4c819d9fe48db52633ab80eccf4829750e1384ae215582e2503c1ba2b897`. Die bisherigen Mac-Prüfstände unten bleiben erhalten. Der abschließende Windows-Code-SHA und weitere Abnahmen folgen im Statuscommit nach den Paketprüfungen.
 
 - Umgebung: Windows 11 Pro 25H2, Build 26200.9457, x64; RTX 5060, 8151 MiB, Treiber 596.36; Python 3.12.13, Torch 2.9.1+cu128. Der Registry-Altname „Windows 10 Pro“ ist kein Nachweis für Windows 10.

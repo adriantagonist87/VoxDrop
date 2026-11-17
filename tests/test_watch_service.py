@@ -4,6 +4,7 @@ import os
 import subprocess
 import tempfile
 import unittest
+from platform_io import WINDOWS
 from contextlib import closing
 from pathlib import Path
 from unittest.mock import Mock, patch
@@ -332,6 +333,62 @@ class WatchServiceTests(unittest.TestCase):
         recover(self.db, self.state)
         self.assertEqual(self.job()["state"], "done")
         self.assertFalse(next_job(self.db, self.state, self.engine))
+
+    @unittest.skipUnless(WINDOWS, "Windows automatic recovery")
+    def test_recovery_automatically_resumes_interrupted_transcription(self):
+        self.queue()
+        with self.db:
+            self.db.execute("UPDATE jobs SET state='transcribing',attempt=1")
+        recover(self.db, self.state)
+        self.assertEqual(self.job()["state"], "ready")
+        self.assertIsNone(self.job()["finished"])
+        self.assertTrue(next_job(self.db, self.state, self.engine))
+        self.assertEqual(self.job()["state"], "done")
+        self.assertEqual(self.media.read_bytes(), b"synthetic media bytes")
+        self.engine.assert_called_once()
+
+    @unittest.skipUnless(WINDOWS, "Windows automatic recovery")
+    def test_recovery_resumes_cached_export_without_recognizing_again(self):
+        self.queue()
+        with patch("watch_service.publish_job", side_effect=OSError("interrupted export")):
+            next_job(self.db, self.state, self.engine)
+        with self.db:
+            self.db.execute("UPDATE jobs SET state='exporting'")
+        recover(self.db, self.state)
+        self.assertEqual(self.job()["state"], "ready")
+        next_job(self.db, self.state, self.engine)
+        self.assertEqual(self.job()["state"], "done")
+        self.engine.assert_called_once()
+
+    def test_transient_io_failure_retries_automatically_after_backoff(self):
+        self.queue()
+        self.engine.side_effect = [OSError(errno.EBUSY, "file temporarily locked"), TRANSCRIPT]
+        next_job(self.db, self.state, self.engine)
+        self.assertEqual(self.job()["state"], "failed")
+        self.assertFalse(next_job(self.db, self.state, self.engine))
+        with self.db:
+            self.db.execute("UPDATE job_retries SET retry_at=0")
+        self.assertTrue(next_job(self.db, self.state, self.engine))
+        self.assertEqual(self.job()["state"], "done")
+        self.assertFalse(self.db.execute("SELECT 1 FROM job_retries").fetchone())
+        self.assertEqual(self.engine.call_count, 2)
+
+    def test_transient_export_retry_keeps_cached_text(self):
+        self.queue()
+        with patch("watch_service.publish_job", side_effect=OSError(errno.ETIMEDOUT, "SMB timeout")):
+            next_job(self.db, self.state, self.engine)
+        with self.db:
+            self.db.execute("UPDATE job_retries SET retry_at=0")
+        next_job(self.db, self.state, self.engine)
+        self.assertEqual(self.job()["state"], "done")
+        self.engine.assert_called_once()
+
+    def test_permanent_asr_error_does_not_enter_automatic_retry_loop(self):
+        self.queue()
+        self.engine.side_effect = RuntimeError("invalid recording")
+        next_job(self.db, self.state, self.engine)
+        self.assertEqual(self.job()["state"], "failed")
+        self.assertFalse(self.db.execute("SELECT 1 FROM job_retries").fetchone())
 
     def test_unavailable_folder_is_a_service_status_then_recovers(self):
         moved = self.root / "offline"

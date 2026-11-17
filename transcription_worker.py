@@ -9,7 +9,7 @@ import tempfile
 import threading
 from pathlib import Path
 
-from platform_io import WINDOWS, process_options
+from platform_io import WINDOWS, child_process, process_options
 from voxdrop import DEFAULT_DATA, configure_runtime, transcribe
 
 EVENT = "smb-transcription:"
@@ -87,7 +87,7 @@ def run_transcription(media, *, report, measurements, **settings):
         ]
         error = None
         peak = [0]
-        with subprocess.Popen(
+        with child_process(
             command,
             stdout=subprocess.PIPE,
             text=True,

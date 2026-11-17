@@ -156,6 +156,8 @@ def with_settings(settings, callback):
         delete=False,
     ) as file:
         json.dump(settings, file, ensure_ascii=False, indent=2)
+        file.flush()
+        os.fsync(file.fileno())
         temporary = Path(file.name)
     try:
         return callback(temporary)
@@ -513,7 +515,7 @@ class Controller(QObject):
                 and command("prepare-app-data").strip() == "resume"
             )
             settings = read_settings()
-            if (background or resume) and CONFIG.is_file():
+            if (background or resume or (sys.platform == "win32" and settings.get("monitoring"))) and CONFIG.is_file():
                 command("start", CONFIG)
             return settings
 

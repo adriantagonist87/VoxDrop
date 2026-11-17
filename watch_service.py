@@ -15,15 +15,17 @@ import sys
 import tempfile
 import threading
 import time
+import traceback
 import uuid
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from contextlib import closing, contextmanager, suppress
+from contextlib import closing, contextmanager, suppress, redirect_stdout, redirect_stderr
 from functools import lru_cache
 from pathlib import Path, PureWindowsPath
 
 import login_agent
 from platform_io import (
     WINDOWS,
+    child_process,
     is_reparse_point,
     lock_service,
     open_regular,
@@ -36,6 +38,7 @@ from smb_paths import (
     validate_folder_path,
 )
 from transcription_worker import run_transcription
+from runtime_logs import RollingLog
 from voxdrop import (
     DEFAULT_DATA,
     DEFAULT_HARDWARE,
@@ -91,6 +94,8 @@ CREATE TABLE IF NOT EXISTS events (
     attempt INTEGER NOT NULL,
     error TEXT
 );
+CREATE INDEX IF NOT EXISTS job_history_order ON jobs(updated,id);
+CREATE INDEX IF NOT EXISTS job_queue_order ON jobs(state,detected,id);
 CREATE INDEX IF NOT EXISTS event_job_state ON events(job_id,state);
 CREATE TABLE IF NOT EXISTS transcription_measurements (
     job_id INTEGER PRIMARY KEY REFERENCES jobs(id),
@@ -148,6 +153,11 @@ CREATE TABLE IF NOT EXISTS copy_claims (
     path TEXT NOT NULL,
     identity TEXT NOT NULL,
     PRIMARY KEY(job_id, path)
+);
+CREATE TABLE IF NOT EXISTS job_retries (
+    job_id INTEGER PRIMARY KEY REFERENCES jobs(id),
+    retry_at REAL NOT NULL,
+    delay REAL NOT NULL
 );
 """
 )
@@ -1002,6 +1012,13 @@ def next_job(
     allow_automatic=True,
     config=None,
 ):
+    with db:
+        db.execute(
+            """UPDATE jobs SET state='ready',error=NULL,finished=NULL,updated=?
+            WHERE state='failed' AND id IN
+            (SELECT job_id FROM job_retries WHERE retry_at<=?)""",
+            (time.time(), time.time()),
+        )
     selection = (
         """AND (origin_job_id IS NOT NULL OR json_extract(settings,'$.folder_drop')=1 OR
         COALESCE(json_extract(settings,'$.watch_path'),json_extract(settings,'$.input_dir'))
@@ -1186,6 +1203,8 @@ def next_job(
         else:
             publish_transcript_only(db, job, transcript)
         error_state(db, job_id, "done", None)
+        with db:
+            db.execute("DELETE FROM job_retries WHERE job_id=?", (job_id,))
         with suppress(OSError):
             transcript.unlink(missing_ok=True)
     except SourceChanged as error:
@@ -1194,10 +1213,30 @@ def next_job(
         error_state(db, job_id, "blocked", str(error))
     except Exception as error:  # noqa: BLE001 - job boundary, retains cached export for manual retry
         error_state(db, job_id, "failed", str(error) or type(error).__name__)
+        if transient_file_error(error):
+            previous = db.execute("SELECT delay FROM job_retries WHERE job_id=?", (job_id,)).fetchone()
+            delay = min(900, previous[0] * 2) if previous else 10
+            with db:
+                db.execute("INSERT OR REPLACE INTO job_retries VALUES (?,?,?)",
+                           (job_id, time.time() + delay, delay))
+        else:
+            with db:
+                db.execute("DELETE FROM job_retries WHERE job_id=?", (job_id,))
     finally:
         with suppress(OSError):
             local.unlink(missing_ok=True)
+        with suppress(OSError):
+            work.rmdir()  # Only an empty work directory; cached failures stay intact.
     return True
+
+
+def transient_file_error(error):
+    """Retry bounded-frequency I/O failures; never retry result collisions or ASR errors."""
+    return isinstance(error, OSError) and (
+        error.errno in {errno.EBUSY, errno.ETIMEDOUT, errno.ENOSPC,
+                        errno.ENETDOWN, errno.ENETUNREACH, errno.ECONNRESET}
+        or getattr(error, "winerror", None) in {32, 33, 53, 54, 55, 59, 64, 67, 121, 1231, 1232}
+    )
 
 
 def recover(db, state):
@@ -1237,9 +1276,13 @@ def recover(db, state):
         error_state(
             db,
             job["id"],
-            "failed",
-            "Auftrag unterbrochen. Manuelle Wiederholung möglich.",
+            "ready" if WINDOWS else "failed",
+            "Auftrag unterbrochen. Automatische Wiederaufnahme nach Dienststart."
+            if WINDOWS else "Auftrag unterbrochen. Manuelle Wiederholung möglich.",
         )
+        if WINDOWS:
+            with db:
+                db.execute("UPDATE jobs SET finished=NULL WHERE id=?", (job["id"],))
 
 
 def retry(db, job_id):
@@ -1249,6 +1292,8 @@ def retry(db, job_id):
             WHERE id=? AND state IN ('failed','blocked')""",
             (time.time(), job_id),
         ).rowcount
+        if changed:
+            db.execute("DELETE FROM job_retries WHERE job_id=?", (job_id,))
     if not changed:
         raise ValueError("Dieser Auftrag befindet sich nicht im Fehlerzustand.")
 
@@ -1333,6 +1378,7 @@ def clear_history(db, state):
                 "Der Verlauf kann nach Abschluss des aktiven Auftrags geleert werden."
             )
         for table in (
+            "job_retries",
             "events",
             "transcription_measurements",
             "speaker_diarization",
@@ -1533,8 +1579,15 @@ def run(state, config, *, once):
         signal.signal(signum, lambda *_: stop.set())
 
     def poll():
-        with closing(database(state)) as db:
-            poll_config(db, config, stop, connected, multiple)
+        while not stop.is_set():
+            try:
+                with closing(database(state)) as db:
+                    poll_config(db, config, stop, connected, multiple)
+                return
+            except (OSError, ValueError, RuntimeError, sqlite3.Error):
+                connected.clear()
+                traceback.print_exc()
+                stop.wait(5)
 
     with (state / "service.lock").open("a") as lock, closing(database(state)) as db:
         try:
@@ -1593,7 +1646,11 @@ def run(state, config, *, once):
 
 
 def is_running(state):
-    with (state / "service.lock").open("a") as lock:
+    return lock_held(state / "service.lock") or lock_held(state / "supervisor.lock")
+
+
+def lock_held(path):
+    with path.open("a") as lock:
         try:
             lock_service(lock)
         except BlockingIOError:
@@ -1601,11 +1658,73 @@ def is_running(state):
     return False
 
 
+def supervise(state, model_data, config):
+    with closing(RollingLog(state / "service.log")) as log:
+        with redirect_stdout(log), redirect_stderr(log):
+            supervise_worker(state, model_data, config, log)
+
+
+def supervise_worker(state, model_data, config, log):
+    """Restart an unexpectedly exited service without requiring an open GUI."""
+    stop = threading.Event()
+    for signum in (signal.SIGINT, signal.SIGTERM):
+        signal.signal(signum, lambda *_: stop.set())
+    with (state / "supervisor.lock").open("a") as lock:
+        try:
+            lock_service(lock)
+        except BlockingIOError:
+            return
+        delay = 2
+        while not stop.is_set():
+            started = time.monotonic()
+            try:
+                with child_process(
+                    [sys.executable, "-BEs", "-Xutf8", str(Path(__file__).resolve()),
+                     "--state-dir", str(state), "--model-data", str(model_data),
+                     "run", str(config)],
+                    stdin=subprocess.DEVNULL,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    text=True,
+                    encoding="utf-8",
+                    **process_options(),
+                ) as child:
+                    def copy_output(stream=child.stdout):
+                        try:
+                            while line := stream.readline(64_000):
+                                log.write(line)
+                        except (OSError, ValueError):
+                            pass  # The process context closes the pipe during shutdown.
+
+                    reader = threading.Thread(target=copy_output, daemon=True)
+                    reader.start()
+                    while child.poll() is None and not stop.wait(0.5):
+                        pass
+                    if stop.is_set() and child.poll() is None:
+                        child.terminate()
+                        try:
+                            child.wait(timeout=10)
+                        except subprocess.TimeoutExpired:
+                            child.kill()
+                    code = child.wait()
+                reader.join(timeout=10)
+                if stop.is_set():
+                    return
+                print(f"Hintergrunddienst beendet (Code {code}); Neustart in {delay} s.",
+                      file=sys.stderr, flush=True)
+            except (OSError, ValueError, RuntimeError):
+                traceback.print_exc()
+            if time.monotonic() - started >= 60:
+                delay = 2
+            stop.wait(delay)
+            delay = min(300, delay * 2)
+
+
 def start_in_background(state, model_data, config):
     read_settings(config)
     if is_running(state):
         return
-    with (state / "service.log").open("ab") as log:
+    with (state / ("bootstrap.log" if WINDOWS else "service.log")).open("ab") as log:
         subprocess.Popen(
             [
                 sys.executable,
@@ -1616,7 +1735,7 @@ def start_in_background(state, model_data, config):
                 str(state),
                 "--model-data",
                 str(model_data.resolve()),
-                "run",
+                "supervise" if WINDOWS else "run",
                 str(config.resolve()),
             ],
             **process_options(background=True),
@@ -1650,7 +1769,7 @@ def main(argv=None):
     commands = cli.add_subparsers(dest="command", required=True)
     commands.add_parser("inspect-folders", help=argparse.SUPPRESS)
     commands.add_parser("prepare-app-data", help=argparse.SUPPRESS)
-    for name in ("check", "run", "start"):
+    for name in ("check", "run", "start", "supervise"):
         command = commands.add_parser(name)
         command.add_argument("config", type=Path)
         if name == "run":
@@ -1734,9 +1853,12 @@ def main(argv=None):
             return 0
         state = args.state_dir.resolve()
         initialise(state)
-        if args.command == "run":
+        if args.command in ("run", "supervise"):
             configure_runtime(args.model_data)
-            run(state, args.config, once=args.once)
+            if args.command == "supervise":
+                supervise(state, args.model_data.resolve(), args.config.resolve())
+            else:
+                run(state, args.config, once=args.once)
             return 0
         if args.command == "start":
             start_in_background(state, args.model_data, args.config)
