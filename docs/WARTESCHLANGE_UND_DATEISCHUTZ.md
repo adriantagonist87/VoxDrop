@@ -4,7 +4,11 @@ Nutzerauftrag vom 18.11.2026: Die mittlere Spalte muss sämtliche wartenden Auft
 
 ## Aktueller geprüfter Windows-Stand
 
-Aktuell installiert ist [Preview 7](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.2-windows-preview.7), App-Code `f4f5287679652579a74ec244255f5b7872fbe265`, ZIP-SHA-256 `e07abafa47a911f0f3d353dd5f3c93b83b67e30941a58cc378850bde452b7658`. Nutzerergänzung: Zahlen in den Verlaufsbuttons, roter Fehlerbutton bei positiver Zahl und schlanke ein-/ausklappbare Queue.
+Aktuell installiert ist [Preview 8](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.2-windows-preview.8), App-Code `d40b00526494155979d19d6b0b67fcf1853d618f`, SHA-256 `80129d589819ab0ba4e3c7644aa5e31f63c1d565c403457df21d2b068d27c0f8`. Zusätzliche Suchfelder hinter Lupenbuttons, schnelle Dateipfad-Wildcards, manuell gestartete/gestoppte FTS-Inhaltssuche, Drop-Konfliktdialog mit Priorisierung/geschützter Neutranskription/Sofort-Auswahl und korrigierte native Explorer-Markierung. [Präzises Verhalten, 20.000-Dateien-Messung, native Abnahme und Mac-Übergabe](SUCHE_UND_DROP_KONFLIKTE.md). 131 Fälle (124 bestanden, sieben Skips), finale echte EXE-/CUDA-/Suchprüfung in 87,605 s bestanden. Produktivupdate direkt von GitHub: 88 Paketdateien identisch, vollständige Profil-/Codesicherung; 9.148 bisherige Aufträge erhalten, 8.870 weiter pausiert, Konfiguration/Modelle/Laufzeit unverändert. Die folgenden Prüfstände bleiben mit ihren damaligen Codes erhalten.
+
+### Vorangegangener Prüfstand: Preview 7
+
+Vorangegangener installierter Stand ist [Preview 7](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.2-windows-preview.7), App-Code `f4f5287679652579a74ec244255f5b7872fbe265`, ZIP-SHA-256 `e07abafa47a911f0f3d353dd5f3c93b83b67e30941a58cc378850bde452b7658`. Nutzerergänzung: Zahlen in den Verlaufsbuttons, roter Fehlerbutton bei positiver Zahl und schlanke ein-/ausklappbare Queue.
 
 `Alle (n)`, `Fehler (n)` und `Fertig (n)` zählen sämtliche gespeicherten terminalen Aufträge, unabhängig von der 250-Zeilen-Anzeige. Fehler umfasst `blocked`/`failed`, Fertig `done`/`existing`/`duplicate`; Alle enthält zusätzlich etwa abgebrochene und ersetzte Dateiversionen. Zähler sind Auftragszahlen, keine Anzahl eindeutiger Mediendateien. SQL filtert vor dem Limit, sodass auch ältere Fehler erscheinen. Abgebrochene Aufträge bleiben in Alle sichtbar; normale `seen`/`ready`/aktive Aufträge stehen ausschließlich in der Queue bzw. beim aktuellen Auftrag. Positive Fehlerzahl bleibt auch ausgewählt rot mit weißem Text; null erhält die normale Darstellung.
 
