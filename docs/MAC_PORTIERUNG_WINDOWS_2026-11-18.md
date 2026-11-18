@@ -6,12 +6,12 @@ Der Nutzer beauftragt am 18. November 2026 den Abschluss der Windows-Veröffentl
 
 | Referenz | Exakter Stand |
 | --- | --- |
-| Windows-Programm, identisch mit der abgenommenen PC-Installation | `a5efd22a241368e5e0d8e5b9c933e39cf965b20b` |
-| Finaler Windows-Download | [v1.3.2](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.2), SHA-256 `be621da30940ab64ff3dfe14ac2d29a9c18b5a05ee6b76edc8deb0cfa8cc9775` |
-| Letzte vollständige native CUDA-/Beenden-/Wiederaufnahmeabnahme | `53e69cee39ac5a0721f02eb79034db33e792c6a7`; alle 34 Engine-Dateien im Windows-Programm dazu identisch |
+| Windows-Programm, identisch mit der abgenommenen PC-Installation | `ca9e3e8ca2ae6b6294eb667c61768bc8dd402506` |
+| Finaler Windows-Download | [v1.3.3](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.3), SHA-256 `8b213066f23c0a18e59bd4567a38a19fb8a053f16486d35d6136a3888dd5add4` |
+| Letzte vollständige native CUDA-/Beenden-/Wiederaufnahmeabnahme | `53e69cee39ac5a0721f02eb79034db33e792c6a7`; ASR-/Sprecherdateien unverändert; Queue-Start separat ergänzt |
 | Letzter belegter nativer Mac-Code | `df207f79aa812f70d090e4306443436d51d48952`, v1.3.1 / Build 23 |
 | Aktuelle plattformübergreifende Quellen | `main`; vollständigen SHA beim Beginn mit `git rev-parse HEAD` erfassen |
-| Paket-/Dateinachweis | [Manifest mit allen 91 Dateien](../releases/v1.3.2/windows-release.json) und [Prüfwerkzeug](../scripts/verify_windows_release.py) |
+| Paket-/Dateinachweis | [Manifest mit allen 91 Dateien](../releases/v1.3.3/windows-release.json) und [Prüfwerkzeug](../scripts/verify_windows_release.py) |
 
 ## Im anderen Codex beginnen
 
@@ -71,3 +71,7 @@ Für `main` sind Pull Requests mit aktuellem erfolgreichen Windows-Check und gel
 Bei Abschluss: Funktionsmatrix mit tatsächlichen Mac-Ergebnissen aktualisieren, getesteten SHA festhalten, Änderungen über PR integrieren, DMG samt Prüfsumme veröffentlichen und den separaten Mac-Link in README ersetzen. Der technisch offene gemischtsprachige Qwen-/Stille-Fall bleibt außerhalb des ausdrücklich vereinbarten Umfangs getrennter deutscher/englischer Meetings und darf nicht als behoben behauptet werden.
 
 Weitere Belege: [Queue und Dateischutz](WARTESCHLANGE_UND_DATEISCHUTZ.md), [Suche und Drop-Konflikte](SUCHE_UND_DROP_KONFLIKTE.md), [Verlauf und Bereinigung](VERLAUF_BESTAND_BEREINIGUNG.md), [Lebensdauer](APP_BEENDEN_UND_LEBENSDAUER.md), [Tray/Taskleiste](FENSTER_TRAY_UND_TASKLEISTE.md), [Icon](APP_ICON_UND_LAYOUT.md).
+
+## Ergänzung v1.3.3
+
+Sichtbaren grünen Start-/Fortsetzen-Knopf, separate Pause und eindeutigen Verarbeitungsstatus übernehmen. `start-queue` verarbeitet den aktuellen Queuebestand explizit auch ohne Ordnerüberwachung und ohne Konfigurationsänderung. Normale unpausierte Queues starten automatisch, bewusste Pause bleibt über Neustarts erhalten. Seen-Einträge werden bei explizitem Start sofort dem bestehenden sicheren Worker übergeben; offene Aufnahmen und Dateiversionen besonders auf Mac nativ prüfen. [Details und Nachweise](VERARBEITUNG_STARTEN.md).
