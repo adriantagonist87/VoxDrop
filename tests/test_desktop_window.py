@@ -382,3 +382,23 @@ class DesktopWindowTests(unittest.TestCase):
             callbacks[0](dict(jobs=jobs,queue=[],history_counts=dict(all=1,done=1,errors=0)),None)
         self.assertFalse(self.controller.history)
         self.assertFalse(self.controller.queue)
+
+    def test_window_close_requests_full_stop_before_allowing_exit(self):
+        self.presenter.show();QTest.qWait(30)
+        with patch.object(self.controller_module,'command',return_value='') as command,patch.object(self.controller,'submit',side_effect=lambda operation,finished,**options:finished(operation(),None)),patch.object(self.app,'quit') as quit_app:
+            self.window.close();QTest.qWait(30)
+            command.assert_called_once_with('stop')
+            quit_app.assert_called_once()
+        self.assertTrue(self.controller.shutdown_complete)
+        self.assertTrue(self.controller.content_cancel.is_set())
+        self.assertTrue(self.controller.network_cancel.is_set())
+
+    def test_tray_quit_action_calls_full_app_shutdown(self):
+        with patch.object(self.controller_module.QSystemTrayIcon,'isSystemTrayAvailable',return_value=True),patch.object(self.controller,'requestQuit') as quit_app:
+            self.controller.preview=False
+            self.controller.init_tray()
+            self.controller.preview=True
+            action=self.controller.menu.actions()[-1]
+            self.assertEqual(action.text(),'VoxDrop beenden')
+            action.trigger();quit_app.assert_called_once()
+        self.controller.tray.hide()

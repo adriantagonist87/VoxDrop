@@ -33,7 +33,7 @@ class NetworkWaitTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as temporary, patch(
             "controller.DESKTOP_LOG", Path(temporary) / "desktop.log"
-        ), patch("controller.subprocess.run", side_effect=[
+        ), patch("controller.COMMANDS.run", side_effect=[
             CompletedProcess([], 1, "", "Fehler: [WinError 10013] Socket access denied"),
             CompletedProcess([], 0, "verified", ""),
         ]) as process:

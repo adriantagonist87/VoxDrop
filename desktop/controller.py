@@ -14,6 +14,7 @@ from time import time
 from model_storage import data_directory
 from file_actions import reveal_in_explorer
 from transcript_search import path_matches, run_content_search, transcript_path, history_category
+from command_process import CommandProcesses
 from network_wait import NetworkPermissionError, retry_network_permission
 from PySide6.QtCore import (
     Property,
@@ -104,11 +105,17 @@ def read_settings():
     return {**DEFAULTS, **saved}
 
 
+COMMANDS=CommandProcesses()
+
+
 def command(*arguments):
+    if arguments[0]=='start' and '--owner-pid' not in arguments:
+        import psutil
+        arguments=(*arguments,'--owner-pid',os.getpid(),'--owner-created',psutil.Process().create_time())
     python = Path(sys.executable)
     if python.name.casefold() == "pythonw.exe":
         python = python.with_name("python.exe")
-    result = subprocess.run(
+    result = COMMANDS.run(
         [
             str(python),
             "-BEs",
@@ -121,10 +128,13 @@ def command(*arguments):
             *(str(value) for value in arguments),
         ],
         cwd=ENGINE,
-        check=False,
-        capture_output=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
         encoding="utf-8",
         creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+        detached_start=arguments[0]=='start',
+        allow_stop=arguments[0]=='stop',
     )
     if result.returncode:
         details = result.stderr.strip() or result.stdout.strip()
@@ -305,6 +315,9 @@ class Controller(QObject):
 
     def __init__(self, *, preview=False):
         super().__init__()
+        COMMANDS.reset()
+        self.quitting=False
+        self.shutdown_complete=False
         self.preferences = QSettings(
             str(PROFILE / "layout.ini"), QSettings.Format.IniFormat
         )
@@ -432,6 +445,8 @@ class Controller(QObject):
             "order": self.order,
             "canClear": bool(self.snapshot.get('has_stored_data',self.snapshot.get('stored_jobs',0)
                 or self.snapshot.get('jobs') or self.snapshot.get('queue') or self.history_counts()['all'])) and not job and not self.busy,
+            'quitting': self.quitting,
+            'shutdownComplete': self.shutdown_complete,
         }
 
     @Property("QVariantMap", notify=changed)
@@ -499,13 +514,16 @@ class Controller(QObject):
             ],
         }
 
-    def submit(self, operation, callback):
+    def submit(self, operation, callback, *, shutdown=False):
+        if self.quitting and not shutdown:
+            return
         task = Worker(operation)
         self.pending.add(task)
 
         def finish(result, error):
             self.pending.discard(task)
-            callback(result, error)
+            if shutdown or not self.quitting:
+                callback(result, error)
 
         task.signals.finished.connect(finish, Qt.ConnectionType.QueuedConnection)
         QThreadPool.globalInstance().start(task)
@@ -517,6 +535,8 @@ class Controller(QObject):
 
     @Slot(bool)
     def network_permission_changed(self, waiting):
+        if self.quitting:
+            return
         self.waiting_for_network = waiting
         if self.downloading:
             self.notify(
@@ -562,8 +582,10 @@ class Controller(QObject):
                 and command("prepare-app-data").strip() == "resume"
             )
             settings = read_settings()
-            if (background or resume or (sys.platform == "win32" and settings.get("monitoring"))) and CONFIG.is_file():
-                command("start", CONFIG)
+            if CONFIG.is_file():
+                import psutil
+                command('stop')
+                command('start',CONFIG,'--owner-pid',os.getpid(),'--owner-created',psutil.Process().create_time())
             return settings
 
         def prepared(settings, error):
@@ -922,7 +944,7 @@ class Controller(QObject):
         )
 
     def refresh(self):
-        if self.preview or self.refreshing or not self.ready or self.clearing:
+        if self.preview or self.refreshing or not self.ready or self.clearing or self.quitting:
             return
         self.refreshing = True
         order = self.order
@@ -978,7 +1000,7 @@ class Controller(QObject):
         self.menu.addAction("Hauptfenster öffnen", self.windowRequested.emit)
         self.monitor_action = self.menu.addAction("Dienst starten", self.toggleMonitor)
         self.menu.addSeparator()
-        self.menu.addAction("Oberfläche beenden", QApplication.instance().quit)
+        self.quit_action=self.menu.addAction('VoxDrop beenden',self.requestQuit)
         self.tray.setContextMenu(self.menu)
         self.tray.activated.connect(self.tray_clicked)
         self.tray.show()
@@ -991,6 +1013,59 @@ class Controller(QObject):
     @Slot(result=bool)
     def hasTray(self):
         return self.tray is not None and self.tray.isVisible()
+
+    def cancelForegroundWork(self):
+        self.content_cancel.set()
+        self.network_cancel.set()
+        self.timer.stop()
+        self.drop_timer.stop()
+        self.history_search_timer.stop()
+        COMMANDS.cancel()
+
+    @Slot()
+    def requestQuit(self):
+        if self.quitting:
+            return
+        self.quitting=True
+        self.busy=True
+        self.cancelForegroundWork()
+        self.notify('VoxDrop wird beendet. Überwachung und Verarbeitung werden gestoppt …')
+        if self.tray:self.quit_action.setEnabled(False)
+
+        def shutdown():
+            if not self.content_done.wait(6):
+                raise RuntimeError('Die Detailsuche wird noch beendet. Bitte erneut versuchen.')
+            return command('stop')
+
+        def finished(result,error):
+            if error:
+                self.quitting=False
+                self.busy=False
+                COMMANDS.reset()
+                if self.tray:self.quit_action.setEnabled(True)
+                self.notify('VoxDrop konnte noch nicht vollständig beendet werden: '+error,True)
+                self.timer.start()
+                return
+            self.shutdown_complete=True
+            self.changed.emit()
+            if self.tray:self.tray.hide()
+            QApplication.instance().quit()
+        self.submit(shutdown,finished,shutdown=True)
+
+    @Slot()
+    def ensureStopped(self):
+        """Also cover native Cmd-Q/session quit paths outside the QML close button."""
+        if self.shutdown_complete:
+            return
+        self.quitting=True
+        self.cancelForegroundWork()
+        self.content_done.wait(6)
+        try:
+            command('stop')
+            self.shutdown_complete=True
+        except Exception as error:
+            # The registered owner watchdog remains the independent crash fallback.
+            print('VoxDrop-Beenden: '+str(error),file=sys.stderr)
 
     def update_status(self):
         if self.tray:

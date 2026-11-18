@@ -49,6 +49,7 @@ from queue_control import (
 )
 from media_history import MediaBusy, initialise_media_history, remember_result, previously_transcribed
 from history_store import HISTORY_FILTERS, search_storage_lock, storage_generation
+from app_lifecycle import initialise_lifecycle, stopping, register_owner, lifecycle_lock, watch_owner, stop_service
 from voxdrop import (
     DEFAULT_DATA,
     DEFAULT_HARDWARE,
@@ -358,6 +359,7 @@ def initialise(state):
         db.executescript(SCHEMA)
         initialise_queue(db)
         initialise_media_history(db)
+        initialise_lifecycle(db)
 
 
 def upgrade_jobs(db):
@@ -533,6 +535,8 @@ def inspect_folders_with_deadline(settings):
 
 
 def scan(db, settings, now=None, *, inspect=inspect_folders, generation=None):
+    if stopping(db):
+        return
     generation=storage_generation(db) if generation is None else generation
     _, completed, versions, warning = inspect(settings)
     if not settings["monitoring"]:
@@ -546,7 +550,7 @@ def scan(db, settings, now=None, *, inspect=inspect_folders, generation=None):
     )
     with db:
         db.execute('BEGIN IMMEDIATE')
-        if generation!=storage_generation(db):
+        if generation!=storage_generation(db) or stopping(db):
             return
         for candidate in versions:
             destination = (
@@ -1205,6 +1209,8 @@ def next_job(
     allow_automatic=True,
     config=None,
 ):
+    if stopping(db):
+        return False
     prune_immediate(db)
     if queue_paused(db) and not immediate_count(db):
         return False
@@ -1282,6 +1288,7 @@ def next_job(
             f"""UPDATE jobs SET state=?, attempt=attempt+1, started=?, updated=?, finished=NULL,
             error=NULL, settings=? WHERE id=? AND state='ready' AND settings=?
             AND (NOT EXISTS(SELECT 1 FROM queue_state WHERE paused=1) OR id IN (SELECT job_id FROM immediate_jobs))
+            AND NOT EXISTS(SELECT 1 FROM app_control WHERE stop_requested=1)
             AND id=(SELECT j.id FROM jobs j JOIN queue_positions q ON q.job_id=j.id
                 WHERE j.state='ready' {selection} ORDER BY q.position,j.id LIMIT 1)""",
             (phase, now, now, json.dumps(settings, ensure_ascii=False), job_id, job["settings"]),
@@ -1500,7 +1507,7 @@ def transient_file_error(error):
     )
 
 
-def recover(db, state):
+def recover(db, state, *, verify_exports=True):
     jobs = db.execute(
         "SELECT * FROM jobs WHERE state IN ('copying','transcribing','exporting')"
     ).fetchall()
@@ -1521,7 +1528,7 @@ def recover(db, state):
         for leftover in work.glob("transcription-*"):
             if leftover.is_dir() and not leftover.is_symlink():
                 shutil.rmtree(leftover)
-        if job["publication_started"] and job["text_hash"]:
+        if verify_exports and job["publication_started"] and job["text_hash"]:
             try:
                 settings = json.loads(job["settings"])
                 moving = job["origin_job_id"] is None and moves_media(settings)
@@ -1547,11 +1554,11 @@ def recover(db, state):
         error_state(
             db,
             job["id"],
-            "ready" if WINDOWS else "failed",
+            "ready" if WINDOWS or not verify_exports else "failed",
             "Auftrag unterbrochen. Automatische Wiederaufnahme nach Dienststart."
             if WINDOWS else "Auftrag unterbrochen. Manuelle Wiederholung möglich.",
         )
-        if WINDOWS:
+        if WINDOWS or not verify_exports:
             with db:
                 db.execute("UPDATE jobs SET finished=NULL WHERE id=?", (job["id"],))
 
@@ -1904,6 +1911,9 @@ def run(state, config, *, once):
         with db:
             db.execute("DELETE FROM connection")
         recover(db, state)
+        lifetime=threading.Thread(target=watch_owner,args=(state,stop),name='app-owner',daemon=True)
+        if not once:
+            lifetime.start()
         if once:
             if multiple.is_set():
                 with db:
@@ -1980,6 +1990,8 @@ def supervise_worker(state, model_data, config, log):
         except BlockingIOError:
             return
         delay = 2
+        lifetime=threading.Thread(target=watch_owner,args=(state,stop),name='app-owner',daemon=True)
+        lifetime.start()
         while not stop.is_set():
             started = time.monotonic()
             try:
@@ -2006,9 +2018,8 @@ def supervise_worker(state, model_data, config, log):
                     while child.poll() is None and not stop.wait(0.5):
                         pass
                     if stop.is_set() and child.poll() is None:
-                        child.terminate()
                         try:
-                            child.wait(timeout=10)
+                            child.wait(timeout=6)
                         except subprocess.TimeoutExpired:
                             child.kill()
                     code = child.wait()
@@ -2025,8 +2036,14 @@ def supervise_worker(state, model_data, config, log):
             delay = min(300, delay * 2)
 
 
-def start_in_background(state, model_data, config):
+def start_in_background(state, model_data, config, *, owner_pid=None, owner_created=None):
     read_settings(config)
+    with lifecycle_lock(state),closing(database(state)) as db:
+        register_owner(db,owner_pid,owner_created)
+        _start_in_background(state,model_data,config)
+
+
+def _start_in_background(state,model_data,config):
     if is_running(state):
         return
     with (state / ("bootstrap.log" if WINDOWS else "service.log")).open("ab") as log:
@@ -2113,6 +2130,9 @@ def main(argv=None):
         command.add_argument("config", type=Path)
         if name == "run":
             command.add_argument("--once", action="store_true")
+        if name == 'start':
+            command.add_argument('--owner-pid',type=int)
+            command.add_argument('--owner-created',type=float)
         if name == "check":
             command.add_argument("--folder")
     commands.add_parser("validate-settings").add_argument("config", type=Path)
@@ -2147,6 +2167,7 @@ def main(argv=None):
     rerun.add_argument("job_id", type=int)
     rerun.add_argument("config", type=Path)
     commands.add_parser("clear-history")
+    commands.add_parser('stop')
     commands.add_parser("enqueue-folders").add_argument("config", type=Path)
     commands.add_parser('prepare-drop').add_argument('config', type=Path)
     drop_command = commands.add_parser('resolve-drop')
@@ -2209,6 +2230,17 @@ def main(argv=None):
             print(json.dumps(inspect_folders(json.load(sys.stdin)), ensure_ascii=True))
             return 0
         state = args.state_dir.resolve()
+        if args.command=='stop' and (state/'jobs.sqlite3').is_file():
+            with closing(database(state)) as db:
+                result=stop_service(db,state,Path(__file__).resolve())
+                if result['database_stop_recorded']:
+                    try:
+                        recover(db,state,verify_exports=False)
+                        service_state(db,'stopped')
+                    except (OSError,sqlite3.Error):
+                        result['recovery_deferred']=True
+            print(json.dumps(result))
+            return 0
         initialise(state)
         if args.command in ("run", "supervise"):
             configure_runtime(args.model_data)
@@ -2218,7 +2250,14 @@ def main(argv=None):
                 run(state, args.config, once=args.once)
             return 0
         if args.command == "start":
-            start_in_background(state, args.model_data, args.config)
+            start_in_background(state,args.model_data,args.config,owner_pid=args.owner_pid,owner_created=args.owner_created)
+            return 0
+        if args.command=='stop':
+            with closing(database(state)) as db:
+                result=stop_service(db,state,Path(__file__).resolve())
+                recover(db,state,verify_exports=False)
+                service_state(db,'stopped')
+            print(json.dumps(result))
             return 0
         if args.command == "autostart":
             if WINDOWS:

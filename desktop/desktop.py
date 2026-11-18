@@ -59,6 +59,7 @@ def main():
         return 1
 
     controller = Controller()
+    app.aboutToQuit.connect(controller.ensureStopped)
     engine = QQmlApplicationEngine()
     controller.init_tray()
     window = load_window(engine, controller)
@@ -96,7 +97,10 @@ def main():
     if not background or not controller.hasTray():
         presenter.show()
     controller.start(background)
-    return app.exec()
+    result=app.exec()
+    from PySide6.QtCore import QThreadPool
+    QThreadPool.globalInstance().waitForDone(6000)
+    return result
 
 
 if __name__ == "__main__":

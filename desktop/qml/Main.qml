@@ -66,12 +66,12 @@ ApplicationWindow {
     palette.placeholderText: muted
 
     onClosing: function(event) {
-        if (api.hasTray()) {
-            event.accepted = false
-            window.hide()
-        } else {
-            Qt.quit()
+        if (api.state.shutdownComplete) {
+            event.accepted = true
+            return
         }
+        event.accepted = false
+        api.requestQuit()
     }
 
     component Copy: Label {
