@@ -1,6 +1,15 @@
 # Projektstatus VoxDrop
 
-## Aktuell: Windows v1.3.2 und gemeinsame Mac-Entwicklungsbasis
+## Aktuell: Windows v1.3.3 – Verarbeitung starten und Status erkennen
+
+Die Produktivdiagnose zeigte eine laufende, nicht pausierte Verarbeitung; der erste lange Auftrag befand sich in der Sprecherphase. Automatischer Start war aktiv. Dennoch fehlte eine klar erkennbare eigenständige Startaktion, und Phasen ohne Prozentangabe wirkten zu leicht wie Stillstand. V1.3.3 ergänzt den sichtbaren grünen Start-/Fortsetzen-Knopf, eine separate Pause und „Verarbeitung läuft“ auch ohne Prozentwert.
+
+App-Code `ca9e3e8ca2ae6b6294eb667c61768bc8dd402506`, [Windows v1.3.3](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.3), ZIP-SHA-256 `8b213066f23c0a18e59bd4567a38a19fb8a053f16486d35d6136a3888dd5add4`. [Manifest mit 91 Dateien](../releases/v1.3.3/windows-release.json). Ein ausdrücklicher Start bearbeitet die bereits eingereihte Queue unabhängig von ausgeschalteter Ordnerüberwachung. Einstellungen, Reihenfolge, bewusste Abbrüche und Originale bleiben geschützt. Gespeicherte Pause wird beim normalen App-Start weiterhin respektiert; neue unpausierte Queues werden automatisch verarbeitet.
+
+163 Regressionen in 55,421 s bestanden, sieben bekannte Plattformskips. Nach der abschließenden Trennung der beiden QML-Buttons zusätzlich alle 24 Qt-Fälle in 8,244 s bestanden. Finales natives Paket in 9.201 s: echter QML-Klick setzt eine normale pausierte Queue bei ausgeschalteter Überwachung fort und veröffentlicht einen vorbereiteten Export; Konfiguration, Originalhash und Eigentümer bleiben erhalten, SQLite/Fremdschlüssel ok, explizites Beenden ohne Orphans. Kein zusätzlicher GPU-Lauf neben dem laufenden Produktivauftrag. [Ursache, Bedienung und Update](VERARBEITUNG_STARTEN.md).
+
+
+## Vorangegangener Stand: Windows v1.3.2 und gemeinsame Mac-Entwicklungsbasis
 
 Der Nutzer beauftragt den GitHub-Abschluss und die anschließende Mac-Portierung auf denselben Funktionsstand. [Windows v1.3.2](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.2) liefert exakt die 91 Programmdateien der abgenommenen PC-Installation: App-Code `a5efd22a241368e5e0d8e5b9c933e39cf965b20b`, ZIP-SHA-256 `be621da30940ab64ff3dfe14ac2d29a9c18b5a05ee6b76edc8deb0cfa8cc9775`. [Dateimanifest](../releases/v1.3.2/windows-release.json) und `scripts/verify_windows_release.py` machen ZIP und Installation prüfbar. Keine Änderung an der produktiven App, ihren Modellen oder Einstellungen durch diesen GitHub-Abschluss.
 
@@ -218,7 +227,7 @@ Die ursprüngliche Mac-Historie von v1.2.0 mit Code-Commit `19c8084193ec96717d87
 | Umgebung | Letzter geprüfter öffentlicher Commit | Prüfung und Ergebnis |
 | --- | --- | --- |
 | macOS, Apple Silicon | `df207f79aa812f70d090e4306443436d51d48952` | v1.3.1 Build 23: alle 64 Tests einschließlich sechs neuer Fensterregressionen unter macOS 27.2, arm64, Python 3.12.13 bestanden. Zusätzlich vollständiges QML-Fenster auf Cocoa mit Öffnungssignalen, Einzelinstanz-Socket, Maximierung, Vollbild, Minimierung und Schließen geprüft. Auf diesem Mac installiert; Desktop-Dateien bytegleich zum Prüfstand, Einstellungen und Modellbestand erhalten. Die vollständige Modell-/Neustartabnahme erfolgte zuvor mit v1.3.0 bei `270e3af7ce96bfce8c5daf49236da2fa4d1d05be`; deren KI-Backend ist unverändert. |
-| Windows 11 mit NVIDIA | `a5efd22a241368e5e0d8e5b9c933e39cf965b20b` | v1.3.2, exakt installierter Preview-13-Code; native Tray-/Taskleisten-/Scanabnahme 30,927 s, 22 Qt-Fälle. 34 Engine-Dateien bytegleich zum nativen CUDA-Prüfstand `53e69cee39ac5a0721f02eb79034db33e792c6a7`. Zusätzlich 159 synthetische GitHub-CI-Fälle auf `efd209bca441828143273227ddd6ea0c406b3c03` erfolgreich. Mac-Portierung gesondert offen. |
+| Windows 11 mit NVIDIA | `ca9e3e8ca2ae6b6294eb667c61768bc8dd402506` | v1.3.3: sichtbarer Start-/Fortsetzen-Knopf, separate Pause, eindeutiger Laufstatus und ausdrückliche Queuebearbeitung ohne Ordnerüberwachung. 163 Regressionen/24 abschließende Qt-Fälle; natives finales Steuerungspaket bestanden. ASR-/Sprecherdateien unverändert. |
 | Linux | **UNGEPRÜFT**, Zielport offen | Gemeinsame Qt-Oberfläche vorhanden. Backends, Plattformadapter, Einrichtung und Pakete sind auf macOS/Windows ausgerichtet. |
 
 Der macOS-Testbefehl war `MPLCONFIGDIR=<lokales Testverzeichnis> .runtime/aTrain/.venv/bin/python -m unittest discover -s tests`. Das Ergebnis war `Ran 58 tests … OK`. Dieser Testlauf prüft teilweise gemockte Abläufe. Die zusätzlichen GUI- und Modellprüfungen haben den jeweils unten angegebenen Umfang. Die Ersteinrichtung wurde in einem leeren Profil auf dem vorhandenen Mac geprüft. Die Prüfung auf einem physisch zweiten Mac ist offen.

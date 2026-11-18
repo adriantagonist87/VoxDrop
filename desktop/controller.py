@@ -403,6 +403,18 @@ class Controller(QObject):
                 "canCancel": job['state'] in ('copying','transcribing') and not job.get('publication_started') and not job.get('cancel_requested'),
             }
         checked = {path: self.folder_status(path) for path in self.paths}
+        paused=self.snapshot.get('queue_paused',False)
+        count=len(self.snapshot.get('queue',[]))
+        if job:
+            processing_status='Verarbeitung läuft. '+('Danach pausiert die Warteschlange.' if paused else f'{count} Dateien warten.')
+        elif paused:
+            processing_status='Verarbeitung pausiert. Zum Starten „Fortsetzen“ wählen.'
+        elif not running:
+            processing_status='Verarbeitung ist aus. „Verarbeitung starten“ wählen.'
+        elif count:
+            processing_status='Automatische Verarbeitung aktiv. Nächster Auftrag wird vorbereitet.'
+        else:
+            processing_status='Bereit. Neue Aufträge werden automatisch verarbeitet.'
         return {
             "ready": self.ready,
             "busy": self.busy,
@@ -417,6 +429,9 @@ class Controller(QObject):
             "waiting": self.snapshot.get("waiting", 0),
             "queueCount": len(self.snapshot.get('queue',[])),
             "queuePaused": self.snapshot.get('queue_paused',False),
+            "processingStatus": processing_status,
+            "canStartProcessing": self.ready and not self.busy and not self.quitting and
+                (paused or not running or (not job and count>0)),
             "queueImmediateCount": self.snapshot.get('immediate_count', 0),
             "queueCompact": self.queue_compact,
             "queueSearch": self.queue_query,
@@ -1305,6 +1320,15 @@ class Controller(QObject):
     def pauseQueue(self, paused):
         self.action(lambda:command('queue-pause','on' if paused else 'off'),
                     'Warteschlange pausiert; aktueller Auftrag läuft weiter.' if paused else 'Warteschlange fortgesetzt.')
+
+    @Slot()
+    def startProcessing(self):
+        if not self.ready or self.busy or self.quitting:
+            return
+        def begin():
+            command('start',CONFIG)
+            return command('start-queue')
+        self.action(begin,'Verarbeitung gestartet. Eingereihte Dateien werden automatisch nacheinander bearbeitet.')
 
     @Slot(int)
     def showDetails(self, identifier):

@@ -606,7 +606,7 @@ ApplicationWindow {
                         }
                         Muted {
                             Layout.fillWidth: true
-                            text: viewState.current.progress === null || viewState.current.progress === undefined ? "" :
+                            text: viewState.current.progress === null || viewState.current.progress === undefined ? "Verarbeitung läuft. Für diese Phase ist noch keine Prozentangabe verfügbar." :
                                 Math.round(viewState.current.progress * 100) + " %"
                             visible: text.length > 0
                         }

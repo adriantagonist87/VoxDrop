@@ -41,7 +41,7 @@ from smb_paths import (
 from transcription_worker import run_transcription
 from runtime_logs import RollingLog
 from queue_control import (
-    JobCancelled, initialise_queue, queue_jobs, queue_paused, set_queue_paused,
+    JobCancelled, initialise_queue, queue_jobs, queue_paused, set_queue_paused, start_queue,
     move_queue_item, cancel_job, cancel_queue, cancellation_requested, poll_cancellation,
     prioritise_jobs, restore_preempted,
     immediate_count, prune_immediate,
@@ -2164,6 +2164,7 @@ def main(argv=None):
     commands.add_parser("retry").add_argument("job_id", type=int)
     commands.add_parser('cancel-job').add_argument('job_id',type=int)
     commands.add_parser('cancel-queue')
+    commands.add_parser('start-queue')
     commands.add_parser('queue-pause').add_argument('mode',choices=('on','off'))
     move=commands.add_parser('move-queue')
     move.add_argument('job_id',type=int)
@@ -2308,6 +2309,8 @@ def main(argv=None):
                 print(cancel_queue(db))
             elif args.command == 'queue-pause':
                 set_queue_paused(db,args.mode=='on')
+            elif args.command == 'start-queue':
+                print(json.dumps(dict(started=start_queue(db))))
             elif args.command == 'move-queue':
                 move_queue_item(db,args.job_id,args.before_id,after=args.after)
             elif args.command == 'move-queue-relative':
