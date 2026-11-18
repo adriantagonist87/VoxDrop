@@ -58,6 +58,20 @@ class QueueTests(unittest.TestCase):
         self.assertEqual(first.read_bytes(),b'synthetic media')
         self.assertEqual(second.read_bytes(),b'cancelled media')
 
+    @unittest.skipUnless(WINDOWS,'Windows writer sharing probe')
+    def test_explicit_start_does_not_bypass_open_writer_or_wait_for_scan_interval(self):
+        source,identifier=self.add()
+        with self.db:self.db.execute("UPDATE jobs SET state='seen' WHERE id=?",(identifier,))
+        service.start_queue(self.db)
+        self.assertEqual(self.row(identifier)['state'],'ready')
+        with source.open('ab'):
+            service.next_job(self.db,self.state,self.engine,available_only=True,allow_automatic=False)
+        self.engine.assert_not_called()
+        self.assertIn('Aufnahme wird noch geschrieben',self.row(identifier)['error'])
+        with self.db:self.db.execute('UPDATE job_retries SET retry_at=0')
+        service.next_job(self.db,self.state,self.engine,available_only=True,allow_automatic=False)
+        self.assertEqual(self.row(identifier)['state'],'done')
+
     def test_cleanup_error_cannot_replace_app_quit_preemption_or_user_cancel(self):
         from app_lifecycle import request_stop, register_owner
         for app_quit in (True, False):

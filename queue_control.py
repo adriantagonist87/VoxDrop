@@ -86,6 +86,10 @@ def start_queue(db):
         db.execute('UPDATE queue_state SET paused=0 WHERE id=1')
         db.executemany('INSERT OR IGNORE INTO immediate_jobs(job_id) VALUES (?)',
                        [(identifier,) for identifier in identifiers])
+        # An explicit start need not wait for the next scanner interval. The
+        # worker still checks open writers and the exact queued file version.
+        db.execute("""UPDATE jobs SET state='ready',updated=? WHERE state='seen'
+            AND id IN (SELECT job_id FROM immediate_jobs)""",(time.time(),))
     return len(identifiers)
 
 
