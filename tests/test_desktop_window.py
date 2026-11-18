@@ -130,3 +130,17 @@ class DesktopWindowTests(unittest.TestCase):
             self.controller.openTranscript()
         opened.assert_called_once_with(QUrl.fromLocalFile(str(path)))
         self.assertTrue(self.controller.detail['openTranscript'])
+
+    def test_imported_results_do_not_claim_a_model_or_new_inference(self):
+        job=self.queue_fixture(1)[0]
+        job.update(state='existing',result_kind='existing')
+        self.controller.selected=job
+        rows={row['label']:row['value'] for row in self.controller.detail['rows']}
+        self.assertEqual(rows['Modell verwendet'],'Nicht bekannt (Bestandsdatei)')
+        self.assertEqual(rows['Dauer Spracherkennung'],'Nicht erneut ausgeführt')
+        self.assertEqual(rows['Verfahren der Sprecherzuordnung'],'Nicht neu bestimmt')
+        self.assertEqual(rows['Rechengerät'],'Keine neue Inferenz')
+        for kind in ('reused','duplicate'):
+            job['result_kind']=kind
+            rows={row['label']:row['value'] for row in self.controller.detail['rows']}
+            self.assertEqual(rows['Modell verwendet'],'Siehe Ursprungsauftrag')

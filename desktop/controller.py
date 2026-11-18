@@ -413,6 +413,7 @@ class Controller(QObject):
         job = self.selected
         settings = job_settings(job)
         speakers = settings.get("speakers", True)
+        known_result = job.get('result_kind') in ('existing','reused','duplicate')
         memory = job.get("peak_memory_bytes")
         method = {
             "dover-lap": f"DOVER-Lap ({job.get('speaker_passes') or 3} Durchgänge)",
@@ -443,7 +444,9 @@ class Controller(QObject):
                     ("Versuche", job.get("attempt", 0)),
                     (
                         "Modell verwendet",
-                        MODELS.get(settings.get("model"), MODELS["large-v3-turbo"]),
+                        ('Nicht bekannt (Bestandsdatei)' if job.get('result_kind')=='existing'
+                         else 'Siehe Ursprungsauftrag') if known_result
+                        else MODELS.get(settings.get("model"), MODELS["large-v3-turbo"]),
                     ),
                     (
                         "RAM-Auslastung verursacht",
@@ -451,19 +454,19 @@ class Controller(QObject):
                         if memory
                         else "—",
                     ),
-                    ("Dauer Spracherkennung", duration(job.get("speech_seconds"))),
+                    ("Dauer Spracherkennung", 'Nicht erneut ausgeführt' if known_result else duration(job.get("speech_seconds"))),
                     (
                         "Verfahren der Sprecherzuordnung",
-                        method if speakers else "Deaktiviert",
+                        'Nicht neu bestimmt' if known_result else method if speakers else "Deaktiviert",
                     ),
                     (
                         "Dauer Sprecherzuordnung",
-                        duration(job.get("speaker_seconds"))
+                        'Nicht erneut ausgeführt' if known_result else duration(job.get("speaker_seconds"))
                         if speakers
                         else "Deaktiviert",
                     ),
                     ("Dauer gesamt", duration(total_duration(job))),
-                    ("Rechengerät", GPU_NAME.get(settings.get("hardware"), "CPU")),
+                    ("Rechengerät", 'Keine neue Inferenz' if known_result else GPU_NAME.get(settings.get("hardware"), "CPU")),
                 )
             ],
         }

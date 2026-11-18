@@ -1,5 +1,11 @@
 # Übergabeauftrag für Codex auf dem Windows-PC
 
+## Neuer Funktionsstand: Preview 5
+
+App-Code `94e333153db90dc57c917575a8ba39040716a170`, [GitHub-Preview 5](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.2-windows-preview.5), SHA-256 `c6ebc9d660e4ea9e2b9356bcc08023b28f73179f03f5d50b107f36dcf0c04d6c`. Vollständige bedienbare Warteschlange, OS-Standardöffner für TXT, Ergebnis-/Inhaltserkennung und Windows-Schreibschutzprüfung implementiert und produktiv installiert. [Detaillierte Übergabe](WARTESCHLANGE_UND_DATEISCHUTZ.md). 108 Tests (101 bestanden, sieben Skips); echtes EXE-/CUDA-Paket einschließlich Abbruch, Wiederverwendung, Neutranskription und Wiederanlauf bestanden. Bisherige 241 Aufträge erhalten; native Integrität/Fremdschlüssel und bestehende TXT bestätigt. Vorübergehende Updatepause beendet, produktive Überwachung aktiv.
+
+Für den Mac zusätzlich `queue_control.py` und `media_history.py` im Paket prüfen, SQLite-Migration/Queue-Reihenfolge, persistente Abbruchanforderung/Unix-Prozessgruppe, QML-Liste/Drag-and-drop bei Mindestgröße, OS-TXT-Öffner und `onTextChanged` gegenprüfen. Windows prüft offene Schreibzugriffe nativ; der Mac behält bisherige Stabilitäts-/Versionsprüfung und braucht eine eigene Gegenprüfung für laufende Aufnahmen. Gemeinsamen Code weiter nicht ungeprüft nach main integrieren. Die folgenden Abschnitte dokumentieren frühere Prüfstände.
+
 ## Aktuelle Sitzung vom 18.11.2026
 
 Neuinstallation und Betriebsprüfungen einschließlich Neustart/Standby sind durchgeführt, die App ist produktiv eingerichtet; verbleibende ungeprüfte Fälle stehen unten. Aktueller [GitHub-Vorabdownload Preview 4](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.2-windows-preview.4), App-Code `f35bff9f8f1222d176b987382d3214dfbd9148c1`, SHA-256 `1be623b71f02177e46f402b43a53cf4232bc5e8bae513b7263c1c12553ba241a`. Vollständige Bereinigung und leere Preview-2-Einrichtung beider Modelle bestanden, anschließend geprüfte GitHub-Updates. Acht getrennte Sprachfälle, lokale/UNC-Dateiabläufe und 48,9-minütige normale OPUS-Überwachung mit drei DOVER-Durchgängen bestanden. Suite: 94 Fälle, 87 bestanden, sieben Skips. Ergebnisse und noch offene Schritte stehen im [laufenden Bericht](WINDOWS_ABNAHME_2026-11-18.md); nachfolgende Nachtberichte sind historische Prüfstände.

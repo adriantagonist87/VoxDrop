@@ -2,6 +2,18 @@
 
 Nutzerauftrag vom 18.11.2026: Die mittlere Spalte muss sämtliche wartenden Aufträge sichtbar und bedienbar machen. Zusätzlich TXT direkt mit der OS-Standardanwendung öffnen, frühere Ergebnisse erkennen und laufende Aufnahmen vor verfrühter Verarbeitung schützen.
 
+## Aktueller geprüfter Windows-Stand
+
+[Preview 5](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.2-windows-preview.5), App-Code `94e333153db90dc57c917575a8ba39040716a170`, ZIP-SHA-256 `c6ebc9d660e4ea9e2b9356bcc08023b28f73179f03f5d50b107f36dcf0c04d6c`. Interne Version weiterhin 1.3.1. Unverändertes natives ZIP vor Veröffentlichung über EXE geprüft, danach erneut unmittelbar von GitHub heruntergeladen, Prüfsumme und alle installierten Paketdateien verglichen. Keine Überlagerung aus dem Entwicklercheckout.
+
+Echte Paketabnahme mit isoliertem Profil und synthetischen Medien in 80,542 s bestanden: Reihenfolge vor Start geändert und Einzelauftrag entfernt; tatsächlichen Qwen-Auftrag nach dekodierter Audioanlage abgebrochen, null verbleibende Inferenzprozesse und Arbeitsordner bereinigt. Deutscher CUDA-Auftrag erfolgreich. Umbenennung derselben Aufnahme übernahm das hashgeprüfte Ergebnis ohne neue ASR. Englische ausdrückliche Neutranskription erfolgreich unter eigenem Namen bei erhaltenem altem TXT. Ein unverändert offener Schreiber blockierte Verarbeitung bis zum Schließen. Alle abbrechen, Pause und Abbruchstatus blieben über einen echten Dienstneustart erhalten. Originalhashes und SQLite-Integrität bestätigt.
+
+Der tatsächlich ausgelieferte Controller hat zusätzlich eine synthetische TXT mit realem Windows-Qt-Plattformadapter über eine lokale Datei-URL an die OS-Standardanwendung übergeben; `openUrl` wurde nicht durch einen Erfolgsmock ersetzt und das Betriebssystem akzeptierte den Aufruf. Die sichtbare Editoransicht ist damit nicht separat abgenommen.
+
+Produktivupdate vor Beginn mit null aktiven Aufträgen und SQLite `ok` abgesichert. Vollständiges Profil und alter App-Code privat kopiert und pro Datei hashverglichen. Laufzeit-/Modellmanifeste bytegleich, Modelldateimetadaten unverändert, keine erneuten großen Downloads. Danach vorherige produktive Überwachung wieder aktiviert. Alle 241 bisherigen Auftrags-IDs, Quellen, Größen, Dateiversionen, Erkennungszeitpunkte und Ursprungsbeziehungen erhalten; Fremdschlüssel und SQLite `ok`. Alle 97 schon vor der Neuinstallation vorhandenen TXT weiterhin hashgleich.
+
+Beim Kontrolllauf wurden 200 Aufträge mit vorhandenem benachbartem TXT erkannt; 31 warteten und einer wurde verarbeitet, neun waren bereits abgeschlossen. Die kleinere Arbeitswarteschlange beruht auf Bestands-/Ergebniserkennung; Medien wurden dafür nicht gelöscht. Im installierten Fenster bestätigt der Accessibility-Baum die neue Liste und ihre Bedienelemente. Eine Bildschirmaufnahme zeigte den darüberliegenden Browser; die eigenständige visuelle Layoutprüfung verwendet deshalb den tatsächlichen QML-Render mit synthetischen Einträgen. Keine produktiven Lösch-/Abbruch-/Reorder-Aktionen zu Testzwecken ausgeführt.
+
 ## Umsetzung
 
 - Mittlere Spalte: laufender Auftrag mit gezieltem Abbruch, darunter virtualisierte vollständige Warteschlange. Dateiname/Pfad, Position, Status, Größe, bekannte Audiodauer, Einreihzeit, Modell/Sprache/Gerät und Optionen; unbekannte Dauern werden nicht geschätzt. Details für jeden Eintrag, auch außerhalb der 250 Verlaufseinträge.
@@ -29,4 +41,4 @@ Native Windows-Suite auf dem vorliegenden Quellstand: 108 Fälle in 22,011 s, 10
 
 Frühere Zwischenläufe enthielten eine ungültige neue Testkonfiguration (gleicher Legacy-Eingangs-/Ausgabeordner), einen QObject-Lookup statt visueller Delegate-Suche und eine alte Zwei-ASR-Erwartung für bytegleiche Testdateien. Testeinrichtung korrigiert; unabhängige Aufnahmen im Routingtest haben jetzt unterschiedliche synthetische Bytes, die Inhaltswiederverwendung hat einen eigenen Test. Diese Zwischenläufe waren keine bestandene Abnahme.
 
-Paket-/CUDA-Abnahme und endgültiger getesteter SHA werden nach dem unveränderten nativen Build ergänzt. Installierter Produktivstand ist bis zum geprüften Update weiterhin Preview 4; automatische Folgeaufträge sind für die Updatevorbereitung pausiert, aktueller Auftrag bleibt erhalten. Keine gemeinsame Mac-Freigabe; Änderungen bleiben im Draft-PR.
+Paket-/CUDA-Abnahme und Produktivupdate sind im aktuellen Stand oben ergänzt. Die für das Update vorübergehend pausierte automatische Überwachung ist wieder aktiv. Keine gemeinsame Mac-Freigabe; Änderungen bleiben im Draft-PR. Auf dem Mac insbesondere neue Module in der Paketliste, SQLite-Migration, Prozessgruppenabbruch, QML-Drag-and-drop, Standardöffner und Pfadsignal gegenprüfen. Der Windows-Schreibzugriffsadapter ersetzt keine native Mac-Prüfung offener Schreiber.
