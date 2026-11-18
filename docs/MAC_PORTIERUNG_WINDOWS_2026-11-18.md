@@ -6,9 +6,9 @@ Der Nutzer beauftragt am 18. November 2026 den Abschluss der Windows-Veröffentl
 
 | Referenz | Exakter Stand |
 | --- | --- |
-| Windows-Programm, identisch mit der abgenommenen PC-Installation | `a7166f0039f9aafb1c710079f167c22b4512595f` |
-| Finaler Windows-Download | [v1.4.0](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.4.0), SHA-256 `adc19a6ad86e299099050e545357e9435caf22df6c9d57b29efbfa2c52e33ec4` |
-| Letzte vollständige native CUDA-/Beenden-/Wiederaufnahmeabnahme | `53e69cee39ac5a0721f02eb79034db33e792c6a7`; ASR-/Sprecherdateien unverändert; Queue-Start separat ergänzt |
+| Windows-Programm, identisch mit der abgenommenen PC-Installation | `48ff35f43f07c07b4b7abd0b22561c9096fbe1cc` |
+| Finaler Windows-Download | [v1.4.0](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.4.0), SHA-256 `f91c03dbbd093fa983b8a55688e682ae47571a5772f2600495833884dfd00565` |
+| Letzte vollständige native CUDA-/Beenden-/Wiederaufnahmeabnahme | `48ff35f43f07c07b4b7abd0b22561c9096fbe1cc`; Play/Stopp/Wiederaufnahme, beide ASR-Modelle und drei DOVER-Durchgänge bei 75 % Budget geprüft |
 | Letzter belegter nativer Mac-Code | `df207f79aa812f70d090e4306443436d51d48952`, v1.3.1 / Build 23 |
 | Aktuelle plattformübergreifende Quellen | `main`; vollständigen SHA beim Beginn mit `git rev-parse HEAD` erfassen |
 | Paket-/Dateinachweis | [Manifest mit allen Programmdateien](../releases/v1.4.0/windows-release.json) und [Prüfwerkzeug](../scripts/verify_windows_release.py) |
