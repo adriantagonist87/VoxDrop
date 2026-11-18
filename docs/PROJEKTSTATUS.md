@@ -1,6 +1,17 @@
 # Projektstatus VoxDrop
 
-## Aktuell: Windows Preview 13
+## Aktuell: Windows v1.3.2 und gemeinsame Mac-Entwicklungsbasis
+
+Der Nutzer beauftragt den GitHub-Abschluss und die anschließende Mac-Portierung auf denselben Funktionsstand. [Windows v1.3.2](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.2) liefert exakt die 91 Programmdateien der abgenommenen PC-Installation: App-Code `a5efd22a241368e5e0d8e5b9c933e39cf965b20b`, ZIP-SHA-256 `be621da30940ab64ff3dfe14ac2d29a9c18b5a05ee6b76edc8deb0cfa8cc9775`. [Dateimanifest](../releases/v1.3.2/windows-release.json) und `scripts/verify_windows_release.py` machen ZIP und Installation prüfbar. Keine Änderung an der produktiven App, ihren Modellen oder Einstellungen durch diesen GitHub-Abschluss.
+
+Der gemeinsame Entwicklungsstand wird über PR #1 auf `main` zusammengeführt. Die bisherige Mac-DMG bleibt auf v1.3.1; native Mac-Funktionsfreigabe steht aus. **[Konkreter Auftrag für den Mac-Codex](MAC_PORTIERUNG_WINDOWS_2026-11-18.md)** mit Start-/Buildbefehlen, vollständiger Funktionsmatrix und Pflichtprüfungen für Cmd-Q, Unix-Prozesse, offene Aufnahmen, SQLite/FTS und Icons. Frühere Draft-/Integrationshinweise unten sind historische Übergabestände, keine aktuelle Arbeitssperre.
+
+`main` ist tatsächlich geschützt: kein Force-Push/Löschen, Pull Requests und erfolgreicher aktueller Check „Windows regression“ von GitHub Actions, auch für Administratoren. README mit transparentem kanonischem Logo, getrennten Downloads und allen heutigen Windows-Funktionen aktualisiert. [Abschluss-/Releasebericht](GITHUB_ABSCHLUSS_2026-11-18.md).
+
+Neue frische lokale CI-Umgebung: 159 Fälle in 47,992 s, 152 bestanden/sieben bekannte Skips. [GitHub-Windows-Prüfung auf `efd209bca441828143273227ddd6ea0c406b3c03`](https://github.com/adriantagonist87/VoxDrop/actions/runs/44357386673) erfolgreich: 159 Fälle in 70,690 s, 154 bestanden/fünf reine Mac-Skips; Symlink-Fälle auf dem Runner ebenfalls bestanden. Die erste GitHub-Python-Cache-Fehlkonfiguration wurde auf den App-eigenen uv/Python-Weg korrigiert. Diese synthetischen CI-Prüfungen ergänzen die früheren nativen GPU-/GUI-Abnahmen, ersetzen keine Mac-Abnahme.
+
+
+## Historischer Übergabestand: Windows Preview 13
 
 [Windows Preview 13](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.2-windows-preview.13), App-Code `a5efd22a241368e5e0d8e5b9c933e39cf965b20b`, ZIP-SHA-256 `be621da30940ab64ff3dfe14ac2d29a9c18b5a05ee6b76edc8deb0cfa8cc9775`. Neue ausdrückliche Nutzerpräzisierung: **Fenster-X blendet in den Systemtray aus**, **Minimieren minimiert in die Taskleiste**. App, Überwachung und Verarbeitung laufen in beiden Fällen weiter. **„VoxDrop beenden“ im Tray** beendet weiterhin alles und entlädt Modelle aus RAM/VRAM. Ohne verfügbaren Tray minimiert X in die Taskleiste. [Bedienung, native Tests und Mac-Übergabe](FENSTER_TRAY_UND_TASKLEISTE.md).
 
@@ -80,7 +91,7 @@ Erster produktiver Auftrag nach Aktivierung erfolgreich in 478,768 s; Original g
 
 Stand vom 18. November 2026. Für jede Weiterentwicklung sind zusätzlich die Arbeitsregeln und die Entwicklungsanleitung zu lesen. [Arbeitsregeln](../AGENTS.md) · [Entwicklung](ENTWICKLUNG.md) · [Windows-Übergabeauftrag](UEBERGABE_WINDOWS.md)
 
-**Abgleich mit main:** Der separate [Windows-Übergabestatus](WINDOWS_STATUS_2026-11-17.md) macht die Arbeit dort als reine Dokumentation sichtbar. Installierter Windows-Code: `2a1ae7feb5c9c2125b20e630875bed13b316250e` (Preview 11); native Abnahmen und Unterschiede zwischen den Paketständen stehen oben. App-Code bleibt im [Draft-PR #1](https://github.com/adriantagonist87/VoxDrop/pull/1); ältere Abschnitte unten sind historische Prüfstände. Gemeinsame Änderungen bleiben **UNGEPRÜFT unter macOS**.
+**Abgleich mit main:** Der separate [Windows-Übergabestatus](WINDOWS_STATUS_2026-11-17.md) macht die Arbeit dort als reine Dokumentation sichtbar. Installierter Windows-Code: `a5efd22a241368e5e0d8e5b9c933e39cf965b20b` (v1.3.2 / identisch zu Preview 13); native Abnahmen und Unterschiede zwischen den Paketständen stehen oben. PR #1 führt den gemeinsamen Entwicklungsstand im neuen Nutzerauftrag zusammen; ältere Abschnitte unten sind historische Prüfstände. Gemeinsame Änderungen bleiben **UNGEPRÜFT unter macOS**.
 
 Zusätzlicher Speicherbefund nach Paket `2889268f52c9a69a42a3c4df38a0f029323ac9e8`: Ein echter isolierter Worker-Absturztest reproduziert temporäre dekodierte Audiodaten außerhalb des Auftragsverzeichnisses. Unter Windows erhalten Inferenzprozesse jetzt TMPDIR/TEMP/TMP innerhalb ihres `transcription-*`-Arbeitsverzeichnisses. Bei regulärem Fehler bereinigt der Elternprozess diesen Ordner; nach Dienstabbruch entfernt ihn die vorhandene sichere Wiederaufnahme. Ein kleiner echter Kindprozess mit hartem `os._exit` prüft Ablage und Bereinigung anhand synthetischer Bytes ohne Modelllauf oder persönliche Medien. Die alte Implementierung scheitert an dieser Regression. Die Mac-Umgebung bleibt unverändert; gemeinsame Datei weiter **UNGEPRÜFT unter macOS**.
 
@@ -188,7 +199,7 @@ GitHub-Übergabe: [Windows-Branch](https://github.com/adriantagonist87/VoxDrop/t
 | Gegenstand | Stand |
 | --- | --- |
 | Öffentliches Repository | `adriantagonist87/VoxDrop`, Hauptbranch `main` |
-| Freigegebener Stand | `v1.3.1`, macOS-Build 23, Windows-x64-ZIP |
+| Freigegebene Plattformstände | Windows `v1.3.2`; bisheriges macOS `v1.3.1` Build 23 separat |
 | Getesteter Implementierungscommit | `df207f79aa812f70d090e4306443436d51d48952` |
 | Gemeinsame Entwicklungsbasis | `main` mit App-Code, Arbeitsregeln und gemeinsamer Dokumentation |
 | Betriebsmodell | Eigenständige lokale macOS- und Windows-Apps, auch in verschiedenen Netzwerken |
@@ -207,7 +218,7 @@ Die ursprüngliche Mac-Historie von v1.2.0 mit Code-Commit `19c8084193ec96717d87
 | Umgebung | Letzter geprüfter öffentlicher Commit | Prüfung und Ergebnis |
 | --- | --- | --- |
 | macOS, Apple Silicon | `df207f79aa812f70d090e4306443436d51d48952` | v1.3.1 Build 23: alle 64 Tests einschließlich sechs neuer Fensterregressionen unter macOS 27.2, arm64, Python 3.12.13 bestanden. Zusätzlich vollständiges QML-Fenster auf Cocoa mit Öffnungssignalen, Einzelinstanz-Socket, Maximierung, Vollbild, Minimierung und Schließen geprüft. Auf diesem Mac installiert; Desktop-Dateien bytegleich zum Prüfstand, Einstellungen und Modellbestand erhalten. Die vollständige Modell-/Neustartabnahme erfolgte zuvor mit v1.3.0 bei `270e3af7ce96bfce8c5daf49236da2fa4d1d05be`; deren KI-Backend ist unverändert. |
-| Windows 11 mit NVIDIA | `2a1ae7feb5c9c2125b20e630875bed13b316250e` auf `fix/windows-native-validation` | Preview 11 installiert: 144 Fälle, 137 bestanden/sieben Skips, 54,338 s; finales natives EXE-/QML-/Reset-/Wiederimport-/Suchpaket 13,893 s bestanden. Acht-Tausend-Abbruchtest, Bestand/Zähler, Suchsperre, alte Scans/Tokens, transparente Icons geprüft. Inferenz/Jobbeanspruchung unverändert, frühere CUDA-Belege behalten ihre SHAs. Mac-Gegenprüfung offen. |
+| Windows 11 mit NVIDIA | `a5efd22a241368e5e0d8e5b9c933e39cf965b20b` | v1.3.2, exakt installierter Preview-13-Code; native Tray-/Taskleisten-/Scanabnahme 30,927 s, 22 Qt-Fälle. 34 Engine-Dateien bytegleich zum nativen CUDA-Prüfstand `53e69cee39ac5a0721f02eb79034db33e792c6a7`. Zusätzlich 159 synthetische GitHub-CI-Fälle auf `efd209bca441828143273227ddd6ea0c406b3c03` erfolgreich. Mac-Portierung gesondert offen. |
 | Linux | **UNGEPRÜFT**, Zielport offen | Gemeinsame Qt-Oberfläche vorhanden. Backends, Plattformadapter, Einrichtung und Pakete sind auf macOS/Windows ausgerichtet. |
 
 Der macOS-Testbefehl war `MPLCONFIGDIR=<lokales Testverzeichnis> .runtime/aTrain/.venv/bin/python -m unittest discover -s tests`. Das Ergebnis war `Ran 58 tests … OK`. Dieser Testlauf prüft teilweise gemockte Abläufe. Die zusätzlichen GUI- und Modellprüfungen haben den jeweils unten angegebenen Umfang. Die Ersteinrichtung wurde in einem leeren Profil auf dem vorhandenen Mac geprüft. Die Prüfung auf einem physisch zweiten Mac ist offen.
