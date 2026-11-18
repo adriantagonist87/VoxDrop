@@ -1,5 +1,7 @@
 # Entwicklung auf macOS und Windows
 
+Die Windows-Neuinstallationsabnahme vom 18.11.2026 verwendet den separaten [Preview-Download](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.2-windows-preview.1). Interne Paketversion 1.3.1, Code `dbfcf833ef80617929101e321decac3219e76291`. [Laufender Bericht](WINDOWS_ABNAHME_2026-11-18.md). Unveränderten Download und neue Einrichtung von lokalen Patches oder übernommenen Modellen unterscheiden; Prüfstände getrennt dokumentieren.
+
 Vor jeder Aufgabe gelten die verbindlichen Arbeitsregeln. Der Projektstatus enthält die nachgewiesenen Prüfstände und offenen Fehler. [Arbeitsregeln](../AGENTS.md) · [Projektstatus](PROJEKTSTATUS.md)
 
 ## Repository und Zusammenarbeit

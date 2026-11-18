@@ -1,5 +1,11 @@
 # Projektstatus VoxDrop
 
+## Laufende Neuinstallationsabnahme am 18.11.2026
+
+Die Sitzung wurde begonnen. Der aktuelle Windows-Fixstand ist als [GitHub-Prerelease v1.3.2-windows-preview.1](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.2-windows-preview.1) verfügbar. App-Code `dbfcf833ef80617929101e321decac3219e76291`; [laufender Abnahmebericht](WINDOWS_ABNAHME_2026-11-18.md). Neuinstallation und vollständige Abnahme sind **IN ARBEIT**.
+
+Nutzerpräzisierung: Meetings sind jeweils Deutsch oder Englisch. Beide Sprachen getrennt mit/ohne Stilleüberspringen prüfen. WIN-05 bleibt technisch offen, blockiert diesen Nutzungsumfang aber nicht.
+
 Stand vom 18. November 2026. Für jede Weiterentwicklung sind zusätzlich die Arbeitsregeln und die Entwicklungsanleitung zu lesen. [Arbeitsregeln](../AGENTS.md) · [Entwicklung](ENTWICKLUNG.md) · [Windows-Übergabeauftrag](UEBERGABE_WINDOWS.md)
 
 **Abgleich mit main:** Der separate [Windows-Übergabestatus](WINDOWS_STATUS_2026-11-17.md) ist dort als reiner Dokumentationscommit veröffentlicht. App-Code bleibt im [Draft-PR #1](https://github.com/adriantagonist87/VoxDrop/pull/1). Aktuell geprüfter Windows-Code: `dbfcf833ef80617929101e321decac3219e76291`; gemeinsame Änderungen bleiben **UNGEPRÜFT unter macOS**.
