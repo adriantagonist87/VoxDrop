@@ -14,6 +14,9 @@ def retry_network_permission(operation, cancel, waiting, *, interval=5):
                 waiting(True)
                 if cancel.wait(interval):
                     break
+                # A retry is an active download/check, not a confirmed denial.
+                # Clear the stale warning before it can transfer large models.
+                waiting(False)
         raise RuntimeError("Modelleinrichtung abgebrochen. Sie kann später fortgesetzt werden.")
     finally:
         waiting(False)

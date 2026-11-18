@@ -24,6 +24,18 @@ Private Liste erfasst aufgelöste Installationspfade, Größen, Prozesse, Profil
 
 ## Abnahmefälle
 
+### Bereinigung und erster Neuinstallationslauf
+
+40 exakt zugeordnete App-/Testverzeichnisse entfernt; danach keine dieser Installationen, keine eigenen laufenden App-Prozesse und kein alter VoxDrop-Run-Eintrag vorhanden. Einstellungen/Verlauf und kleine Testzusammenfassungen sind privat mit Hashvergleich gesichert (154,161 MiB); keine Modell-/Laufzeitkopien gesichert. Zusätzlich hat der Nutzer das separate ältere Skriptwerkzeug zur vollständigen Entfernung freigegeben; dessen kleine Quellen bleiben privat gesichert (101.009 Byte). Freier Speicher vor neuer Einrichtung: C: +30,93 GiB; D: rund +8,27 GiB einschließlich des zusätzlichen Werkzeugs. Logische Dateigrößen und freigegebene Blöcke unterscheiden sich unter anderem durch Hardlinks und Dateisystembelegung.
+
+Preview 1 erneut direkt von GitHub heruntergeladen und SHA-256 gegen heruntergeladene Prüfsummendatei sowie veröffentlichten Digest geprüft. Frisches Entpacken, fehlende Laufzeit/Modelle/Profil vor Start belegt. Unveränderte EXE richtete Python 3.12.13 und 128 gesperrte Abhängigkeiten neu ein. Python-Mirror-Fallback auf GitHub erfolgreich. Sichtbares QML-Fenster mit leerem Profil und richtigem Modellspeicher bestätigt. Beim Modelldownload echter 10013 und sichtbare Sicherheitsabfrage; Nutzer erteilte die Freigabe selbst. Tatsächlicher anschließender Download von Qwen, Aligner und Sprechergewichten abgeschlossen; Oberfläche meldet Modelle installiert. Keine Schutzregeln automatisiert geändert.
+
+### WIN-08: veraltete Verweigerungsanzeige beim laufenden Retry
+
+Während nach Nutzerfreigabe bereits große Modelldateien heruntergeladen wurden, blieb die Verweigerungsanzeige aktiv. `retry_network_permission` setzte den Wartezustand erst nach vollständiger Modelleinrichtung zurück. Jetzt wird er vor dem tatsächlichen Wiederholungsversuch gelöscht; erneute Verweigerung setzt ihn wieder. Die neue Regression schlägt am bisherigen Code fehl und besteht nach der Korrektur. Ein Sandbox-Test hatte zusätzlich einen separaten temporären Zugriffsfehler; nativer Wiederholungslauf bestätigte ausschließlich die erwartete fehlgeschlagene neue Regression. Danach fünf gezielte Tests bestanden. Vollständige native Windows-Suite: 92 Fälle, 85 bestanden, sieben explizite Skips, 15,160 s. Paketprüfung der Korrektur folgt. Gemeinsame Änderung **UNGEPRÜFT unter macOS**.
+
+Künstliche getrennte Sprachfixtures: Deutsch 40,367 s, Englisch 37,026 s, je 20 s eingefügte Pause. Wiederholbare Erzeugung und Sprach-/Zeitmarkenprüfung liegen unter `scripts/`; sie verwenden installierte SAPI-Stimmen und veröffentlichen keine persönlichen Medien.
+
 | Fall | Status |
 | --- | --- |
 | Sicherung, Bereinigung und Speicherfreigabe | OFFEN |

@@ -10,6 +10,23 @@ from desktop.network_wait import NetworkPermissionError, retry_network_permissio
 
 
 class NetworkWaitTests(unittest.TestCase):
+    def test_resumed_download_does_not_show_a_stale_permission_denial(self):
+        state = {"waiting": False, "attempts": 0}
+
+        def operation():
+            state["attempts"] += 1
+            if state["attempts"] == 1:
+                raise NetworkPermissionError("10013")
+            self.assertFalse(state["waiting"], "Active retry still reports denied access")
+            return "verified"
+
+        def waiting(value):
+            state["waiting"] = value
+
+        self.assertEqual(
+            retry_network_permission(operation, Event(), waiting, interval=0), "verified"
+        )
+
     def test_actual_controller_command_handles_denial_without_traceback(self):
         sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "desktop"))
         import controller
@@ -31,7 +48,10 @@ class NetworkWaitTests(unittest.TestCase):
         waiting = Mock()
         self.assertEqual(retry_network_permission(operation, Event(), waiting, interval=0), "verified")
         self.assertEqual(operation.call_count, 3)
-        self.assertEqual([c.args[0] for c in waiting.call_args_list], [True, True, False])
+        self.assertEqual(
+            [c.args[0] for c in waiting.call_args_list],
+            [True, False, True, False, False],
+        )
 
     def test_cancel_stops_retries_and_preserves_a_resumable_state(self):
         cancel = Event()
