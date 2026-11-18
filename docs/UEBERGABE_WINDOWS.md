@@ -1,5 +1,9 @@
 # Übergabeauftrag für Codex auf dem Windows-PC
 
+## Neuer Auftrag: GPU-Arbeitsbudget
+
+Windows-CUDA-Regler 10–100 % mit sofortiger separater Speicherung implementiert; erster vollständiger synthetischer Testlauf 173 Fälle erfolgreich, sieben bekannte Skips. Vor Freigabe natives Paket, tatsächliche Lastentlastung bei 50 %, Qwen/Whisper/Sprecher, Livewechsel und Abbruch testen. Produktive Arbeit nicht unterbrechen. [Konkrete Umsetzung und Grenzen](GPU_ARBEITSBUDGET.md).
+
 ## Aktuell: Windows v1.3.3 – Verarbeitung starten und Status erkennen
 
 Die Produktivdiagnose zeigte eine laufende, nicht pausierte Verarbeitung; der erste lange Auftrag befand sich in der Sprecherphase. Automatischer Start war aktiv. Dennoch fehlte eine klar erkennbare eigenständige Startaktion, und Phasen ohne Prozentangabe wirkten zu leicht wie Stillstand. V1.3.3 ergänzt den sichtbaren grünen Start-/Fortsetzen-Knopf, eine separate Pause und „Verarbeitung läuft“ auch ohne Prozentwert.

@@ -39,6 +39,17 @@ class QueueTests(unittest.TestCase):
     def row(self,identifier):
         return self.db.execute('select * from jobs where id=?',(identifier,)).fetchone()
 
+    def test_existing_queued_job_uses_live_budget_config_without_overwriting_job_options(self):
+        source, identifier = self.add()
+        before = self.row(identifier)['settings']
+        saved = json.loads(self.config.read_text())
+        saved['gpu_budget_percent'] = 50
+        self.config.write_text(json.dumps(saved))
+        self.assertTrue(service.next_job(self.db, self.state, self.engine, config=self.config))
+        self.assertEqual(self.engine.call_args.kwargs['gpu_budget_config'], self.config)
+        self.assertEqual(self.row(identifier)['settings'], before)
+        self.assertEqual(service.read_settings(self.config)['gpu_budget_percent'], 50)
+
     def test_explicit_start_processes_queue_with_monitoring_off_without_reviving_cancelled(self):
         first,one=self.add();second,two=self.add('cancelled.wav',b'cancelled media')
         settings=json.loads(self.config.read_text());settings['monitoring']=False

@@ -488,6 +488,33 @@ ApplicationWindow {
                             onActivated: index => api.setSetting("hardware", [api.gpuValue, "cpu"][index])
                         }
                     }
+                    Copy {
+                        Layout.fillWidth: true
+                        text: "GPU-Arbeitsbudget: " + Math.round(gpuBudgetSlider.value) + " %"
+                    }
+                    Slider {
+                        id: gpuBudgetSlider
+                        objectName: "gpuBudgetSlider"
+                        Layout.fillWidth: true
+                        from: 10
+                        to: 100
+                        stepSize: 5
+                        snapMode: Slider.SnapAlways
+                        value: settings.gpu_budget_percent || 100
+                        enabled: viewState.ready && !viewState.busy && api.gpuValue === "cuda" && settings.hardware === "cuda"
+                        Accessible.name: "GPU-Arbeitsbudget in Prozent"
+                        onMoved: gpuBudgetSave.restart()
+                        Timer {
+                            id: gpuBudgetSave
+                            interval: 250
+                            onTriggered: api.setGpuBudget(Math.round(gpuBudgetSlider.value))
+                        }
+                    }
+                    Muted {
+                        Layout.fillWidth: true
+                        text: api.gpuValue !== "cuda" ? "Derzeit für NVIDIA-GPUs unter Windows verfügbar." :
+                            "Sofort gespeichert, auch während der Verarbeitung. Weniger Last bedeutet längere Laufzeit. Kurze Lastspitzen und der Grafikspeicherbedarf bleiben bestehen."
+                    }
                     Toggle {
                         Layout.fillWidth: true
                         text: "Lange Stille überspringen"

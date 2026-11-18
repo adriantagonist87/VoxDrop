@@ -1,5 +1,9 @@
 # Projektstatus VoxDrop
 
+## In Arbeit: GPU-Arbeitsbudget
+
+Nutzerauftrag: Windows-GPU entlasten, um parallel flüssig arbeiten zu können. Regler 10–100 % mit eigenständiger Live-Speicherung und kooperativen CUDA-Pausen für Qwen/Aligner, Whisper und Sprecher implementiert; 173 Regressionen mit sieben Plattformskips bestanden. Native GPU-/Paketmessungen stehen vor Veröffentlichung noch aus. [Funktionsumfang, Grenzen und Mac-Auftrag](GPU_ARBEITSBUDGET.md). Laufender Produktivauftrag wird nicht abgebrochen; nur nachfolgende Übernahmen für Messung/Update vorübergehend zurückhalten und anschließend ursprüngliche Pause wiederherstellen.
+
 ## Aktuell: Windows v1.3.3 – Verarbeitung starten und Status erkennen
 
 Die Produktivdiagnose zeigte eine laufende, nicht pausierte Verarbeitung; der erste lange Auftrag befand sich in der Sprecherphase. Automatischer Start war aktiv. Dennoch fehlte eine klar erkennbare eigenständige Startaktion, und Phasen ohne Prozentangabe wirkten zu leicht wie Stillstand. V1.3.3 ergänzt den sichtbaren grünen Start-/Fortsetzen-Knopf, eine separate Pause und „Verarbeitung läuft“ auch ohne Prozentwert.

@@ -40,6 +40,7 @@ from smb_paths import (
 )
 from transcription_worker import run_transcription
 from runtime_logs import RollingLog
+from gpu_budget import validate_percent
 from queue_control import (
     JobCancelled, initialise_queue, queue_jobs, queue_paused, set_queue_paused, start_queue,
     move_queue_item, cancel_job, cancel_queue, cancellation_requested, poll_cancellation,
@@ -197,6 +198,7 @@ def read_settings(path):
         "hardware": DEFAULT_HARDWARE,
         "model": DEFAULT_MODEL,
         "skip_silence": False,
+        "gpu_budget_percent": 100,
     }
     settings = {name: values.get(name, default) for name, default in defaults.items()}
     if "folders" in values:
@@ -256,6 +258,7 @@ def read_settings(path):
         raise ValueError(f"Erlaubte Rechengeräte sind {', '.join(HARDWARE)}.")
     if settings["model"] not in MODELS:
         raise ValueError("Erlaubte Transkriptionsmodelle sind Qwen und Whisper.")
+    validate_percent(settings['gpu_budget_percent'])
     count = settings["speaker_count"]
     if count is not None and (type(count) is not int or count not in range(1, 9)):
         raise ValueError(
@@ -1390,6 +1393,7 @@ def next_job(
                 report=report,
                 measurements=measurements,
                 cancelled=lambda: poll_cancellation(state, job_id),
+                gpu_budget_config=config,
             )
             check_cancel()
             transcript.unlink(missing_ok=True)

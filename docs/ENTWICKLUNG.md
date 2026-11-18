@@ -1,5 +1,9 @@
 # Entwicklung auf macOS und Windows
 
+## GPU-Arbeitsbudget
+
+`gpu_budget.py` gehört in sämtliche Engine-Paketlisten. `gpu_budget_percent` (10–100, Standard 100) ist eine globale Live-Ressourceneinstellung und wird dem Worker über den aktuellen Konfigurationspfad übergeben. Historische Jobparameter und Queue-Reihenfolge bleiben erhalten. Die GUI speichert nur diesen Regler sofort; Windows-CUDA unterstützt Torch-Modellhooks und eine unveränderte native Whisper-Delegation. CPU/Mac-Regler deaktiviert, Metal-Portierung und Messstand ausdrücklich separat. [Details und Tests](GPU_ARBEITSBUDGET.md).
+
 ## Aktuell: Windows v1.3.3 – Verarbeitung starten und Status erkennen
 
 Die Produktivdiagnose zeigte eine laufende, nicht pausierte Verarbeitung; der erste lange Auftrag befand sich in der Sprecherphase. Automatischer Start war aktiv. Dennoch fehlte eine klar erkennbare eigenständige Startaktion, und Phasen ohne Prozentangabe wirkten zu leicht wie Stillstand. V1.3.3 ergänzt den sichtbaren grünen Start-/Fortsetzen-Knopf, eine separate Pause und „Verarbeitung läuft“ auch ohne Prozentwert.
