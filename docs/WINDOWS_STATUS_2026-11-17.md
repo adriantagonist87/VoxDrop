@@ -1,6 +1,16 @@
 # Windows-Übergabe vom 17. November, fortgeführt am 18. November 2026
 
-## Aktuell installiert: Windows Preview 8
+## Aktuell installiert: Windows Preview 9
+
+[Windows Preview 9](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.2-windows-preview.9), App-Code `c434d5c4921873d387cefc8cdc55f23f201e61de`, SHA-256 `7dd6e52dadff40a73f8ce9b79c09609f2d2cd21ed3a6917d338af10937422da4`. Die oberen vier Queue-Menüaktionen waren bei aktiver Suche pauschal gesperrt. Jetzt funktionieren sie gegen die gesamte aktuelle Warteschlange; ein konkreter Vor-/Nach-Anker korrigiert auch Drag-and-drop mit ausgeblendeten Nachbarn. Tatsächlich unmögliche Grenzaktionen erscheinen grau. Alle Preview-8-Funktionen bleiben enthalten. [Umsetzung, Prüfbericht und Mac-Checkliste](https://github.com/adriantagonist87/VoxDrop/blob/fix/windows-native-validation/docs/SUCHE_UND_DROP_KONFLIKTE.md).
+
+135 Windows-Testfälle in 33,482 s: 128 bestanden, sieben bekannte Skips. Neue echte Mausfälle für gefiltertes Menü und Drag-and-drop, vollständige Queue-Reihenfolge und Datenbankwiederöffnung. Finales Paket über EXE mit isoliertem Profil gestartet; alle vier relativen CLI-Aktionen sowie QML-Menüklick mit tatsächlicher SQLite-Änderung in 8,584 s bestanden. Synthetische Menüansicht visuell geprüft. ASR-/Export-/Schutzlogik unverändert; tatsächliche CUDA-/Unterbrechungs-/Inhaltssuchabnahme ausdrücklich auf Preview 8 belassen.
+
+Direkter GitHub-Download/SHA und alle 88 installierten Dateien bestätigt. Konsistente SQLite-/Einstellungssicherung und hashgeprüfte alte Codekopie; aktuelle Ordner, Modelle/Laufzeit und Pause erhalten. Nur Oberfläche neu gestartet, Supervisor-/Dienst-PIDs samt Erstellungszeit erhalten. Alle 9.385 unmittelbar vorher vorhandenen Aufträge/Dateiversionen erhalten, SQLite/Fremdschlüssel `ok`. Kontrollstand: 27 wartend, kein aktiver Auftrag, weiter pausiert; Verlauf 9.358/1/487. Bereits im Vorprofil abgebrochene Aufträge bleiben im Verlauf. Installierte Zähler und Fortsetzen nach erneutem Fensterstart und Aktivierung bestätigt. Keine produktive Reihenfolge-/Abbruchaktion als Test.
+
+Mac: gefiltertes Menü an erster/mittlerer/letzter Gesamtposition und Vor-/Nach-Drag mit ausgeblendeten Nachbarn zusätzlich nativ prüfen. Main enthält ausschließlich diese Dokumentation. App-Code im Draft-PR belassen, bisherigen Mac-Prüfstand `df207f79aa812f70d090e4306443436d51d48952` bewahren. Die folgenden Prüfstände sind historisch.
+
+## Vorangegangener installierter Stand: Windows Preview 8
 
 [Preview 8](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.2-windows-preview.8), App-Code `d40b00526494155979d19d6b0b67fcf1853d618f`, SHA-256 `80129d589819ab0ba4e3c7644aa5e31f63c1d565c403457df21d2b068d27c0f8`. Neue Lupen-/Wildcard-/optionale Inhaltssuche, Konfliktdialog für Datei-/Ordnerdrops mit atomaren/idempotenten Aktionen, Priorisierung/Neutranskription/Sofort-Unterbrechung und zuverlässige native Explorer-Auswahl. Pausierte Queue bleibt bis auf ausdrücklich gewählte Sofort-Aufträge und gegebenenfalls den bisherigen Auftrag pausiert. [Vollständiger Funktions-/Prüfbericht und Mac-Aufgaben](https://github.com/adriantagonist87/VoxDrop/blob/fix/windows-native-validation/docs/SUCHE_UND_DROP_KONFLIKTE.md).
 
