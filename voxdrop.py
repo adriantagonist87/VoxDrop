@@ -23,6 +23,7 @@ MEDIA_EXTENSIONS = frozenset(
         ".mp4",
         ".mkv",
         ".ogg",
+        ".opus",
         ".m4a",
         ".wav",
         ".flac",

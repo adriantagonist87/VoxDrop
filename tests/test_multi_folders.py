@@ -23,6 +23,19 @@ from watch_service import (
 
 
 class MultiFolderTests(unittest.TestCase):
+    def test_opus_folder_drop_is_processed_beside_unchanged_original(self):
+        source = self.first / "Besprechung.OPUS"
+        source.write_bytes(b"media-discovery-fixture")
+        (self.first / "Notiz.json").write_text("{}")
+        settings = self.settings(subfolder=True)
+        queued = enqueue_folders(self.db, settings, [str(self.first)])
+        self.assertEqual(queued["queued"], 1)
+        with patch("watch_service.inspect_folders_with_deadline", side_effect=inspect_folders):
+            self.assertTrue(next_job(self.db, self.state, self.engine))
+        self.assertEqual(source.read_bytes(), b"media-discovery-fixture")
+        self.assertEqual(source.with_suffix(".txt").read_text(), "Testtranskript\n")
+        self.assertFalse((self.first / "_FERTIGGESTELLT").exists())
+
     def setUp(self):
         directory = tempfile.TemporaryDirectory()
         self.addCleanup(directory.cleanup)

@@ -60,6 +60,16 @@ Wochenlanger Betrieb braucht einen entsprechenden Beobachtungszeitraum. Gemeinsa
 
 ## Bestätigte Funktionsläufe auf Preview 2
 
+### Nachprüfung des Konsolenfixes in Preview 3
+
+Fix-Code `f41506b13b391c92bdedf17e85c4b7bbc49f3001`, [Preview 3](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.2-windows-preview.3), ZIP-SHA-256 `06b1170625228516c83357b66e97d431399306e0e3fa08ee1c88f964c10999d4`. Nach vollständiger Neuinstallation von Preview 2 als reguläres GitHub-Update eingespielt, nicht als dritte leere Modelleinrichtung ausgegeben. Vollständige private Profil-/Codesicherung vor Update, identische Runtime-/Modellmanifeste, Modelldateien mit unveränderten Größen/Zeitstempeln. Alle installierten Paketdateien nach Kopie per SHA-256 gegen den erneut heruntergeladenen ZIP-Inhalt verglichen. Native Paketprüfung aus GUI-Elternprozess mit Console-Python-Kind: Hintergrundflags `134218240`, Prozesscode 0, `GetConsoleWindow() == 0`, stdout und stderr erhalten. App normal wieder gestartet; in der beobachteten Fensterliste keine VoxDrop-Konsole mehr.
+
+### WIN-10: OPUS-Dateien werden nicht eingereiht
+
+Die ausgewählte freigegebene lange Aufnahme liegt als `.opus` vor. Die gemeinsame `MEDIA_EXTENSIONS`-Liste enthielt `.ogg`, aber nicht `.opus`; der Scanner ignorierte die Testkopie deshalb trotz korrekt aktivierter Überwachung. Null eingereihte Aufträge wurden vor den Paketupdates geprüft. Die gemeinsame Liste wird um `.opus` ergänzt. Neue Regression prüft Erkennung auch mit Großschreibung `.OPUS`, tatsächlichen Warteschlangen-/Exportpfad mit Mock-Engine, TXT neben unverändertem Original und keine Archivverschiebung beim Ordner-Drop. Sie scheitert am alten Code mit null statt einem Auftrag. Echte Codec-Prüfung der privaten 48,9-minütigen OPUS-Kopie erfolgt zusätzlich; keine neue Codec-Abhängigkeit. Gemeinsame Formatänderung unter macOS noch ungeprüft.
+
+Nach Korrektur gesamte Windows-Suite: 94 Fälle, 87 bestanden, sieben Skips, 17,080 s. Echte vollständige OPUS-Dekodierung mit vorhandenen Paketabhängigkeiten: 2935,3386875 s, 46.965.419 Samples, Kopie per SHA-256 unverändert. Die Erkennungsprüfung mit Mock-Engine und die tatsächliche Codec-Prüfung sind getrennte Nachweise; die vollständige Transkription über die laufende Überwachung folgt auf dem neuen GitHub-Paket.
+
 ### WIN-09: sichtbare Konsole beim Windows-Hintergrundstart
 
 Der Nutzer meldete ein regelmäßig aufpoppendes leeres Terminal mit Pfad zur VoxDrop-Python-Laufzeit. Die Untätigkeit des eigentlichen Produktivprüflaufs wurde geprüft: zu diesem Zeitpunkt null eingereihte/aktive Aufträge. Eigene GUI-Statusaufrufe und anschließend der eigene untätige Supervisor/Dienst wurden zur Diagnose angehalten; keine Nutzeraufträge abgebrochen.
