@@ -70,7 +70,7 @@ def emit(**event):
     print(EVENT + json.dumps(event), flush=True)
 
 
-def run_transcription(media, *, report, measurements, cancelled=None, **settings):
+def run_transcription(media, *, report, measurements, cancelled=None, gpu_budget_config=None, **settings):
     data_dir = os.environ.get("ATRAIN_USER_DIR", str(DEFAULT_DATA))
     with tempfile.TemporaryDirectory(
         dir=media.parent, prefix="transcription-"
@@ -89,6 +89,8 @@ def run_transcription(media, *, report, measurements, cancelled=None, **settings
         error = None
         peak = [0]
         environment = os.environ.copy()
+        if gpu_budget_config is not None:
+            environment['VOXDROP_GPU_BUDGET_CONFIG'] = str(gpu_budget_config)
         if WINDOWS:
             # Qwen's decoded numpy audio and library temporaries must stay in
             # recoverable job storage even when Windows kills the worker tree.

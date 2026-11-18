@@ -5,6 +5,7 @@ import json
 from types import SimpleNamespace
 
 from qwen_backend import ALIGNER, ASR, emit, recognize_chunks, timed_words
+from gpu_budget import pace_torch
 
 
 def split_at_quiet_points(audio, sample_rate, *, chunk_duration, search_expand_sec=2):
@@ -130,16 +131,17 @@ def run_windows(model_root, recording, result, hardware, language):
         ).eval(),
         torch,
     )
-    recognize_chunks(
-        recognizer,
-        audio,
-        language,
-        split_at_quiet_points,
-        report,
-        lambda samples, text, detected, start, end: chunks.append(
-            (samples, text, detected, start, end)
-        ),
-    )
+    with pace_torch(recognizer.model, hardware=hardware):
+        recognize_chunks(
+            recognizer,
+            audio,
+            language,
+            split_at_quiet_points,
+            report,
+            lambda samples, text, detected, start, end: chunks.append(
+                (samples, text, detected, start, end)
+            ),
+        )
     # Fit 8 GB GPUs by loading the two model weights in sequence.
     del recognizer
     gc.collect()
@@ -157,7 +159,8 @@ def run_windows(model_root, recording, result, hardware, language):
             ).eval(),
             torch,
         )
-        for index, chunk in enumerate(chunks, start=1):
-            words.extend(timed_words(aligner, *chunk, len(audio)))
-            report("Qwen-Wortzeiten berechnen", index / len(chunks))
+        with pace_torch(aligner.model, hardware=hardware):
+            for index, chunk in enumerate(chunks, start=1):
+                words.extend(timed_words(aligner, *chunk, len(audio)))
+                report("Qwen-Wortzeiten berechnen", index / len(chunks))
     result.write_text(json.dumps(words, ensure_ascii=False), encoding="utf-8")

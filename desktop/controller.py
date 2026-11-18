@@ -91,6 +91,7 @@ DEFAULTS = {
     "dover_lap": False,
     "skip_silence": False,
     "monitoring": False,
+    "gpu_budget_percent": 100,
 }
 
 
@@ -819,6 +820,22 @@ class Controller(QObject):
             if start
             else "Einstellungen gespeichert.",
         )
+
+    @Slot(int)
+    def setGpuBudget(self, percent):
+        if self.busy or self.quitting:
+            return
+        if not 10 <= percent <= 100:
+            self.notify('Das GPU-Arbeitsbudget muss zwischen 10 und 100 % liegen.', True)
+            return
+        self.draft['gpu_budget_percent'] = percent
+        self.changed.emit()
+        def persist():
+            # Persist only this live resource setting, not other unsaved edits.
+            saved = read_settings()
+            saved['gpu_budget_percent'] = percent
+            save_settings(saved)
+        self.action(persist, f'GPU-Arbeitsbudget: {percent} %. Gilt auch für den laufenden Auftrag.')
 
     @Slot(bool)
     def setAutostart(self, enabled):

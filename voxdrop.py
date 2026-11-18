@@ -9,6 +9,7 @@ import time
 from pathlib import Path
 
 import qwen_backend
+from gpu_budget import pace_torch, pace_whisper
 from platform_io import WINDOWS
 from silence import restore_timestamps, select_speech
 
@@ -222,9 +223,9 @@ def load_whisper(path, hardware):
             raise RuntimeError("CUDA ist nicht verfügbar. Prüfe den NVIDIA-Treiber.")
         dll_directory = str(Path(torch.__file__).parent / "lib")
         os.environ["PATH"] = dll_directory + os.pathsep + os.environ.get("PATH", "")
-        return engine.load_transcriber(
+        return pace_whisper(engine.load_transcriber(
             ModelKey(WHISPER_MODEL, Device.GPU, ComputeType.FLOAT16, 0), path
-        )
+        ))
 
     from ctranslate2 import get_supported_compute_types
     from faster_whisper import WhisperModel
@@ -371,22 +372,24 @@ def assign_speakers(
                     "Die Apple-GPU steht für die Sprechererkennung nicht zur Verfügung."
                 )
             diarizer.to(torch.device("mps"))
-        if dover_lap:
-            from speaker_diarization import apply_annotation, run_multiple
+        models = (diarizer._segmentation.model, diarizer._embedding.model_) if hardware == 'cuda' else ()
+        with pace_torch(*models, hardware=hardware):
+            if dover_lap:
+                from speaker_diarization import apply_annotation, run_multiple
 
-            passes = run_multiple(diarizer, audio, speaker_count, report)
-            result = apply_annotation(passes.selected, result)
-            if measurements is not None:
-                measurements["speaker_details"] = passes.details()
-        else:
-            result = engine.diarize(
-                diarizer,
-                audio,
-                result,
-                speaker_count=speaker_count,
-                progress=Progress("Sprecher zuordnen", report),
-                log=lambda _: None,
-            )
+                passes = run_multiple(diarizer, audio, speaker_count, report)
+                result = apply_annotation(passes.selected, result)
+                if measurements is not None:
+                    measurements["speaker_details"] = passes.details()
+            else:
+                result = engine.diarize(
+                    diarizer,
+                    audio,
+                    result,
+                    speaker_count=speaker_count,
+                    progress=Progress("Sprecher zuordnen", report),
+                    log=lambda _: None,
+                )
         if measurements is not None:
             measurements["speaker_seconds"] = time.monotonic() - speaker_started
     return format_transcript(finalize(result, backend)["segments"], speakers=speakers)

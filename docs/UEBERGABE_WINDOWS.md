@@ -1,6 +1,14 @@
 # Übergabeauftrag für Codex auf dem Windows-PC
 
-## Aktuell: Windows v1.3.3 – Verarbeitung starten und Status erkennen
+## Aktuell: Windows v1.3.4 – GPU-Arbeitsbudget
+
+Regler links unter dem Rechengerät: 10–100 % für Windows-CUDA, unabhängig von anderen Entwurfsänderungen sofort gespeichert und auch für laufende/alte Queueaufträge wirksam. Qwen, Aligner, Whisper und beide Sprechermodelle geben gezielt Rechenzeit frei. Kein exaktes systemweites Prozent-/VRAM-Limit; CPU/Mac-Regler deaktiviert. [Umsetzung, Messungen und Mac-Aufgabe](GPU_ARBEITSBUDGET.md).
+
+Geprüfter Paket-Code `c2624c9e7465e273924e21d1ca279bd41f76f4a1`, [Windows v1.3.4](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.4), ZIP-SHA-256 `bea3500c659dfd8e8b703dc96de50cb0490e24e51c6368c30bdd710c8cef83b6`, [92-Dateien-Manifest](../releases/v1.3.4/windows-release.json). Laufzeit/Modellpins unverändert. 174 Fälle in 49,555 s: 167 bestanden, sieben Plattformskips. Nativer QML-Mauszug 100 → 50 einschließlich Mindestfenster und separater Speicherung bestanden; eine echte Status-/Speicherrace davor reproduziert und korrigiert.
+
+RTX-5060-Kontrolllast: 100 % Budget → durchschnittlich 92,44 % GPU; 50 % → 42,29 %, unveränderte Ergebnistensoren. Echter Livewechsel 100 → 50 → 100 am selben CUDA-Modell bestanden. Fünf echte GPU-Sprachläufe mit Qwen/Whisper und jeweils drei DOVER-Prüfungen erfolgreich; deutsche Texte bei 100/50 je Modell bytegleich, separate englische Qwen-Aufnahme bei 50 % vollständig anhand Testankern geprüft. Echter CUDA-Abbruch bei 50 % ohne Modell-/Audioreste bestanden. Keine Behauptung eines exakten systemweiten 50-%-Limits oder einer physischen Desktop-Latenzmessung.
+
+## Vorangegangener Stand: Windows v1.3.3 – Verarbeitung starten und Status erkennen
 
 Die Produktivdiagnose zeigte eine laufende, nicht pausierte Verarbeitung; der erste lange Auftrag befand sich in der Sprecherphase. Automatischer Start war aktiv. Dennoch fehlte eine klar erkennbare eigenständige Startaktion, und Phasen ohne Prozentangabe wirkten zu leicht wie Stillstand. V1.3.3 ergänzt den sichtbaren grünen Start-/Fortsetzen-Knopf, eine separate Pause und „Verarbeitung läuft“ auch ohne Prozentwert.
 

@@ -6,12 +6,12 @@ Der Nutzer beauftragt am 18. November 2026 den Abschluss der Windows-Veröffentl
 
 | Referenz | Exakter Stand |
 | --- | --- |
-| Windows-Programm, identisch mit der abgenommenen PC-Installation | `ca9e3e8ca2ae6b6294eb667c61768bc8dd402506` |
-| Finaler Windows-Download | [v1.3.3](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.3), SHA-256 `8b213066f23c0a18e59bd4567a38a19fb8a053f16486d35d6136a3888dd5add4` |
+| Windows-Programm, identisch mit der abgenommenen PC-Installation | `c2624c9e7465e273924e21d1ca279bd41f76f4a1` |
+| Finaler Windows-Download | [v1.3.4](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.4), SHA-256 `bea3500c659dfd8e8b703dc96de50cb0490e24e51c6368c30bdd710c8cef83b6` |
 | Letzte vollständige native CUDA-/Beenden-/Wiederaufnahmeabnahme | `53e69cee39ac5a0721f02eb79034db33e792c6a7`; ASR-/Sprecherdateien unverändert; Queue-Start separat ergänzt |
 | Letzter belegter nativer Mac-Code | `df207f79aa812f70d090e4306443436d51d48952`, v1.3.1 / Build 23 |
 | Aktuelle plattformübergreifende Quellen | `main`; vollständigen SHA beim Beginn mit `git rev-parse HEAD` erfassen |
-| Paket-/Dateinachweis | [Manifest mit allen 91 Dateien](../releases/v1.3.3/windows-release.json) und [Prüfwerkzeug](../scripts/verify_windows_release.py) |
+| Paket-/Dateinachweis | [Manifest mit allen 92 Dateien](../releases/v1.3.4/windows-release.json) und [Prüfwerkzeug](../scripts/verify_windows_release.py) |
 
 ## Im anderen Codex beginnen
 
@@ -72,6 +72,10 @@ Bei Abschluss: Funktionsmatrix mit tatsächlichen Mac-Ergebnissen aktualisieren,
 
 Weitere Belege: [Queue und Dateischutz](WARTESCHLANGE_UND_DATEISCHUTZ.md), [Suche und Drop-Konflikte](SUCHE_UND_DROP_KONFLIKTE.md), [Verlauf und Bereinigung](VERLAUF_BESTAND_BEREINIGUNG.md), [Lebensdauer](APP_BEENDEN_UND_LEBENSDAUER.md), [Tray/Taskleiste](FENSTER_TRAY_UND_TASKLEISTE.md), [Icon](APP_ICON_UND_LAYOUT.md).
 
-## Ergänzung v1.3.3
+## Ergänzung v1.3.4
 
 Sichtbaren grünen Start-/Fortsetzen-Knopf, separate Pause und eindeutigen Verarbeitungsstatus übernehmen. `start-queue` verarbeitet den aktuellen Queuebestand explizit auch ohne Ordnerüberwachung und ohne Konfigurationsänderung. Normale unpausierte Queues starten automatisch, bewusste Pause bleibt über Neustarts erhalten. Seen-Einträge werden bei explizitem Start sofort dem bestehenden sicheren Worker übergeben; offene Aufnahmen und Dateiversionen besonders auf Mac nativ prüfen. [Details und Nachweise](VERARBEITUNG_STARTEN.md).
+
+## Zusätzlich: GPU-Arbeitsbudget
+
+[Windows-Implementierung und native Lastmessungen](GPU_ARBEITSBUDGET.md). `gpu_budget.py` muss im Mac-Bundle liegen. `gpu_budget_percent` ist eine globale Live-Ressourceneinstellung; der Konfigurationspfad wird separat vom Auftrag an beide Worker weitergegeben. Aktuell ist der Regler auf dem Mac bewusst deaktiviert: CUDA-Hooks begrenzen keine MLX-/Metal-Arbeit. Vor Aktivierung MLX-ASR/Aligner, CTranslate2-Metal und Torch-MPS an echten abgeschlossenen Rechenschritten synchronisieren und Pausen einfügen; Livewechsel, Abbruch, Textgleichheit, Modellreihenfolge und sichtbare Lastentlastung nativ gegenprüfen. Die UI darf kein wirkungsloses 50-%-Versprechen machen. Die Windows-Speicherrace-Regression muss unter Cocoa ebenfalls bestehen.

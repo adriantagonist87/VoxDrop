@@ -488,6 +488,75 @@ ApplicationWindow {
                             onActivated: index => api.setSetting("hardware", [api.gpuValue, "cpu"][index])
                         }
                     }
+                    Copy {
+                        Layout.fillWidth: true
+                        text: "GPU-Arbeitsbudget: " + Math.round(gpuBudgetSlider.value) + " %"
+                    }
+                    Slider {
+                        id: gpuBudgetSlider
+                        objectName: "gpuBudgetSlider"
+                        Layout.fillWidth: true
+                        from: 10
+                        to: 100
+                        stepSize: 5
+                        snapMode: Slider.SnapAlways
+                        value: settings.gpu_budget_percent || 100
+                        enabled: viewState.ready && !viewState.busy && api.gpuValue === "cuda" && settings.hardware === "cuda"
+                        Accessible.name: "GPU-Arbeitsbudget in Prozent"
+                        Accessible.description: "Weniger GPU-Arbeit lässt mehr Zeit für andere Programme und verlängert die Transkription."
+                        background: Rectangle {
+                            x: gpuBudgetSlider.leftPadding
+                            y: gpuBudgetSlider.topPadding + gpuBudgetSlider.availableHeight / 2 - height / 2
+                            width: gpuBudgetSlider.availableWidth
+                            implicitHeight: 6
+                            radius: 3
+                            color: "#505055"
+                            Rectangle {
+                                width: gpuBudgetSlider.visualPosition * parent.width
+                                height: parent.height
+                                radius: 3
+                                color: gpuBudgetSlider.enabled ? window.accent : "#77777d"
+                            }
+                        }
+                        handle: Rectangle {
+                            x: gpuBudgetSlider.leftPadding + gpuBudgetSlider.visualPosition * (gpuBudgetSlider.availableWidth - width)
+                            y: gpuBudgetSlider.topPadding + gpuBudgetSlider.availableHeight / 2 - height / 2
+                            implicitWidth: 20
+                            implicitHeight: 20
+                            radius: 10
+                            color: gpuBudgetSlider.enabled ? window.accent : "#77777d"
+                            border.width: gpuBudgetSlider.activeFocus ? 2 : 1
+                            border.color: gpuBudgetSlider.activeFocus ? window.textColor : "#242424"
+                        }
+                        onMoved: {
+                            gpuBudgetSave.pendingValue = Math.round(value)
+                            api.setSetting("gpu_budget_percent", gpuBudgetSave.pendingValue)
+                            gpuBudgetSave.restart()
+                        }
+                        Timer {
+                            id: gpuBudgetSave
+                            property int pendingValue: 100
+                            interval: 250
+                            onTriggered: {
+                                if (viewState.busy) {
+                                    restart()
+                                    return
+                                }
+                                api.setGpuBudget(pendingValue)
+                            }
+                        }
+                    }
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Muted { text: "10 %" }
+                        Item { Layout.fillWidth: true }
+                        Muted { text: "100 %" }
+                    }
+                    Muted {
+                        Layout.fillWidth: true
+                        text: api.gpuValue !== "cuda" ? "Derzeit für NVIDIA-GPUs unter Windows verfügbar." :
+                            "Sofort gespeichert, auch während der Verarbeitung. Weniger Last bedeutet längere Laufzeit. Kurze Lastspitzen und der Grafikspeicherbedarf bleiben bestehen."
+                    }
                     Toggle {
                         Layout.fillWidth: true
                         text: "Lange Stille überspringen"
