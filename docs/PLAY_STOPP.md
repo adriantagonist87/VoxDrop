@@ -1,6 +1,6 @@
 # Große Play-/Stopp-Steuerung
 
-Oben in der mittleren Spalte steht ein fester, 66 Pixel hoher Knopf: grün mit Dreieck und „STARTEN“, rot mit Quadrat und „STOPP“. Er bewegt sich nicht, wenn die Ansicht des aktuellen Auftrags aus- oder eingeblendet wird. Während des Anhaltens zeigt er „Wird gestoppt …“ und wartet auf das tatsächliche Ende des Auftrags, bevor erneut gestartet werden kann.
+Oben in der mittleren Spalte steht ein normaler quadratischer Knopf mit festen **44 × 44 logischen Pixeln**: grün mit Play-Dreieck oder rot mit Stopp-Quadrat, daneben eine normale Beschriftung. Er wächst im Vollbild nicht mit und bewegt sich beim Wechsel des aktuellen Auftrags nicht. Beim Anhalten erscheint „Wird gestoppt …“; erneuter Start ist erst nach dem tatsächlichen Ende möglich. Die zuerst gebaute breite Variante wurde auf Nutzerkorrektur durch diesen kompakten Knopf ersetzt.
 
 **Starten** aktiviert die Verarbeitung der bestehenden Warteschlange, auch bei ausgeschalteter Ordnerüberwachung. **Stopp** pausiert die weitere Verarbeitung und beendet eine gerade laufende Erkennung samt Modellprozessen. Der unterbrochene Auftrag kehrt an seinen bisherigen Platz zurück. Die wartenden Dateien bleiben erhalten. Beim erneuten Start beginnt eine unterbrochene Erkennung neu; es gibt keinen behaupteten Modell-Checkpoint mitten in einer Aufnahme.
 

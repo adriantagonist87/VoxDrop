@@ -359,7 +359,7 @@ class DesktopWindowTests(unittest.TestCase):
         button=self.visual('queuePlaybackButton')
         self.assertTrue(button.property('visible'));self.assertTrue(button.property('enabled'))
         self.assertEqual(button.property('text'),'STARTEN')
-        self.assertGreaterEqual(button.height(),60)
+        self.assertEqual((button.width(),button.height()),(44,44))
         self.assertFalse(self.visual('pauseQueueButton').property('enabled'))
         self.assertIn('Gestoppt',self.visual('processingStatus').property('text'))
         point=button.mapToScene(QPointF(button.width()/2,button.height()/2)).toPoint()
@@ -379,6 +379,16 @@ class DesktopWindowTests(unittest.TestCase):
         self.assertEqual(button.property('text'),'STOPP')
         self.assertEqual(button.property('background').property('color').name(),'#b5303a')
         self.assertTrue(self.visual('pauseQueueButton').property('enabled'))
+
+    def test_playback_control_keeps_normal_square_size_in_fullscreen(self):
+        self.queue_fixture(2)
+        button=self.visual('queuePlaybackButton')
+        for mode in ('normal','maximized','fullscreen'):
+            if mode=='normal':self.window.showNormal();self.window.resize(1010,630)
+            elif mode=='maximized':self.window.showMaximized()
+            else:self.window.showFullScreen()
+            QTest.qWait(60)
+            self.assertEqual((button.width(),button.height()),(44,44),mode)
 
     def test_real_stop_click_waits_for_worker_then_switches_to_green_play(self):
         jobs=self.queue_fixture(2);self.controller.ready=True
