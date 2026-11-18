@@ -30,6 +30,7 @@ from platform_io import (
     lock_service,
     open_regular,
     process_options,
+    file_is_being_written,
 )
 from smb_paths import (
     on_network_volume,
@@ -39,6 +40,11 @@ from smb_paths import (
 )
 from transcription_worker import run_transcription
 from runtime_logs import RollingLog
+from queue_control import (
+    JobCancelled, initialise_queue, queue_jobs, queue_paused, set_queue_paused,
+    move_queue_item, cancel_job, cancel_queue, cancellation_requested, poll_cancellation,
+)
+from media_history import MediaBusy, initialise_media_history, remember_result, previously_transcribed
 from voxdrop import (
     DEFAULT_DATA,
     DEFAULT_HARDWARE,
@@ -342,6 +348,8 @@ def initialise(state):
         db.execute("PRAGMA journal_mode = WAL")
         upgrade_jobs(db)
         db.executescript(SCHEMA)
+        initialise_queue(db)
+        initialise_media_history(db)
 
 
 def upgrade_jobs(db):
@@ -557,8 +565,33 @@ def scan(db, settings, now=None, *, inspect=inspect_folders):
                 AND origin_job_id IS NULL AND state='seen' AND detected<=?""",
                 (now, *candidate, now - settings["interval_seconds"]),
             )
+    recognise_existing_results(db)
     service_state(db, "active")
     return warning
+
+
+def recognise_existing_results(db):
+    """Import adjacent TXT metadata before queued media reaches inference."""
+    rows=db.execute("""SELECT * FROM jobs WHERE state IN ('seen','ready')
+        AND origin_job_id IS NULL AND text_hash IS NULL""").fetchall()
+    for job in rows:
+        source=Path(job['source'])
+        _, text=targets(job)
+        if text.parent!=source.parent:
+            continue
+        try:
+            if not text.is_file() or file_is_being_written(source) or file_is_being_written(text):
+                continue
+            text_hash=digest(text)
+        except OSError:
+            continue
+        with db:
+            db.execute('BEGIN IMMEDIATE')
+            current=db.execute('SELECT state FROM jobs WHERE id=?',(job['id'],)).fetchone()
+            if current['state'] not in ('seen','ready'):
+                continue
+            remember_result(db,job['id'],'existing',text,text_hash)
+            error_state(db,job['id'],'existing',None)
 
 
 def enqueue_folders(db, settings, folders):
@@ -682,7 +715,7 @@ def version(metadata):
     return metadata.st_dev, metadata.st_ino, metadata.st_size, metadata.st_mtime_ns
 
 
-def stage(job, target):
+def stage(job, target, *, cancelled=None):
     source = Path(job["source"])
     if shutil.disk_usage(target.parent).free < job["size"]:
         raise OSError(
@@ -697,6 +730,8 @@ def stage(job, target):
             if initial[2:] != (job["size"], job["mtime_ns"]):
                 raise SourceChanged("Die Quelle hat sich seit der Erkennung geändert.")
             while chunk := reader.read(1024 * 1024):
+                if cancelled is not None and cancelled():
+                    raise JobCancelled('Auftrag abgebrochen.')
                 writer.write(chunk)
                 sha.update(chunk)
                 written += len(chunk)
@@ -1012,6 +1047,8 @@ def next_job(
     allow_automatic=True,
     config=None,
 ):
+    if queue_paused(db):
+        return False
     with db:
         db.execute(
             """UPDATE jobs SET state='ready',error=NULL,finished=NULL,updated=?
@@ -1029,7 +1066,8 @@ def next_job(
     if not allow_automatic:
         selection = "AND (origin_job_id IS NOT NULL OR json_extract(settings,'$.folder_drop')=1)"
     job = db.execute(
-        f"SELECT * FROM jobs WHERE state='ready' {selection} ORDER BY detected, id LIMIT 1"
+        f"""SELECT jobs.* FROM jobs JOIN queue_positions q ON q.job_id=jobs.id
+        WHERE state='ready' {selection} ORDER BY q.position,jobs.id LIMIT 1"""
     ).fetchone()
     if job is None:
         return False
@@ -1081,21 +1119,64 @@ def next_job(
     now = time.time()
     with db:
         claimed = db.execute(
-            """UPDATE jobs SET state=?, attempt=attempt+1, started=?, updated=?, finished=NULL,
-            error=NULL, settings=? WHERE id=? AND state='ready' AND settings=?""",
+            f"""UPDATE jobs SET state=?, attempt=attempt+1, started=?, updated=?, finished=NULL,
+            error=NULL, settings=? WHERE id=? AND state='ready' AND settings=?
+            AND NOT EXISTS(SELECT 1 FROM queue_state WHERE paused=1)
+            AND id=(SELECT j.id FROM jobs j JOIN queue_positions q ON q.job_id=j.id
+                WHERE j.state='ready' {selection} ORDER BY q.position,j.id LIMIT 1)""",
             (phase, now, now, json.dumps(settings, ensure_ascii=False), job_id, job["settings"]),
         ).rowcount
     if not claimed:
         return False
+
+    def check_cancel():
+        if cancellation_requested(db, job_id):
+            raise JobCancelled('Auftrag abgebrochen.')
+
     try:
+        check_cancel()
         work.mkdir(parents=True, exist_ok=True, mode=0o700)
         if manual and job_folders(job, settings) != (incoming, completed):
             raise OSError(
                 "Die Auftragsordner stimmen nicht mehr mit dem Verlauf überein."
             )
         if not job["text_hash"]:
+            if file_is_being_written(Path(job['source'])):
+                raise MediaBusy('Aufnahme wird noch geschrieben oder ist gesperrt. Warte auf Dateifreigabe.')
+            if not manual:
+                _, existing_text=targets(job)
+                if existing_text.parent == Path(job['source']).parent and existing_text.is_file():
+                    existing_hash=digest(existing_text)
+                    with db:
+                        db.execute('BEGIN IMMEDIATE')
+                        check_cancel()
+                        remember_result(db,job_id,'existing',existing_text,existing_hash)
+                        error_state(db,job_id,'existing',None)
+                    return True
             local.with_suffix(".partial").unlink(missing_ok=True)
-            media_hash = stage(job, local)
+            media_hash = stage(job, local, cancelled=lambda: cancellation_requested(db,job_id))
+            check_cancel()
+            previous=None if manual else previously_transcribed(db,media_hash,job_id)
+            cached_result=None
+            if previous is not None:
+                _, previous_text=targets(previous)
+                previous_bytes=None
+                if previous_text.is_file():
+                    with regular_reader(previous_text) as reader:
+                        previous_bytes=reader.read()
+                text_valid=previous_bytes is not None and hashlib.sha256(previous_bytes).hexdigest()==previous['text_hash']
+                if text_valid:
+                    cached_result=previous_bytes.decode('utf-8')
+                    with db:
+                        remember_result(db,job_id,'reused',None,previous['text_hash'],previous['id'])
+                else:
+                    with db:
+                        db.execute('BEGIN IMMEDIATE')
+                        check_cancel()
+                        remember_result(db,job_id,'duplicate',None,previous['text_hash'],previous['id'])
+                        db.execute('UPDATE jobs SET media_hash=? WHERE id=?',(media_hash,job_id))
+                        error_state(db,job_id,'duplicate',None)
+                    return True
             if manual and settings.get("original_media_hash") not in (None, media_hash):
                 raise SourceChanged(
                     "Die Aufnahme stimmt nicht mehr mit der Datei aus dem Verlauf überein."
@@ -1119,7 +1200,7 @@ def next_job(
                 else settings["language"]
             )
             measurements = {}
-            result = engine(
+            result = cached_result if cached_result is not None else engine(
                 local,
                 language=language,
                 speakers=settings["speakers"],
@@ -1130,10 +1211,14 @@ def next_job(
                 dover_lap=settings.get("dover_lap", False),
                 report=report,
                 measurements=measurements,
+                cancelled=lambda: poll_cancellation(state, job_id),
             )
+            check_cancel()
             transcript.unlink(missing_ok=True)
             publish_text(transcript, result)
             with db:
+                db.execute('BEGIN IMMEDIATE')
+                check_cancel()
                 db.execute(
                     """UPDATE jobs SET state='exporting',media_hash=?,text_hash=?,updated=?,
                     phase=NULL,progress=NULL WHERE id=?""",
@@ -1207,6 +1292,18 @@ def next_job(
             db.execute("DELETE FROM job_retries WHERE job_id=?", (job_id,))
         with suppress(OSError):
             transcript.unlink(missing_ok=True)
+    except JobCancelled:
+        error_state(db, job_id, 'cancelled', None)
+        with db:
+            db.execute('DELETE FROM cancel_requests WHERE job_id=?',(job_id,))
+            db.execute('DELETE FROM job_retries WHERE job_id=?',(job_id,))
+        if work.resolve().parent == (state/'jobs').resolve() and not work.is_symlink():
+            with suppress(OSError):
+                shutil.rmtree(work)
+    except MediaBusy as error:
+        error_state(db,job_id,'failed',str(error))
+        with db:
+            db.execute('INSERT OR REPLACE INTO job_retries VALUES (?,?,?)',(job_id,time.time()+5,5))
     except SourceChanged as error:
         error_state(db, job_id, "superseded", str(error))
     except FileExistsError as error:
@@ -1248,6 +1345,15 @@ def recover(db, state):
     ).fetchall()
     for job in jobs:
         work = state / "jobs" / str(job["id"])
+        if cancellation_requested(db, job['id']) and not job['publication_started']:
+            error_state(db,job['id'],'cancelled',None)
+            with db:
+                db.execute('DELETE FROM cancel_requests WHERE job_id=?',(job['id'],))
+                db.execute('DELETE FROM job_retries WHERE job_id=?',(job['id'],))
+            if work.resolve().parent == (state/'jobs').resolve() and not work.is_symlink():
+                with suppress(OSError):
+                    shutil.rmtree(work)
+            continue
         for leftover in work.glob("media.*"):
             leftover.unlink(missing_ok=True)
         for leftover in work.glob("transcription-*"):
@@ -1292,7 +1398,7 @@ def retry(db, job_id):
     with db:
         changed = db.execute(
             """UPDATE jobs SET state='ready', updated=?,error=NULL
-            WHERE id=? AND state IN ('failed','blocked')""",
+            WHERE id=? AND state IN ('failed','blocked','cancelled')""",
             (time.time(), job_id),
         ).rowcount
         if changed:
@@ -1303,7 +1409,7 @@ def retry(db, job_id):
 
 def retranscribe(db, job_id, settings):
     job = db.execute("SELECT * FROM jobs WHERE id=?", (job_id,)).fetchone()
-    if job is None or job["state"] not in ("done", "failed", "blocked"):
+    if job is None or job["state"] not in ("done", "failed", "blocked", "cancelled", "existing", "duplicate"):
         raise ValueError("Wähle einen abgeschlossenen oder fehlgeschlagenen Auftrag.")
     recorded = Path(job["source"])
     archived, _ = targets(job)
@@ -1338,7 +1444,7 @@ def retranscribe(db, job_id, settings):
     with db:
         db.execute("BEGIN IMMEDIATE")
         if not db.execute(
-            "SELECT 1 FROM jobs WHERE id=? AND state IN ('done','failed','blocked')",
+            "SELECT 1 FROM jobs WHERE id=? AND state IN ('done','failed','blocked','cancelled','existing','duplicate')",
             (job_id,),
         ).fetchone():
             raise ValueError(
@@ -1748,18 +1854,21 @@ def start_in_background(state, model_data, config):
         )
 
 
-def history_jobs(db, order, limit):
+def history_jobs(db, order, limit, *, terminal_only=False):
     direction = "ASC" if order == "asc" else "DESC"
     return db.execute(
         f"""SELECT j.*, m.speech_seconds, m.speaker_seconds, m.peak_memory_bytes,
         d.speaker_method, d.speaker_passes, d.speaker_note,
         a.seconds AS audio_seconds,
+        k.transcript_path AS known_transcript_path,k.prior_job_id,k.kind AS result_kind,
         (SELECT recorded FROM events
          WHERE job_id=j.id AND state='transcribing'
          ORDER BY id DESC LIMIT 1) AS transcription_started
         FROM jobs AS j LEFT JOIN transcription_measurements AS m ON m.job_id=j.id
         LEFT JOIN speaker_diarization AS d ON d.job_id=j.id
         LEFT JOIN audio_durations AS a ON a.job_id=j.id
+        LEFT JOIN known_results k ON k.job_id=j.id
+        {"WHERE j.state NOT IN ('seen','ready','copying','transcribing','exporting')" if terminal_only else ""}
         ORDER BY j.updated {direction}, j.id {direction} LIMIT ?""",
         (limit,),
     ).fetchall()
@@ -1793,6 +1902,12 @@ def main(argv=None):
     autostart.add_argument("mode", choices=("on", "off", "preview"))
     autostart.add_argument("config", type=Path)
     commands.add_parser("retry").add_argument("job_id", type=int)
+    commands.add_parser('cancel-job').add_argument('job_id',type=int)
+    commands.add_parser('cancel-queue')
+    commands.add_parser('queue-pause').add_argument('mode',choices=('on','off'))
+    move=commands.add_parser('move-queue')
+    move.add_argument('job_id',type=int)
+    move.add_argument('before_id',type=int)
     rerun = commands.add_parser("retranscribe")
     rerun.add_argument("job_id", type=int)
     rerun.add_argument("config", type=Path)
@@ -1897,6 +2012,14 @@ def main(argv=None):
                 print(json.dumps(enqueue_folders(db, settings, folders), ensure_ascii=True))
             elif args.command == "retry":
                 retry(db, args.job_id)
+            elif args.command == 'cancel-job':
+                print(cancel_job(db,args.job_id))
+            elif args.command == 'cancel-queue':
+                print(cancel_queue(db))
+            elif args.command == 'queue-pause':
+                set_queue_paused(db,args.mode=='on')
+            elif args.command == 'move-queue':
+                move_queue_item(db,args.job_id,args.before_id)
             elif args.command == "retranscribe":
                 print(retranscribe(db, args.job_id, read_settings(args.config)))
             elif args.command == "clear-history":
@@ -1916,9 +2039,10 @@ def main(argv=None):
                 connection = db.execute(
                     "SELECT available,error FROM connection"
                 ).fetchone()
-                jobs = history_jobs(db, args.order, args.limit)
+                jobs = history_jobs(db, args.order, args.limit,terminal_only=True)
                 current = db.execute(
-                    "SELECT * FROM jobs WHERE state IN ('copying','transcribing','exporting')"
+                    """SELECT j.*, EXISTS(SELECT 1 FROM cancel_requests c WHERE c.job_id=j.id)
+                    AS cancel_requested FROM jobs j WHERE state IN ('copying','transcribing','exporting')"""
                 ).fetchone()
                 waiting = db.execute(
                     "SELECT COUNT(*) FROM jobs WHERE state IN ('seen','ready')"
@@ -1943,6 +2067,8 @@ def main(argv=None):
                             "running": is_running(state),
                             "autostart": login_agent.agent_path().is_file(),
                             "waiting": waiting,
+                            "queue_paused": queue_paused(db),
+                            "queue": [dict(row) for row in queue_jobs(db)],
                             "current": dict(current) if current else None,
                             "jobs": [dict(job) for job in jobs],
                         },

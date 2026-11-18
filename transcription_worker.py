@@ -10,6 +10,7 @@ import threading
 from pathlib import Path
 
 from platform_io import WINDOWS, child_process, process_options
+from queue_control import JobCancelled
 from voxdrop import DEFAULT_DATA, configure_runtime, transcribe
 
 EVENT = "smb-transcription:"
@@ -69,7 +70,7 @@ def emit(**event):
     print(EVENT + json.dumps(event), flush=True)
 
 
-def run_transcription(media, *, report, measurements, **settings):
+def run_transcription(media, *, report, measurements, cancelled=None, **settings):
     data_dir = os.environ.get("ATRAIN_USER_DIR", str(DEFAULT_DATA))
     with tempfile.TemporaryDirectory(
         dir=media.parent, prefix="transcription-"
@@ -94,6 +95,7 @@ def run_transcription(media, *, report, measurements, **settings):
             environment.update({name: directory for name in ("TMPDIR", "TEMP", "TMP")})
         with child_process(
             command,
+            cancellable=True,
             stdout=subprocess.PIPE,
             text=True,
             encoding="utf-8",
@@ -101,8 +103,19 @@ def run_transcription(media, *, report, measurements, **settings):
             **process_options(),
         ) as child:
             stop = threading.Event()
+            aborted = threading.Event()
             sampler = threading.Thread(target=sample_peak, args=(child.pid, stop, peak))
             sampler.start()
+
+            def monitor_cancel():
+                while not stop.wait(.2):
+                    if cancelled is not None and cancelled():
+                        aborted.set()
+                        child.cancel_tree()
+                        return
+
+            monitor = threading.Thread(target=monitor_cancel)
+            monitor.start()
             try:
                 for line in child.stdout:
                     if line.startswith(EVENT):
@@ -111,13 +124,17 @@ def run_transcription(media, *, report, measurements, **settings):
                             error = event["error"]
                         else:
                             report(event["phase"], event["fraction"])
-                if child.wait():
+                code = child.wait()
+                if aborted.is_set():
+                    raise JobCancelled('Auftrag abgebrochen.')
+                if code:
                     raise RuntimeError(
                         error or "Transkriptionsprozess vor Abschluss beendet."
                     )
             finally:
                 stop.set()
                 sampler.join()
+                monitor.join()
                 if child.poll() is None:
                     child.terminate()
                     child.wait()

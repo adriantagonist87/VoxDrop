@@ -383,7 +383,9 @@ class MultiFolderTests(unittest.TestCase):
     def test_enabling_recursive_mode_retargets_active_and_queued_archive_jobs(self):
         sources = [self.first / "Teil 1.wav", self.first / "Teil 2.wav"]
         for source in sources:
-            source.write_bytes(b"media")
+            # Distinct recordings exercise two ASR transitions; byte-identical
+            # recordings now reuse the verified previous transcript.
+            source.write_bytes(source.name.encode('utf-8'))
         settings = self.settings(subfolder=True)
         self.scan(settings, 100)
         self.scan(settings, 130)
@@ -407,7 +409,7 @@ class MultiFolderTests(unittest.TestCase):
                 )
             )
         for source in sources:
-            self.assertEqual(source.read_bytes(), b"media")
+            self.assertEqual(source.read_bytes(), source.name.encode('utf-8'))
             self.assertEqual(source.with_suffix(".txt").read_text(), "Testtranskript\n")
         self.assertFalse((self.first / "_FERTIGGESTELLT").exists())
         self.assertEqual(self.engine.call_count, 2)

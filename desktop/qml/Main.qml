@@ -369,7 +369,7 @@ ApplicationWindow {
                                     ToolTip.visible: hovered && !activeFocus && contentWidth > availableWidth
                                     ToolTip.text: text
                                     ToolTip.delay: 500
-                                    onTextEdited: api.editFolder(folder.index, text)
+                                    onTextChanged: api.editFolder(folder.index, text)
                                 }
                                 Action {
                                     text: "↻"
@@ -588,19 +588,10 @@ ApplicationWindow {
             color: canvas
             SplitView.minimumWidth: 265
             SplitView.fillWidth: true
-            ScrollView {
-                id: workScroll
-                anchors.fill: parent
-                clip: true
-                contentWidth: availableWidth
-                contentHeight: work.implicitHeight + 42
-                ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
-
                 ColumnLayout {
                     id: work
-                    x: 21
-                    y: 20
-                    width: Math.max(1, workScroll.availableWidth - 42)
+                    anchors.fill: parent
+                    anchors.margins: 20
                     spacing: 12
                     Rectangle {
                         Layout.fillWidth: true
@@ -649,16 +640,21 @@ ApplicationWindow {
                         Muted { text: viewState.current.elapsed ? "Laufzeit  " + viewState.current.elapsed : ""; Layout.fillWidth: true }
                         Copy { text: "Modell  " + (viewState.current.model || ""); Layout.fillWidth: true }
                         Copy { text: "Rechengerät  " + (viewState.current.hardware || ""); Layout.fillWidth: true }
+                        Action {
+                            objectName: "cancelCurrentButton"
+                            text: "Aktuelle Transkription abbrechen"
+                            enabled: !viewState.busy && Boolean(viewState.current.canCancel)
+                            onClicked: api.cancelJob(viewState.current.id)
+                        }
                     }
                     Rectangle { Layout.fillWidth: true; height: 1; color: line }
-                    Copy { text: "Warteschlange  " + (viewState.waiting || 0); Layout.fillWidth: true }
+                    QueuePane { api: window.api; viewState: window.viewState; Layout.fillWidth: true; Layout.fillHeight: true }
                     Muted {
                         text: viewState.dropMessage || "Ordner für eine einmalige Transkription hier ablegen."
                         color: viewState.dropError ? warningColor : muted
                         Layout.fillWidth: true
                     }
                 }
-            }
         }
 
         Rectangle {
@@ -796,6 +792,7 @@ ApplicationWindow {
             spacing: 6
             Action { text: "Erneut versuchen"; visible: selected.retry || false; enabled: !viewState.busy; onClicked: { api.retryJob(false); detail.close() } }
             Action { text: "Neu transkribieren"; visible: selected.repeat || false; enabled: !viewState.busy; onClicked: { api.retryJob(true); detail.close() } }
+            Action { objectName: "openTranscriptButton"; text: "Transkript öffnen"; visible: selected.openTranscript || false; enabled: !viewState.busy; onClicked: api.openTranscript() }
             Action { text: Qt.platform.os === "osx" ? "Im Finder zeigen" : "Im Explorer zeigen"; visible: selected.reveal || false; onClicked: api.revealOutput() }
             Item { Layout.fillWidth: true }
             Action { text: "Schließen"; onClicked: detail.close() }

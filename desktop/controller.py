@@ -70,6 +70,9 @@ STATES = {
     "failed": "Fehler",
     "blocked": "Blockiert",
     "superseded": "Neue Dateiversion",
+    "cancelled": "Abgebrochen",
+    "existing": "TXT bereits vorhanden",
+    "duplicate": "Bereits transkribiert (gleicher Inhalt)",
 }
 DEFAULTS = {
     "folders": [],
@@ -235,6 +238,8 @@ def job_settings(job):
 
 
 def output_path(job, *, transcript=False):
+    if transcript and job.get('result_kind') in ('existing','duplicate'):
+        return Path(job['known_transcript_path']) if job.get('known_transcript_path') else Path(job['source']).with_suffix('.txt')
     source = Path(job["source"])
     archived = Path(job["completed_dir"]) / source.name
     settings = job_settings(job)
@@ -293,6 +298,7 @@ class Controller(QObject):
     changed = Signal()
     foldersChanged = Signal()
     historyChanged = Signal()
+    queueChanged = Signal()
     detailsOpened = Signal()
     windowRequested = Signal()
     networkPermissionChanged = Signal(bool)
@@ -314,6 +320,8 @@ class Controller(QObject):
         self.pending = set()
         self.selected = None
         self.history = []
+        self.queue = []
+        self.queue_dragging = False
         self.order = self.preferences.value("historyOrder", "desc")
         self.filter = "all"
         self.ready = preview
@@ -341,6 +349,7 @@ class Controller(QObject):
     historyItems = Property(
         "QVariantList", lambda self: self.history, notify=historyChanged
     )
+    queueItems = Property('QVariantList',lambda self:self.queue,notify=queueChanged)
 
     @Property("QVariantMap", notify=changed)
     def state(self):
@@ -351,14 +360,16 @@ class Controller(QObject):
         if job:
             settings = job_settings(job)
             current = {
+                "id": job['id'],
                 "name": Path(job["source"]).name,
-                "phase": job.get("phase") or STATES.get(job["state"], job["state"]),
+                "phase": 'Wird abgebrochen …' if job.get('cancel_requested') else job.get("phase") or STATES.get(job["state"], job["state"]),
                 "progress": job.get("progress"),
                 "elapsed": duration(time() - job["started"])
                 if job.get("started")
                 else "",
                 "model": MODELS.get(settings.get("model"), MODELS["large-v3-turbo"]),
                 "hardware": GPU_NAME.get(settings.get("hardware"), "CPU"),
+                "canCancel": job['state'] in ('copying','transcribing') and not job.get('publication_started') and not job.get('cancel_requested'),
             }
         checked = {path: self.folder_status(path) for path in self.paths}
         return {
@@ -373,6 +384,8 @@ class Controller(QObject):
             "serviceError": service.get("error") or "",
             "current": current,
             "waiting": self.snapshot.get("waiting", 0),
+            "queueCount": len(self.snapshot.get('queue',[])),
+            "queuePaused": self.snapshot.get('queue_paused',False),
             "dropMessage": self.drop_message,
             "dropError": self.drop_error,
             "checked": checked,
@@ -410,10 +423,13 @@ class Controller(QObject):
             "path": str(output_path(job)),
             "status": STATES.get(job["state"], job["state"]),
             "error": job.get("error") or "",
-            "note": job.get("speaker_note") or "",
-            "retry": job["state"] in {"blocked", "failed"},
-            "repeat": job["state"] in {"done", "blocked", "failed"},
-            "reveal": job["state"] == "done",
+            "note": ({'existing':'Vorhandene TXT-Datei erkannt. Inhalt und Aufnahme wurden nicht durch VoxDrop gegengeprüft.',
+                      'reused':f"Identischer Dateiinhalt: Ergebnis aus Auftrag {job.get('prior_job_id')} übernommen; keine erneute KI-Verarbeitung.",
+                      'duplicate':f"Identischer Dateiinhalt wurde bereits in Auftrag {job.get('prior_job_id')} verarbeitet. Das frühere TXT ist nicht mehr unverändert verfügbar; bei Bedarf neu transkribieren."}.get(job.get('result_kind')) or job.get("speaker_note") or ""),
+            "retry": job["state"] in {"blocked", "failed", "cancelled"},
+            "repeat": job["state"] in {"done", "blocked", "failed", "cancelled", "existing", "duplicate"},
+            "reveal": job["state"] in {'done','existing'} or bool(job.get('known_transcript_path')),
+            "openTranscript": job['state'] in {'done','existing'} or bool(job.get('known_transcript_path')),
             "rows": [
                 {"label": label, "value": str(value)}
                 for label, value in (
@@ -831,6 +847,7 @@ class Controller(QObject):
                     self.check_folders(automatic=True)
             self.update_status()
             self.update_history()
+            self.update_queue()
             if order != self.order:
                 self.refresh()
 
@@ -928,7 +945,7 @@ class Controller(QObject):
     def update_history(self):
         jobs = self.snapshot.get("jobs", [])
         if self.filter != "all":
-            states = {"done"} if self.filter == "done" else {"blocked", "failed"}
+            states = {"done","existing","duplicate"} if self.filter == "done" else {"blocked", "failed"}
             jobs = [job for job in jobs if job["state"] in states]
         jobs = sorted(
             jobs,
@@ -943,7 +960,7 @@ class Controller(QObject):
                     "id": job["id"],
                     "name": Path(job["source"]).name,
                     "path": str(output_path(job)),
-                    "status": STATES.get(job["state"], job["state"]),
+                    "status": 'Ergebnis übernommen' if job.get('result_kind')=='reused' else STATES.get(job["state"], job["state"]),
                     "updated": clock(job["updated"], "%d.%m.%Y"),
                     "audio": duration(job.get("audio_seconds"), all_units=True),
                     "start": clock(job.get("transcription_started")),
@@ -958,10 +975,55 @@ class Controller(QObject):
             self.history = history
             self.historyChanged.emit()
 
+    def update_queue(self):
+        if self.queue_dragging:
+            return
+        queue=[]
+        for job in self.snapshot.get('queue',[]):
+            settings=job_settings(job)
+            size=job['size']
+            queue.append(dict(
+                id=job['id'],name=Path(job['source']).name,path=job['source'],
+                status=('Aufnahme läuft / Datei gesperrt' if (job.get('error') or '').startswith('Aufnahme wird noch geschrieben') else 'Wartet auf Wiederholung') if job['state']=='failed' else STATES.get(job['state'],job['state']),
+                size=f'{size/2**30:.2f} GiB' if size>=2**30 else f'{size/2**20:.1f} MiB',
+                model=MODELS.get(settings.get('model'),settings.get('model','—')),
+                language={'auto':'Automatisch','de':'Deutsch','en':'Englisch'}.get(settings.get('language'),'—'),
+                hardware=GPU_NAME.get(settings.get('hardware'),'CPU'),
+                audio=duration(job.get('audio_seconds')),added=clock(job['detected'],'%d.%m. %H:%M'),
+                retryAt=clock(job.get('retry_at')) if job.get('retry_at') else '',
+                options=' · '.join(name for name,key in [('Stille','skip_silence'),('Sprecher','speakers'),('DOVER','dover_lap')] if settings.get(key)),
+            ))
+        if queue!=self.queue:
+            self.queue=queue
+            self.queueChanged.emit()
+
+    @Slot(bool)
+    def setQueueDragging(self, active):
+        self.queue_dragging=active
+        if not active:
+            self.update_queue()
+
+    @Slot(int,int)
+    def moveQueueItem(self, identifier, before):
+        self.action(lambda:command('move-queue',identifier,before),'Reihenfolge gespeichert.')
+
+    @Slot(int)
+    def cancelJob(self, identifier):
+        self.action(lambda:command('cancel-job',identifier),'Auftrag wird abgebrochen; Originaldatei bleibt erhalten.')
+
+    @Slot()
+    def cancelQueue(self):
+        self.action(lambda:command('cancel-queue'),'Warteschlange abgebrochen und pausiert.')
+
+    @Slot(bool)
+    def pauseQueue(self, paused):
+        self.action(lambda:command('queue-pause','on' if paused else 'off'),
+                    'Warteschlange pausiert; aktueller Auftrag läuft weiter.' if paused else 'Warteschlange fortgesetzt.')
+
     @Slot(int)
     def showDetails(self, identifier):
         selected = next(
-            (job for job in self.snapshot.get("jobs", []) if job["id"] == identifier),
+            (job for job in [*self.snapshot.get("jobs", []),*self.snapshot.get('queue',[]),*([self.snapshot['current']] if self.snapshot.get('current') else [])] if job["id"] == identifier),
             None,
         )
         if selected:
@@ -986,6 +1048,25 @@ class Controller(QObject):
             self.action(
                 lambda: command("retry", identifier), "Auftrag erneut eingereiht."
             )
+
+    @Slot()
+    def openTranscript(self):
+        if self.selected is None or self.selected['state'] not in ('done','existing','duplicate'):
+            return
+        path=output_path(self.selected,transcript=True)
+
+        def checked(result,error):
+            if error:
+                self.notify(error,True)
+            elif not QDesktopServices.openUrl(QUrl.fromLocalFile(str(result))):
+                self.notify('Das Transkript konnte mit der Standardanwendung nicht geöffnet werden.',True)
+
+        def locate():
+            if not path.is_file():
+                raise FileNotFoundError('Die TXT-Datei ist nicht mehr am gespeicherten Ausgabeort vorhanden.')
+            return path
+
+        self.submit(locate,checked)
 
     @Slot()
     def revealOutput(self):

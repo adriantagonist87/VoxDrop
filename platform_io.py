@@ -46,7 +46,16 @@ def windows_process_job(child):
     except BaseException:
         kernel.CloseHandle(handle)
         raise
-    return lambda: kernel.CloseHandle(handle)
+    import threading
+    close_lock = threading.Lock()
+
+    def close():
+        nonlocal handle
+        with close_lock:
+            if handle is not None:
+                kernel.CloseHandle(handle)
+                handle = None
+    return close
 
 
 def resume_windows_child(child):
@@ -95,7 +104,7 @@ def resume_windows_child(child):
 
 
 @contextmanager
-def child_process(*args, **kwargs):
+def child_process(*args, cancellable=False, **kwargs):
     """Popen with Windows descendant cleanup, including owner crashes."""
     import subprocess
 
@@ -103,12 +112,25 @@ def child_process(*args, **kwargs):
         # Assignment must precede execution, including uv's Python redirector.
         # Otherwise a fast child can spawn descendants outside the job.
         kwargs["creationflags"] = kwargs.get("creationflags", 0) | 4  # CREATE_SUSPENDED
+    elif cancellable:
+        kwargs['start_new_session'] = True
     with subprocess.Popen(*args, **kwargs) as child:
         close_job = None
         try:
             close_job = windows_process_job(child) if WINDOWS else None
             if WINDOWS:
                 resume_windows_child(child)
+            if cancellable:
+                if WINDOWS:
+                    child.cancel_tree = close_job
+                else:
+                    def cancel_tree():
+                        import signal
+                        try:
+                            os.killpg(child.pid, signal.SIGKILL)
+                        except ProcessLookupError:
+                            pass
+                    child.cancel_tree = cancel_tree
         except BaseException:
             if close_job is not None:
                 close_job()
@@ -137,6 +159,29 @@ def lock_service(handle):
         import fcntl
 
         fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+
+
+def file_is_being_written(path):
+    """Probe Windows sharing compatibility; do not lock the file during inference."""
+    if not WINDOWS:
+        return False
+    import ctypes
+    from ctypes import wintypes
+    kernel=ctypes.WinDLL('kernel32',use_last_error=True)
+    kernel.CreateFileW.argtypes=[wintypes.LPCWSTR,wintypes.DWORD,wintypes.DWORD,
+                                ctypes.c_void_p,wintypes.DWORD,wintypes.DWORD,wintypes.HANDLE]
+    kernel.CreateFileW.restype=wintypes.HANDLE
+    kernel.CloseHandle.argtypes=[wintypes.HANDLE]
+    # Exclude FILE_SHARE_WRITE: any existing writable handle makes this fail,
+    # even when OBS has temporarily stopped growing the file.
+    handle=kernel.CreateFileW(str(path),0x80000000,0x1|0x4,None,3,0x80,None)
+    if handle==ctypes.c_void_p(-1).value:
+        code=ctypes.get_last_error()
+        if code in (32,33):
+            return True
+        raise ctypes.WinError(code)
+    kernel.CloseHandle(handle)
+    return False
 
 
 def is_reparse_point(metadata):
