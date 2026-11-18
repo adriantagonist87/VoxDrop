@@ -26,12 +26,20 @@ def windows_process_job(child):
                     ("process_memory", ctypes.c_size_t), ("job_memory", ctypes.c_size_t),
                     ("peak_process_memory", ctypes.c_size_t), ("peak_job_memory", ctypes.c_size_t)]
 
+    class Accounting(ctypes.Structure):
+        _fields_ = [("times", ctypes.c_int64 * 4), ("page_faults", wintypes.DWORD),
+                    ("total_processes", wintypes.DWORD), ("active_processes", wintypes.DWORD),
+                    ("terminated_processes", wintypes.DWORD)]
+
     kernel = ctypes.WinDLL("kernel32", use_last_error=True)
     kernel.CreateJobObjectW.argtypes = [ctypes.c_void_p, wintypes.LPCWSTR]
     kernel.CreateJobObjectW.restype = wintypes.HANDLE
     kernel.SetInformationJobObject.argtypes = [wintypes.HANDLE, ctypes.c_int,
                                                ctypes.c_void_p, wintypes.DWORD]
     kernel.AssignProcessToJobObject.argtypes = [wintypes.HANDLE, wintypes.HANDLE]
+    kernel.TerminateJobObject.argtypes = [wintypes.HANDLE, wintypes.UINT]
+    kernel.QueryInformationJobObject.argtypes = [wintypes.HANDLE, ctypes.c_int,
+                                                 ctypes.c_void_p, wintypes.DWORD, ctypes.c_void_p]
     kernel.CloseHandle.argtypes = [wintypes.HANDLE]
     handle = kernel.CreateJobObjectW(None, None)
     if not handle:
@@ -53,8 +61,27 @@ def windows_process_job(child):
         nonlocal handle
         with close_lock:
             if handle is not None:
-                kernel.CloseHandle(handle)
-                handle = None
+                # Closing a kill-on-close job requests asynchronous termination.
+                # Wait for every member, including venv redirector grandchildren,
+                # before TemporaryDirectory tries to remove their mapped audio.
+                import time
+                try:
+                    if not kernel.TerminateJobObject(handle, 1):
+                        raise ctypes.WinError(ctypes.get_last_error())
+                    deadline = time.monotonic() + 5
+                    accounting = Accounting()
+                    while True:
+                        if not kernel.QueryInformationJobObject(handle, 1, ctypes.byref(accounting),
+                                                                ctypes.sizeof(accounting), None):
+                            raise ctypes.WinError(ctypes.get_last_error())
+                        if not accounting.active_processes:
+                            break
+                        if time.monotonic() >= deadline:
+                            raise RuntimeError("Ein VoxDrop-Unterprozess wurde noch nicht vollständig entladen.")
+                        time.sleep(.01)
+                finally:
+                    kernel.CloseHandle(handle)
+                    handle = None
     return close
 
 

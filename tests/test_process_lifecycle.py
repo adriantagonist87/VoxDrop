@@ -1,8 +1,10 @@
 import json
 import subprocess
 import sys
+import tempfile
 import time
 import unittest
+from pathlib import Path
 
 import psutil
 
@@ -34,6 +36,24 @@ class ProcessLifecycleTests(unittest.TestCase):
                            stdout=subprocess.PIPE, text=True, **process_options()) as child:
             self.assertEqual(child.communicate(timeout=10)[0].strip(), "ready")
             self.assertEqual(child.returncode, 7)
+
+    @unittest.skipUnless(WINDOWS, "Windows mapped audio must be released before cleanup")
+    def test_cancel_waits_for_grandchild_to_release_mapped_audio(self):
+        with tempfile.TemporaryDirectory() as directory:
+            recording = Path(directory) / 'audio.npy'
+            leaf = ("import mmap,os,sys,time; f=open(sys.argv[1],'w+b'); f.truncate(64*1024*1024); "
+                    "audio=mmap.mmap(f.fileno(),0); print(os.getpid(),flush=True); time.sleep(60)")
+            branch = ("import subprocess,sys,time; p=subprocess.Popen([sys.executable,'-c',"
+                      + repr(leaf) + ",sys.argv[1]]); p.wait()")
+            with child_process([sys.executable, '-c', branch, str(recording)], cancellable=True,
+                               stdout=subprocess.PIPE, text=True, **process_options()) as child:
+                import concurrent.futures
+                with concurrent.futures.ThreadPoolExecutor() as pool:
+                    pid = int(pool.submit(child.stdout.readline).result(timeout=10))
+                process = psutil.Process(pid)
+                child.cancel_tree()
+                self.assertFalse(process.is_running())
+                recording.unlink()  # No retry: cancel_tree must release the mapping first.
 
     @unittest.skipUnless(WINDOWS, "Windows kill-on-owner-exit job objects")
     def test_owner_crash_kills_child_and_grandchild(self):
