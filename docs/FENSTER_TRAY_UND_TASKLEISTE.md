@@ -1,0 +1,33 @@
+# Fenster-X, Systemtray und Taskleiste – Preview 13
+
+## Präzisierte Nutzeranforderung
+
+Preview 12 beendete die gesamte App bei Fenster-X. Der Nutzer hat dies am 18.11.2026 ausdrücklich geändert: X soll in den Systemtray ausblenden, Minimieren in die Taskleiste minimieren. Vollständiges Beenden bleibt über „VoxDrop beenden“ im Tray erreichbar. Die neue Vorgabe ersetzt die frühere X-Regel in Arbeitsregeln, Entwicklungsanleitung und bisherigen Beenden-Berichten.
+
+[Windows Preview 13](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.2-windows-preview.13), App-Code `a5efd22a241368e5e0d8e5b9c933e39cf965b20b`, ZIP-SHA-256 `be621da30940ab64ff3dfe14ac2d29a9c18b5a05ee6b76edc8deb0cfa8cc9775`. Neue ausdrückliche Nutzerpräzisierung: **Fenster-X blendet in den Systemtray aus**, **Minimieren minimiert in die Taskleiste**. App, Überwachung und Verarbeitung laufen in beiden Fällen weiter. **„VoxDrop beenden“ im Tray** beendet weiterhin alles und entlädt Modelle aus RAM/VRAM. Ohne verfügbaren Tray minimiert X in die Taskleiste. [Bedienung, native Tests und Mac-Übergabe](FENSTER_TRAY_UND_TASKLEISTE.md).
+
+22 vollständige Qt-Fälle in 7,231 s bestanden. Finales natives Paket in 30.927 s: echtes unsichtbares Fenster nach X, neue synthetische Datei weiter überwacht, Wiederöffnung über reale Tray-QAction mit gleicher Eigentümer-PID; native Windows-Minimierung mit IsIconic und taskleistenfähigem Fenster bestätigt. Ausdrückliches Tray-Beenden stoppt alle erfassten Prozesse und verhindert weitere Scans (6.375 s). Alle 34 Engine-Dateien bytegleich zu Preview 12; dessen native CUDA-/Abbruchabnahme bleibt exakt auf Code `53e69cee39ac5a0721f02eb79034db33e792c6a7`.
+
+Frischer GitHub-Download, SHA und 91 installierte Dateien bestätigt. Profil mit 61 Dateien und alter Code hashgesichert; aktuelle leere Datenbank, Überwachung aus und Queuepause erhalten. Modelle/Laufzeit unverändert. Keine produktiven X-/Abbruch-/Löschtests. Gemeinsamer Funktionscode bleibt bis nativer Mac-Gegenprüfung im Draft-PR; main erhält die aktuelle Bedienregel und Übergabe.
+
+## Umsetzung
+
+Nur die gemeinsame QML-Schließbehandlung ändert sich funktional: Ohne bereits abgeschlossenen vollständigen Shutdown wird der Schließevent abgewiesen. Bei vorhandenem Tray wird das Fenster unsichtbar; ohne Tray wird es minimiert. Die native Minimieren-Schaltfläche bleibt beim normalen Betriebssystemverhalten. Vorhandene Tray-Klick-/„Hauptfenster öffnen“- und Einzelinstanz-Wiederöffnung verwenden weiter den WindowPresenter und erhalten die Anzeigeeinstellungen.
+
+Die ausgeblendete App ist weiterhin eine laufende App. Deshalb bleiben die GUI-Eigentümeridentität, Scanner und Arbeitsprozesse erhalten. Das ist ausdrücklich von vollständigem App-Beenden zu unterscheiden. „VoxDrop beenden“, eigentlicher App-Shutdown und Eigentümerverlust behalten die vollständige Prozessbereinigung aus Preview 12. Modelldateien auf dem Datenträger werden dabei weiterhin nicht gelöscht. Überwachung läuft nur bei gesetzter Überwachungsoption; einmalig eingereihte Aufträge bleiben unabhängig davon möglich.
+
+Während eines echten Abschlusses lässt `shutdownComplete` den Fenster-Schließevent zu, damit QML den App-Abschluss nicht verhindert. Keine Änderung an Backends, Modellen, Datenbank, Such-/Drop-/Verlaufslogik oder Abhängigkeiten. Alle 34 Engine-Dateien wurden bytegleich mit Preview 12 verglichen. Auch Controller, Desktop-Einstieg und WindowPresenter sind unverändert.
+
+## Native Prüfung und Installation
+
+Geprüfter funktionaler Commit `a5efd22a241368e5e0d8e5b9c933e39cf965b20b`. Alle 22 vollständigen Qt-Fälle bestanden in 7,231 s: X zum Tray ohne Quit/Abbruchsignale, Wiederöffnung, Minimierung, erreichbarer Rückfall ohne Tray, akzeptierter Schließevent nach vollständigem Abschluss und übrige GUI-Funktionen. Offscreen nur bei dieser Qt-Regression, native Paketprüfung ohne Offscreen.
+
+Finales Paket mit isoliertem Profil, synthetischen Medien samt benachbarten TXT und laufender Überwachung gestartet. Eigener Qt-Testtreiber ruft unverändertes paketiertes Desktop-main auf, sendet dem tatsächlichen QML-Fenster einen Schließevent und betätigt die vorhandenen Tray-QActions. Nach X: Close abgewiesen, Qt- und native Windows-Sichtbarkeit false, kein Shutdown; gleiche App-PID und laufender Dienst. Eine währenddessen neu angelegte Datei wurde als Bestand erfasst. Tray-Öffnen stellt dasselbe Fenster wieder her. Minimieren: native IsIconic=true, Fenster sichtbar, Qt-Minimized, kein Toolfenster und kein Besitzerfenster; damit normales Taskleistenverhalten. Erneutes Öffnen mit gleicher Eigentümer-PID erfolgreich. Abschließend echte Tray-Beenden-Aktion: alle erfassten Dienste beendet, Eventloop verlassen, keine Folgescans. Originalhash, SQLite und Fremdschlüssel ok, keine erfassten Prozesse übrig. Dauer 30.927 s, vollständiges Beenden 6.375 s. Kein physischer Taskleisten-/Infobereichsklick behauptet; die nativen Fensterzustände und tatsächlichen Qt-Aktionen sind belegt.
+
+Direkt von GitHub geladen, SHA geprüft und alle 91 Paketdateien bytegleich installiert. Zu diesem Zeitpunkt war die produktive App geschlossen, kein aktiver Auftrag. Vollständiges Profil (61 Dateien) und alter Code hashgesichert. Nutzerkonfiguration/Pause und leere Datenbank erhalten, keine Modelle/Laufzeit ausgetauscht. Danach App einmal regulär geöffnet; genau ein GUI-Eigentümer mit venv-Redirector, SQLite/Fremdschlüssel ok, Konfiguration gleich. Produktive Überwachung weiter aus, Queue weiter pausiert. Frühere Auftragszahlen oder Ordner wurden nicht zurückgespielt. Private Rohberichte und Sicherungen bleiben außerhalb des öffentlichen Repositorys.
+
+## Mac und weitere Arbeit
+
+Branch `fix/windows-native-validation`, Draft-PR #1. main enthält Dokumentation und neue Arbeitsregel; gemeinsamer Laufzeit-/QML-Code bleibt bis Mac-Gegenprüfung im PR. Letzter belegter nativer Mac-Code weiter `df207f79aa812f70d090e4306443436d51d48952`.
+
+Mac: rotes Fenster-X muss nun bei vorhandenem Menüleistenstatus nur ausblenden; Minimieren benutzt die native Dock-Minimierung. Menüleisten-Öffnen/Dock-Wiederöffnung müssen dasselbe Fenster mit vorherigem Anzeigemodus zeigen. Cmd-Q und „VoxDrop beenden“ müssen vollständig beenden und dürfen von der QML-Schließbehandlung nicht abgefangen werden. Ohne verfügbares Statussymbol bleibt die App erreichbar. Metal-Inferenz und Ordnerüberwachung beim Ausblenden weiterführen, beim ausdrücklichen Beenden vollständig stoppen. Alle übrigen offenen Mac-Paket-/Prozess-/Such-/Reset-/Drop-/Icon-Abnahmen aus den bestehenden Berichten bleiben erhalten. Die Preview-12-Behauptung „Fenster-X beendet vollständig“ ist historisch und keine aktuelle Sollvorgabe mehr.

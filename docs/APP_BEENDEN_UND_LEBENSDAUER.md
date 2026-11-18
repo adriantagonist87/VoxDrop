@@ -1,5 +1,7 @@
 # App beenden und Lebensdauer – Windows Preview 12
 
+**Aktuelle Präzisierung ab Preview 13:** Fenster-X blendet nur noch in den Tray aus; Minimieren legt das Fenster in die Taskleiste. Vollständiger Stopp über „VoxDrop beenden“. Die nachfolgende X-Abnahme beschreibt den historischen Preview-12-Stand. [Aktuelle Fensterbedienung](FENSTER_TRAY_UND_TASKLEISTE.md).
+
 ## Auftrag und Änderung
 
 Der Nutzer meldete im Infobereich „Oberfläche beenden“ und verlangt ausdrücklich: App läuft → Überwachung nach Einstellung; App geschlossen → keinerlei Überwachung oder geladene Modelle. Die bisherige Trennung zwischen GUI und unabhängigem Dauerbetrieb ist damit aufgehoben. Diese Vorgabe ersetzt ältere Architekturpassagen.
