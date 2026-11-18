@@ -8,8 +8,10 @@ import hashlib
 import json
 import shutil
 import sqlite3
+import subprocess
 import sys
 import time
+from datetime import datetime
 from pathlib import Path
 
 import psutil
@@ -18,7 +20,7 @@ import winreg
 config = json.loads(Path(sys.argv[1]).read_text(encoding='utf-8-sig'))
 app, profile, fixture, incoming, output = [Path(config[key]) for key in ('app','profile','fixture','incoming','report')]
 report = dict(started=time.time(), boot_time=psutil.boot_time(), observer_started_app=False)
-new_boot = report['boot_time'] > config['prepared_boot_time'] + 1
+new_boot = False
 
 def roles():
     matches = {'gui': [], 'supervisor': [], 'service': []}
@@ -49,6 +51,18 @@ def roles():
     return result
 
 try:
+    if len(config['observer_run_value']) > 260:
+        raise RuntimeError('Observer Run command exceeds the Windows 260-character limit; use a short local bootstrap')
+    boot_query = subprocess.run(
+        ['powershell.exe', '-NoProfile', '-NonInteractive', '-Command',
+         "(Get-CimInstance Win32_OperatingSystem).LastBootUpTime.ToUniversalTime().ToString('o')"],
+        check=True, capture_output=True, text=True, timeout=30,
+        creationflags=subprocess.CREATE_NO_WINDOW,
+    )
+    report['windows_boot'] = boot_query.stdout.strip()
+    current_boot = datetime.fromisoformat(report['windows_boot'].replace('Z', '+00:00'))
+    prepared_boot = datetime.fromisoformat(config['prepared_windows_boot'].replace('Z', '+00:00'))
+    new_boot = current_boot > prepared_boot
     if not new_boot:
         raise RuntimeError('No new Windows boot since preparation; do not count this as login acceptance')
     report['code_commit'] = json.loads((app/'build-info.json').read_text())['code_commit']

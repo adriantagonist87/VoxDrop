@@ -49,11 +49,11 @@ Preview 2 erneut direkt von GitHub heruntergeladen, SHA-256 und Code-Identität 
 | Neue Modelle und Laufzeit vollständig im App-Ordner | BESTANDEN, beide Modelle über sichtbare Oberfläche eingerichtet |
 | Deutsch/Englisch getrennt, Qwen/Whisper, lange Pausen | BESTANDEN, acht echte CUDA-Fälle mit Textankern und Zeitmarken |
 | Sprecher/DOVER, sequenzielle Modellbelegung und VRAM-Freigabe | BESTANDEN auf Preview 2; Preview 4 zusätzlich langer Qwen-/DOVER-Lauf |
-| Lokale/SMB-Überwachung, Pause, Rekursion und Ausfälle | Lokale/UNC-Dateipfade BESTANDEN; aktuelles Pause/Fortsetzen IN ARBEIT; tatsächlicher SMB-Serverausfall ungeprüft |
+| Lokale/SMB-Überwachung, Pause, Rekursion und Ausfälle | Lokale/UNC-Dateipfade und funktionales Pause/Fortsetzen BESTANDEN; tatsächlicher SMB-Serverausfall ungeprüft |
 | Sichtbare Bedienung, Explorer-Drop, Fenster/Infobereich, Verlauf | Modelle/Optionen/Speichern/Verlauf/Minimierung/Maximierung bedient; physischer Explorer-Drop und Taskleisten-/Infobereichsklicks ungeprüft |
 | Dateischutz, Kollisionen, Neutranskription und Wiederaufnahme | BESTANDEN; Qwen-Prozessabbruch auch auf finalem Preview-4-Paket wiederholt |
 | Tatsächlicher Windows-Neustart/Anmeldestart | OFFEN |
-| Tatsächlicher Sleep/Resume | OFFEN |
+| Tatsächlicher Sleep/Resume | BESTANDEN auf Preview 4; Windows-S3-Ereignisse, gleicher Prozessbaum und erfolgreicher neuer Folgeauftrag |
 | Produktive Ordner und Endeinstellungen | OFFEN |
 
 Wochenlanger Betrieb braucht einen entsprechenden Beobachtungszeitraum. Gemeinsame Änderungen bleiben **UNGEPRÜFT unter macOS** und im Draft-PR #1. Mac-Prüfstand `df207f79aa812f70d090e4306443436d51d48952` bewahren.
@@ -70,11 +70,21 @@ Die Computerbedienung wurde zwischenzeitlich durch physisches Escape beendet; na
 
 Für die echte Neustartabnahme ist `scripts/check-windows-login.py` vorbereitet: privates Konfigurations-/Ergebnis-JSON, einmaliger eigener HKCU-Run-Beobachter. Er startet VoxDrop niemals selbst. Erst nach neuem Boot und beobachtetem automatischem Hintergrund-GUI-/Supervisor-/Dienststart legt er eine künstliche Aufnahme im Prüfordner ab; er prüft Fertigstellung/TXT/Originalhash und entfernt anschließend ausschließlich seinen eigenen Test-Run-Wert. Der produktive VoxDrop-Run-Wert bleibt erhalten. Tatsächlicher Neustartlauf weiterhin offen.
 
+Vor dem echten Neustart die Testregistrierung auf einen kurzen lokalen Bootstrap umgestellt (151 statt 298 Zeichen; Windows-Run-Grenze 260). Nativer Test desselben Bootstrap im laufenden Boot bestätigt ausdrücklich `No new Windows boot`, kein Appstart, keine Produktivänderung und erhaltene Registrierung. Erst bei tatsächlich erfolgreichem neuen Anmeldelauf darf der private Abschlusshelfer den bereits festgelegten Produktivordner aktivieren. Er prüft zuvor sämtliche vorhandenen produktiven Dateien gegen die privaten Ausgangshashes, sichert Konfiguration und konsistente SQLite-Datenbank und archiviert ausschließlich die zehn exakt erwarteten Abnahme-Dateien mit Hashvergleich privat. Zusätzliche Dateien oder Abweichungen stoppen diesen Abschluss ohne pauschales Löschen. Noch kein produktiver Abschluss oder neuer Boot behauptet.
+
+Der erste Sicherungsvorcheck verglich den berechneten `psutil.boot_time()`-Fließkommawert exakt und stoppte bei einer Abweichung unter einer Mikrosekunde. Windows-CIM und Kernel-General-12-Ereignis bestätigten denselben bisherigen Boot. Prüftreiber korrigiert: native `LastBootUpTime` als UTC-Zeitpunkt statt Fließkomma-Gleichheit für den Bootnachweis; erneuter tatsächlicher Bootstrap-Negativtest und Sicherungsvorcheck bestanden. Vier Aufträge abgeschlossen, null aktiv/ausstehend, SQLite `ok`, konsistente Datenbank-/Konfigurationssicherung vorhanden. Kein Appfehler und keine neue Bootabnahme daraus abgeleitet.
+
 Finale Wiederholung des isolierten Qwen-Abbruchtests auf Preview 4 bestanden: normaler EXE-Hintergrundstart und automatischer Ersatz des beendeten Dienstes; Abbruch nach Anlage von 2.583.624 Byte dekodiertem Audio im Auftragsordner. Null verwaiste Inferenzprozesse, automatische Fertigstellung bis `done`, TXT veröffentlicht, Originalhash unverändert und unterbrochenes Audio entfernt. Produktives Profil nicht angehalten oder verändert.
 
 Automatische englische Erkennung im normalen Überwachungsprofil auf Preview 4 bestanden: Qwen/CUDA, Sprache `auto`, Stilleüberspringen, Sprecher und DOVER aktiv; 37,026 s synthetisches Audio in 32,532 s. Alle Textanker vor/nach 20 s Pause vorhanden, Freitag-Zeitmarke bei 28 s, Originalhash unverändert. Separat gespeicherte Pause vor neuer deutscher Testdatei bestätigt: über vier Minuten keine Einreihung und kein TXT. Fortsetzen wird erst nach tatsächlicher Bedienung und erfolgreichem Folgeauftrag als bestanden markiert. Währenddessen verweigerte die Bedienhilfe den Cursorzugriff und lieferte schwarze Aufnahmen; Nutzer wurde gemäß Computer-Use-Regel zum Entsperren aufgefordert. Kein Appfehler daraus abgeleitet.
 
 Fortsetzen anschließend über den ausgelieferten `controller.save_settings`-Pfad mit Validierung und atomarer Veröffentlichung durchgeführt, da die Bedienhilfe trotz bestätigter Entsperrung, frischer Fensterzuordnung und Kernel-Neuverbindung schwarze Aufnahmen lieferte. Kein zusätzlicher sichtbarer Speichern-Klick behauptet. Danach deutsche Testdatei automatisch `done`: 30,523 s, Sprache `auto`, Qwen/CUDA/Sprecher/DOVER/Stilleüberspringen, alle Textanker vorhanden, Zeitmarke nach Pause 29 s, Originalhash erhalten. Damit Pause/Fortsetzen funktional bestanden; zusätzliche sichtbare Bedienabnahme bleibt getrennt begrenzt.
+
+### Tatsächlicher Standby und Wiederaufnahme auf Preview 4
+
+Am 18.11.2026 um 09:47 Uhr echten S3-Standby über die native Windows-Power-API ausgelöst. Vorher null aktive/ausstehende Aufträge und ein GUI-/Supervisor-/Dienstbaum; einmaliger absoluter UTC-Aufweckzeitgeber mit `fResume=True` für 70 s gesetzt, keine dauerhafte Energie-/Sicherheitsoption verändert. API-Grundlage: [SetSuspendState](https://learn.microsoft.com/en-us/windows/win32/api/powrprof/nf-powrprof-setsuspendstate) und [SetWaitableTimer](https://learn.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-setwaitabletimer).
+
+Windows-Systemereignisse Kernel-Power 42/107 und Power-Troubleshooter 1 bestätigen S3 (`TargetState`/`EffectiveState` 4). Derselbe Boot und alle sechs App-Prozesse einschließlich Redirector-Paare mit identischen PIDs/Erstellzeiten blieben erhalten. Geschätzter Niedrigenergieanteil aus Uhr-/Unbiased-Interrupt-Time-Differenz 13,617 s; der Rechner wachte vor dem gesetzten Zeitgeber auf, dessen Auslösung wird daher nicht behauptet. Danach neue synthetische deutsche Aufnahme ohne App-Neustart automatisch erkannt und in 37,307 s fertiggestellt, TXT neben Original und SHA-256 erhalten. Eigener Zeitgeber anschließend entfernt; nur im Prüfprozess aktiviertes Shutdown-Privileg zurückgesetzt. Sleep/Resume mit Folgearbeit damit bestanden.
 
 ### Nachprüfung des Konsolenfixes in Preview 3
 
