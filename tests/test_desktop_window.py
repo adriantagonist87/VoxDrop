@@ -383,15 +383,35 @@ class DesktopWindowTests(unittest.TestCase):
         self.assertFalse(self.controller.history)
         self.assertFalse(self.controller.queue)
 
-    def test_window_close_requests_full_stop_before_allowing_exit(self):
+    def test_window_x_hides_to_tray_without_stopping_app_or_work(self):
         self.presenter.show();QTest.qWait(30)
-        with patch.object(self.controller_module,'command',return_value='') as command,patch.object(self.controller,'submit',side_effect=lambda operation,finished,**options:finished(operation(),None)),patch.object(self.app,'quit') as quit_app:
+        with patch.object(self.controller,'hasTray',return_value=True),patch.object(self.controller,'requestQuit') as quit_app:
+            self.assertFalse(self.window.close());QTest.qWait(30)
+            self.assertFalse(self.window.isVisible());quit_app.assert_not_called()
+        self.assertFalse(self.controller.quitting)
+        self.assertFalse(self.controller.content_cancel.is_set())
+        self.assertFalse(self.controller.network_cancel.is_set())
+        self.presenter.show();QTest.qWait(30)
+        self.assertTrue(self.window.isVisible())
+
+    def test_minimize_keeps_taskbar_window_and_x_without_tray_stays_reachable(self):
+        self.presenter.show();QTest.qWait(30)
+        self.window.showMinimized();QTest.qWait(30)
+        self.assertTrue(self.window.isVisible())
+        self.assertEqual(self.window.windowState(),Qt.WindowState.WindowMinimized)
+        self.presenter.show();QTest.qWait(30)
+        with patch.object(self.controller,'hasTray',return_value=False),patch.object(self.controller,'requestQuit') as quit_app:
             self.window.close();QTest.qWait(30)
-            command.assert_called_once_with('stop')
-            quit_app.assert_called_once()
-        self.assertTrue(self.controller.shutdown_complete)
-        self.assertTrue(self.controller.content_cancel.is_set())
-        self.assertTrue(self.controller.network_cancel.is_set())
+            self.assertTrue(self.window.isVisible())
+            self.assertEqual(self.window.windowState(),Qt.WindowState.WindowMinimized)
+            quit_app.assert_not_called()
+
+    def test_completed_full_shutdown_allows_window_to_close(self):
+        self.presenter.show();QTest.qWait(30)
+        self.controller.shutdown_complete=True;self.controller.changed.emit()
+        with patch.object(self.controller,'hasTray',return_value=True):
+            self.assertTrue(self.window.close());QTest.qWait(30)
+        self.assertFalse(self.window.isVisible())
 
     def test_tray_quit_action_calls_full_app_shutdown(self):
         with patch.object(self.controller_module.QSystemTrayIcon,'isSystemTrayAvailable',return_value=True),patch.object(self.controller,'requestQuit') as quit_app:

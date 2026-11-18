@@ -71,7 +71,10 @@ ApplicationWindow {
             return
         }
         event.accepted = false
-        api.requestQuit()
+        if (api.hasTray())
+            window.hide()
+        else
+            window.showMinimized()
     }
 
     component Copy: Label {
