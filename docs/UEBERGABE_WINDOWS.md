@@ -1,6 +1,12 @@
 # Übergabeauftrag für Codex auf dem Windows-PC
 
-## Aktuell: Preview 8
+## Aktuell: Preview 9
+
+Installiert und veröffentlicht: [Windows Preview 9](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.2-windows-preview.9), App-Code `c434d5c4921873d387cefc8cdc55f23f201e61de`, ZIP-SHA-256 `7dd6e52dadff40a73f8ce9b79c09609f2d2cd21ed3a6917d338af10937422da4`. Die vier Queue-Menüaktionen waren bei Suchfilter pauschal gesperrt. Nun bestimmen neue relative Datenbankaktionen die vollständige aktuelle Position; Drag-and-drop verwendet einen konkreten Vor-/Nach-Anker. Unsichtbare Nachbarn werden nicht übersprungen, echte Grenzaktionen erkennbar deaktiviert. [Genauer Bericht](SUCHE_UND_DROP_KONFLIKTE.md). 135 Fälle (128 bestanden, sieben Skips), finales Paket einschließlich EXE-Einstieg und gefiltertem QML-Menüklick gegen echte SQLite-Reihenfolge in 8,584 s bestanden. ASR-/Export-/Schutzlogik unverändert, native CUDA-Abnahme weiterhin exakt auf Preview 8.
+
+GitHub-ZIP mit SHA und allen 88 installierten Dateien verglichen; konsistente Datenbank-/Einstellungssicherung und verifizierte alte Codekopie. Nur Oberfläche neu gestartet; bestehende Supervisor-/Dienstprozesse erhalten. Alle 9.385 vorhandenen Aufträge erhalten, 27 wartend und weiter pausiert; aktuelle Nutzerordner/Modelle/Laufzeit unverändert. Keine produktive Reihenfolge-/Abbruchaktion als Test. Installierte Zähler/Pause nach erneutem Fensterstart und Aktivierung gelesen. Mac: zusätzlich gefiltertes Menü und Drag-and-drop mit ausgeblendeten Nachbarn nativ prüfen. App-Code bis Gegenprüfung im Draft lassen.
+
+## Vorangegangener Stand: Preview 8
 
 Installiert und veröffentlicht: [Preview 8](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.2-windows-preview.8), App-Code `d40b00526494155979d19d6b0b67fcf1853d618f`, SHA-256 `80129d589819ab0ba4e3c7644aa5e31f63c1d565c403457df21d2b068d27c0f8`. [Vollständige Funktions-/Mac-Übergabe](SUCHE_UND_DROP_KONFLIKTE.md): schnelle Lupen-/Wildcard-/optionale Inhaltssuche, Datei-/Ordner-Konfliktdialog, atomare Batchaktionen, priorisierte Unterbrechung/Wiederaufnahme, begrenzte Sofort-Auswahl bei pausierter Queue und native Explorer-Markierung. 131 Tests (124 bestanden, sieben Skips) und echte finale EXE-/CUDA-/Suchabnahme in 87,605 s bestanden. GitHub-Update mit Null-Aktiv-Prüfung, vollständiger hashgesicherter Profil-/Codekopie, unveränderten Modellen/Laufzeit und aktuellen Nutzereinstellungen durchgeführt. 9.148 bisherige Aufträge erhalten, 8.870 weiterhin pausiert, SQLite/Fremdschlüssel `ok`, 97 ursprüngliche TXT erhalten. Gemeinsam geänderter Code weiter unter macOS ungeprüft; vor Integration insbesondere FTS5/Fallback, Unix-Suchprozessabbruch, gemischte Drops, Preemption/Queuepause und neue QML-Komponenten gegenprüfen.
 
