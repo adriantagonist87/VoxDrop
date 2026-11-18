@@ -2,7 +2,7 @@
 
 ## Laufende Neuinstallationsabnahme am 18.11.2026
 
-Die Sitzung wurde begonnen. Der aktuelle Windows-Fixstand ist als [GitHub-Prerelease v1.3.2-windows-preview.1](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.2-windows-preview.1) verfügbar. App-Code `dbfcf833ef80617929101e321decac3219e76291`; [laufender Abnahmebericht](WINDOWS_ABNAHME_2026-11-18.md). Neuinstallation und vollständige Abnahme sind **IN ARBEIT**.
+Der aktuelle Windows-Fixstand ist als [GitHub-Prerelease v1.3.2-windows-preview.2](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.2-windows-preview.2) verfügbar. App-Code `c86746f8cc98c2dce75fb95bd489563591640f9a`; [laufender Abnahmebericht](WINDOWS_ABNAHME_2026-11-18.md). Vollständige Bereinigung und zweite frische GitHub-/EXE-/Modelleinrichtung bestanden; weitere Funktionsabnahme **IN ARBEIT**. WIN-08 (veraltete Verweigerungsanzeige während laufendem Download-Retry) korrigiert; neue Regression vorher fehlgeschlagen, nachher erfolgreich. 92 Windows-Testfälle: 85 bestanden, sieben Skips. Gemeinsamer Fix unter macOS ungeprüft.
 
 Nutzerpräzisierung: Meetings sind jeweils Deutsch oder Englisch. Beide Sprachen getrennt mit/ohne Stilleüberspringen prüfen. WIN-05 bleibt technisch offen, blockiert diesen Nutzungsumfang aber nicht.
 

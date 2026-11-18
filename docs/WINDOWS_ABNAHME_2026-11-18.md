@@ -8,13 +8,13 @@ Vollständige Bereinigung, neue Installation direkt von GitHub, Funktionsprüfun
 
 ## Installationskandidat
 
-- [GitHub-Prerelease v1.3.2-windows-preview.1](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.2-windows-preview.1).
-- Asset `VoxDrop-1.3.1-Windows-Test-dbfcf833ef80.zip`: 45.704.396 Byte, plus `.sha256`.
-- App-Code `dbfcf833ef80617929101e321decac3219e76291`.
-- SHA-256 `be0bcba6711ba6c45b90f3b3f09b7920a8c62b01ef912cc23145adb3bf62555a`.
+- Maßgeblich: [GitHub-Prerelease v1.3.2-windows-preview.2](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.2-windows-preview.2).
+- Asset `VoxDrop-1.3.1-Windows-x64-c86746f8cc98.zip`: 45.704.551 Byte, plus `.sha256`.
+- App-Code `c86746f8cc98c2dce75fb95bd489563591640f9a`.
+- SHA-256 `3841a6ebcb882fb7e0642c1a390ea7475a98fe15e84e6b4ec67c068166ada426`.
 - Interne Version weiterhin 1.3.1; der Preview-Tag bezeichnet den neueren Windows-Fixstand. Keine stabilen Assets ersetzt, Preview nicht als neuestes stabiles Release markiert.
-- ZIP-Integrität, `build-info.json` und alle 29 enthaltenen eigenen Desktop-/Engine-/Windows-Dateien gegen den Code-Commit geprüft. Keine Abweichung nach Zeilenendennormalisierung des Builders. Spätere Branch-Änderungen enthalten nur Dokumentation und einen Messprüfer.
-- GitHub bestätigt Assetgröße und denselben Digest. Erneuter Download/frische Einrichtung folgen separat.
+- Preview 1: ZIP-Integrität, `build-info.json` und alle 29 enthaltenen eigenen Desktop-/Engine-/Windows-Dateien gegen den damaligen Code-Commit geprüft. Keine Abweichung nach Zeilenendennormalisierung des Builders. Preview 2 nativ aus sauberem committetem Checkout mit demselben verifizierten Vendorbestand gebaut; Korrektur WIN-08 enthalten.
+- GitHub bestätigt Assetgröße und denselben Digest. Preview 2 erneut direkt heruntergeladen und mit öffentlicher Prüfsumme verglichen. Vollständige zweite Neueinrichtung ohne übernommene Modelle/Laufzeit durchgeführt.
 
 Ein erster privater Archivprüfer behandelte Verzeichniseinträge als Dateien. Erst der korrigierte Dateivergleich bestand; Prüftreiberfehler, kein Appfehler.
 
@@ -36,18 +36,49 @@ Während nach Nutzerfreigabe bereits große Modelldateien heruntergeladen wurden
 
 Künstliche getrennte Sprachfixtures: Deutsch 40,367 s, Englisch 37,026 s, je 20 s eingefügte Pause. Wiederholbare Erzeugung und Sprach-/Zeitmarkenprüfung liegen unter `scripts/`; sie verwenden installierte SAPI-Stimmen und veröffentlichen keine persönlichen Medien.
 
+### Zweite vollständige Einrichtung mit Preview 2
+
+Vor dem zweiten Entfernen die frische Datenbank nativ geprüft: Integrität `ok`, null Aufträge, null aktive Aufträge. Alle Dateien des kleinen ersten Profils einschließlich SQLite vollständig privat kopiert und einzeln per SHA-256 verglichen. Ein zunächst geplanter Reset war von der automatischen Sicherheitsprüfung wegen unvollständiger Profilsicherung abgelehnt worden; erst nach dieser zusätzlichen Prüfung und vollständigen Sicherung ausgeführt. Kein Umgehen der Ablehnung. Preview 1, deren Laufzeit, Modelle und Profil anschließend vollständig entfernt; keine großen Downloads übernommen.
+
+Preview 2 erneut direkt von GitHub heruntergeladen, SHA-256 und Code-Identität geprüft, unveränderte EXE aus leerem App-/Profilbestand gestartet. Neue Python-/CUDA-Laufzeit und anschließend Qwen, Aligner, Sprechergewichte sowie Whisper über die sichtbare Oberfläche bezogen. Beide Modellwahlen melden `Modelle installiert`, Modellspeicher neben der EXE. Frühere Nutzerfreigabe für denselben Python-Pfad blieb gültig. Keine lokale Quellüberlagerung. Native Sprach-/Datei-/Ressourcenprüfungen laufen auf diesem Paket.
+
 | Fall | Status |
 | --- | --- |
-| Sicherung, Bereinigung und Speicherfreigabe | OFFEN |
-| GitHub-Neudownload, Prüfsumme, normale EXE-Ersteinrichtung | OFFEN |
-| Neue Modelle und Laufzeit vollständig im App-Ordner | OFFEN |
-| Deutsch/Englisch getrennt, Qwen/Whisper, lange Pausen | OFFEN |
+| Sicherung, Bereinigung und Speicherfreigabe | BESTANDEN, private Bestands-/Hash-/Volumenbelege |
+| GitHub-Neudownload, Prüfsumme, normale EXE-Ersteinrichtung | BESTANDEN, Preview 2 mit Code und SHA oben |
+| Neue Modelle und Laufzeit vollständig im App-Ordner | BESTANDEN, beide Modelle über sichtbare Oberfläche eingerichtet |
+| Deutsch/Englisch getrennt, Qwen/Whisper, lange Pausen | BESTANDEN, acht echte CUDA-Fälle mit Textankern und Zeitmarken |
 | Sprecher/DOVER, sequenzielle Modellbelegung und VRAM-Freigabe | OFFEN |
 | Lokale/SMB-Überwachung, Pause, Rekursion und Ausfälle | OFFEN |
 | Sichtbare Bedienung, Explorer-Drop, Fenster/Infobereich, Verlauf | OFFEN |
-| Dateischutz, Kollisionen, Neutranskription und Wiederaufnahme | OFFEN |
+| Dateischutz, Kollisionen, Neutranskription und Wiederaufnahme | Datei-/Exportfälle BESTANDEN; Prozessabbruchprüfung läuft |
 | Tatsächlicher Windows-Neustart/Anmeldestart | OFFEN |
 | Tatsächlicher Sleep/Resume | OFFEN |
 | Produktive Ordner und Endeinstellungen | OFFEN |
 
 Wochenlanger Betrieb braucht einen entsprechenden Beobachtungszeitraum. Gemeinsame Änderungen bleiben **UNGEPRÜFT unter macOS** und im Draft-PR #1. Mac-Prüfstand `df207f79aa812f70d090e4306443436d51d48952` bewahren.
+
+## Bestätigte Funktionsläufe auf Preview 2
+
+Alle folgenden Ergebnisse verwenden App-Code `c86746f8cc98c2dce75fb95bd489563591640f9a` aus dem erneuten GitHub-Download.
+
+| Modell | Sprache | Stille überspringen / Sprecher / DOVER | Gesamtlauf |
+| --- | --- | --- | --- |
+| Qwen | Deutsch | aus / aus / aus | 31,344 s |
+| Qwen | Deutsch | ein / ein / ein | 52,766 s |
+| Qwen | Englisch | aus / aus / aus | 42,734 s |
+| Qwen | Englisch | ein / ein / ein | 46,985 s |
+| Whisper | Deutsch | aus / aus / aus | 8,937 s |
+| Whisper | Deutsch | ein / ein / ein | 18,812 s |
+| Whisper | Englisch | aus / aus / aus | 8,812 s |
+| Whisper | Englisch | ein / ein / ein | 17,766 s |
+
+Alle acht Prozesse erfolgreich, alle Originalhashes erhalten, definierte Textanker vor/nach der 20-s-Pause vorhanden. Zeitmarken für den Abschnitt nach der Pause blieben bei rund 27–30 s statt auf die kompaktierte Audiospur zurückzufallen. GPU-Nutzung nachgewiesen; nach Prozessende wieder auf jeweiligem Desktop-Niveau (wechselnde Baseline 1746–1832 MiB). Höchste GPU-Gesamtstichprobe Qwen 6306 MiB, Whisper 4186 MiB. Gesamtlauf enthält Prozessstart/Importe und Messabfragen; keine isolierte Modellgeschwindigkeit. Die DOVER-Fälle führten jeweils drei Durchgänge aus; Warnungen des Fusionspakets bei identischen Einsprecher-Ergebnissen stehen privat im Laufprotokoll. Diese künstlichen Einsprecherfälle belegen keine allgemeine Sprecherqualitätsgarantie.
+
+Lokale echte GPU-Dateiabnahme mit fünf erfolgreichen Aufträgen: rekursive einmalige Ordnerablage, Duplikate und später ergänzte Datei, Originalhashes, separate Neutranskription bei erhaltenem alten TXT, gemeinsames Archivpaar ausschließlich bei aktivierter regulärer Archivoption, weiterlaufender erreichbarer Ordner, erneute Prüfung nach Rückkehr eines fehlenden Ordners, geschützte vorhandene TXT-Kollision und erfolgreicher Cache-Export-Retry. Vollständige private Zusammenfassung vorhanden.
+
+Echter UNC-End-to-End-Lauf in ausdrücklich freigegebener isolierter Testablage: CUDA-Transkription, TXT neben Original trotz Archivoption im Drop-Pfad, Originalhash erhalten, konkreter Fehler bei fehlendem SMB-Unterordner und erfolgreiche Refresh-Prüfung nach dessen Anlage. Keine Unterbrechung des tatsächlichen SMB-Servers vorgenommen; dieser Fall bleibt getrennt ungeprüft.
+
+Zwischenzeitlicher Windows-Neustart am 18.11.2026 vor Einrichtung des neuen Anmeldestarts beobachtet. Alle acht Sprachresultate waren davor gespeichert. Dieser Neustart gilt nicht als Anmeldestartabnahme, weil zu diesem Zeitpunkt noch kein neuer Run-Eintrag gesetzt war. Nach Wiederverbindung drei tatsächliche HTTPS-Prüfungen aus der installierten VoxDrop-Laufzeit (GitHub-API, GitHub-Rohquelle, Hugging Face) jeweils HTTP 200. GitHub-Connector lesend ebenfalls erreichbar. Die Connector-Schreiboperation auf main wurde zuvor mit 403 verweigert; der autorisierte reine Statuscommit wurde stattdessen regulär über die vorhandene Git-Anmeldung gepusht.
+
+Sichtbare Bedienung bisher: Modellwechsel und beide Downloads, Pfad hinzufügen/eingeben, erreichbarer/beschreibbarer Prüfordner, rekursive Option mit gesperrter Archivoption, Stille und DOVER auswählen, Einstellungen speichern. Anmeldestart über die App aktiviert; exakter Run-Zielpfad nativ bestätigt, kein deaktivierter StartupApproved-Eintrag vorhanden. Ein erster Bedienversuch nach Wiederverbindung meldete fehlende Koordinatengeometrie; nach frischer Fensteraufnahme/Zuordnung funktionierte die koordinatengestützte Bedienung. Vollständige physische Explorer-/Taskleisten-/Infobereichsabnahme weiterhin offen.
