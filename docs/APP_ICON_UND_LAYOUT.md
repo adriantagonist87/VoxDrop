@@ -1,5 +1,7 @@
 # Neues App-Icon und Fenster ohne Logo-Kopfzeile
 
+**Historischer Preview-10-Bericht:** Seit [Preview 11](VERLAUF_BESTAND_BEREINIGUNG.md) sind PNG/ICO/README-Vorschau außen transparent. [Freistellung und Prompt](ICON_FREISTELLUNG.md). Die unten angegebenen RGB-Hashes beschreiben ausschließlich den damaligen Stand.
+
 Nutzerauftrag vom 18.11.2026: bereitgestellte grüne Audio-/Video-/CC-Vorlage für App-/Dock-/Taskleistensymbol und GitHub übernehmen; die gesamte Logo-/Namens-/Untertitelzeile im Fenster entfernen. Windows-Infobereich und Mac-Menüleistenstatus bleiben unverändert.
 
 ## Ausgeliefert und geprüft

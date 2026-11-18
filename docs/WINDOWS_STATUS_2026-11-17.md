@@ -1,6 +1,16 @@
 # Windows-Übergabe vom 17. November, fortgeführt am 18. November 2026
 
-## Aktuell installiert: Windows Preview 10
+## Aktuell installiert: Windows Preview 11
+
+[Windows Preview 11](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.2-windows-preview.11), App-Code `2a1ae7feb5c9c2125b20e630875bed13b316250e`, ZIP-SHA-256 `83822f1f5d39d48cf8328c67013699d6001cfdb675deeaa40cf6940ba91b3a86`. „Alle“ enthält nur tatsächliche Verarbeitung; ungestartete Abbrüche bleiben intern. Separate Filter „Abgebrochen“ und „Bestand“, vorhandene/übernommene Ergebnisse zählen nicht als neue Erfolge. „Verlauf leeren“ entfernt nach Bestätigung alle Auftrags-/Queue-/Drop-/Suchdaten und lokalen Arbeitskopien; Originale und Einstellungen bleiben erhalten. Aktive Überwachung liest im nächsten Intervall neu ein. Icon außen transparent, Statuswellen unverändert. [Details und Mac-Aufgaben](VERLAUF_BESTAND_BEREINIGUNG.md).
+
+144 Windows-Fälle: 137 bestanden, sieben bekannte Skips, 54,338 s. Finales EXE-/QML-/SQL-/Wiederimport-/Suchpaket in 13,893 s bestanden. Acht-Tausend-Abbruchtest, alte Scan-/Token-/Statusantworten und wiederholbare Cachebereinigung geprüft; 18 Qt-Fälle. Installierter 20.000-Einträge-Pfadfilter plus Zähler ca. 214 ms. Nächste neue native CUDA-Abnahme nicht behauptet, Inferenz/Jobbeanspruchung unverändert.
+
+GitHub-ZIP/SHA/89 Dateien bestätigt, vollständiges Profil und Code gesichert. Leerlaufupdate mit regulärem Dienst-/GUI-Neustart; 9.143 vorhandene Aufträge, aktuelle Ordner/Pause und Modelle/Laufzeit erhalten. 8.869 wartend, weiter pausiert; sichtbare Zähler 1/0/1/0/273 für Alle/Fehler/Fertig/Abgebrochen/Bestand. Keine produktive Bereinigung als Test. Transparente Icon-Dateien und Übergabe auf main; funktionaler Code bis Mac-Gegenprüfung im Draft-PR.
+
+Mac zusätzlich: `history_store.py` im Bundle, fünf Kategorien/Zähler, Suchsperre/Revision, vollständigen Reset samt FTS-Dateien und erneuten regulären Intervall-/Inhaltssuchimport nativ prüfen. Transparentes ICNS/Dock/Finder gegenprüfen; bestehende Modelle und Einstellungen erhalten.
+
+## Vorangegangener installierter Stand: Windows Preview 10
 
 [Windows Preview 10](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.2-windows-preview.10), App-Code `4e565d426167b55a900a2c35d449ae0f29a98493`, ZIP-SHA-256 `4bcdc831057c93227530f73a08b553c4a725a78962945097dc3dd91cb0bd6e0d`. Nutzervorlage für Windows-App/EXE/Taskleiste und vorbereiteten Mac-Dock-Generator; Logo-/Namens-/Untertitelzeile entfernt, 74 Pixel mehr Inhaltshöhe. Windows-Infobereich/Mac-Menüleistenstatus bleiben unverändert. [Genaue Icon-/Layoutübergabe](APP_ICON_UND_LAYOUT.md).
 
