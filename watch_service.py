@@ -2109,7 +2109,7 @@ def history_counts(db, *, search='', content_matches=False):
     return dict(zip(keys,counts))
 
 
-def history_jobs(db, order, limit, *, terminal_only=False, history_filter="all", search='', content_matches=False):
+def history_jobs(db, order, limit, *, terminal_only=False, history_filter="all", search='', content_matches=False, offset=0):
     direction = "ASC" if order == "asc" else "DESC"
     clause, arguments = history_search_scope(db, search, content_matches)
     scope = HISTORY_FILTERS[history_filter] if terminal_only or history_filter != 'all' else '1'
@@ -2126,8 +2126,8 @@ def history_jobs(db, order, limit, *, terminal_only=False, history_filter="all",
         LEFT JOIN audio_durations AS a ON a.job_id=j.id
         LEFT JOIN known_results k ON k.job_id=j.id
         WHERE {scope}{clause}
-        ORDER BY j.updated {direction}, j.id {direction} LIMIT ?""",
-        (*arguments, limit),
+        ORDER BY j.updated {direction}, j.id {direction} LIMIT ? OFFSET ?""",
+        (*arguments, limit, max(0, offset)),
     ).fetchall()
 
 
@@ -2157,6 +2157,7 @@ def main(argv=None):
     refresh_command.add_argument("folder")
     status_command = commands.add_parser("status")
     status_command.add_argument("--limit", type=int, default=-1)
+    status_command.add_argument("--offset", type=int, default=0)
     status_command.add_argument("--order", choices=("asc", "desc"), default="desc")
     status_command.add_argument("--filter", dest="history_filter", choices=HISTORY_FILTERS, default="all")
     status_command.add_argument('--search', default='')
@@ -2354,7 +2355,7 @@ def main(argv=None):
                     db.executemany('INSERT OR IGNORE INTO content_matches VALUES (?)', ((identifier,) for identifier in identifiers))
                     content_matches = True
                 jobs = history_jobs(db, args.order, args.limit, terminal_only=True,
-                                    history_filter=args.history_filter, search=args.search, content_matches=content_matches)
+                                    history_filter=args.history_filter, search=args.search, content_matches=content_matches, offset=args.offset)
                 current = db.execute(
                     """SELECT j.*, EXISTS(SELECT 1 FROM cancel_requests c WHERE c.job_id=j.id)
                     AS cancel_requested FROM jobs j WHERE state IN ('copying','transcribing','exporting')"""
@@ -2388,6 +2389,7 @@ def main(argv=None):
                             "current": dict(current) if current else None,
                             "jobs": [dict(job) for job in jobs],
                             "history_counts": history_counts(db, search=args.search, content_matches=content_matches),
+                            "global_history_counts": history_counts(db),
                             "stored_jobs": db.execute('SELECT COUNT(*) FROM jobs').fetchone()[0],
                             "has_stored_data": bool(db.execute('SELECT 1 FROM jobs UNION ALL SELECT 1 FROM drop_batches LIMIT 1').fetchone()
                                 or (state/'transcript-search.sqlite3').exists() or (state/'content-search-result.json').exists()

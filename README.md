@@ -6,10 +6,14 @@ VoxDrop ist eine kostenlose App für macOS und Windows auf Basis von aTrain. Sie
 
 | System | Download | Stand |
 | --- | --- | --- |
-| **Windows 11 x64 / NVIDIA CUDA** | **[Windows-ZIP herunterladen](https://github.com/adriantagonist87/VoxDrop/releases/download/v1.3.5/VoxDrop-1.3.5-Windows-x64.zip)** · [Release und Prüfsumme](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.5) | Geprüfter Windows-Stand vom 18. November 2026; dieselben 91 Programmdateien wie in der abgenommenen Installation. |
+| **Windows 11 x64 / NVIDIA CUDA** | **[Windows-ZIP herunterladen](https://github.com/adriantagonist87/VoxDrop/releases/download/v1.4.0/VoxDrop-1.4.0-Windows-x64.zip)** · [Release und Prüfsumme](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.4.0) | Neue Arbeitsübersicht; Programmdateien und SHA-256 im [Release-Manifest](releases/v1.4.0/windows-release.json). |
 | **macOS / Apple Silicon** | **[Mac-DMG herunterladen](https://github.com/adriantagonist87/VoxDrop/releases/download/v1.3.1/VoxDrop-1.3.1-macOS-arm64.dmg)** · [Mac-Release](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.1) | Bisherige native Mac-Ausgabe. Die unten beschriebenen neuen Windows-Funktionen werden auf dieser gemeinsamen Codebasis für Mac nachgezogen. |
 
 ## Windows einrichten
+
+![VoxDrop-Arbeitsübersicht mit synthetischen Beispieldateien](docs/images/workspace-wide.png)
+
+**Neu in 1.4:** Queue und kompakter Verlauf nebeneinander, bei kleinen Fenstern als Reiter. Aktueller Auftrag, quadratisches Play/Stopp, Ordnerstatus und GPU-Budget bleiben erreichbar. Die Einstellungen sind in **Transkription**, **Ordner & Überwachung** und **App & Daten** gegliedert, mit Speichern/Verwerfen. Große Verläufe erhalten Seitenwahl; aufgeklappte Queuezeilen und Scrollposition bleiben beim Abarbeiten erhalten. [Alle Funktionen, Screenshots und Prüfung](docs/WORKSPACE_LAYOUT.md).
 
 Die ZIP vollständig in einen beschreibbaren lokalen Ordner entpacken und **VoxDrop.exe** starten. Beim ersten Start werden die passende Python-/CUDA-Laufzeit und anschließend die ausgewählten Modelle heruntergeladen. Danach erfolgen Transkription und Suche lokal. Überwachte Ordner und Einstellungen richtet jede Installation selbst ein. [Voraussetzungen und Einrichtung](windows/README.md)
 
@@ -52,7 +56,7 @@ Für die Weiterentwicklung am Mac dient der gemeinsame Quellstand auf **main**. 
 - Transkripte mit Zeitstempeln und optionaler Sprecherzuordnung über pyannote. DOVER-Lap kann drei Durchgänge der Sprecherzuordnung zusammenführen.
 - Lange Sprechpausen überspringen und Aufträge aus dem Verlauf mit anderen Einstellungen erneut transkribieren.
 - Start bei der Anmeldung, Menüleistenstatus und Hinweise bei unerreichbaren oder schreibgeschützten Ordnern.
-- Gemeinsame dunkelgraue Oberfläche mit verstellbaren Spalten für Einstellungen, aktuellen Auftrag und Verlauf.
+- Gemeinsame dunkelgraue Oberfläche. Der aktuelle Windows-Quellstand bietet eine verstellbare Queue-/Verlaufsansicht und getrennte Einstellungen; die veröffentlichte Mac-DMG behält bis zur nativen Portierung ihren bisherigen Aufbau.
 - **Unterordner mit einbeziehen** erweitert die Überwachung auf verschachtelte Ordner. Die TXT-Dateien landen direkt neben den Aufnahmen.
 - Ordner lassen sich für eine einmalige Transkription ins Fenster ziehen. VoxDrop reiht die Aufnahmen samt Unterordnern ein und legt die TXT-Dateien neben den Originalen ab.
 

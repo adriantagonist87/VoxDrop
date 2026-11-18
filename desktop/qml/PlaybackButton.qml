@@ -3,6 +3,7 @@ import QtQuick.Controls
 import QtQuick.Layouts
 
 RowLayout {
+    property bool showLabel: true
     required property var api
     required property var viewState
     Layout.preferredHeight: 44
@@ -24,7 +25,8 @@ RowLayout {
         Accessible.name: stopMode ? 'Warteschlange und Transkription stoppen' : 'Warteschlange und Transkription starten'
         Accessible.description: 'Stopp erhält die Warteschlange. Eine unterbrochene Erkennung beginnt beim Fortsetzen neu.'
         ToolTip.visible: hovered
-        ToolTip.text: stopMode ? 'Aktuelle Erkennung stoppen und Warteschlange anhalten. Fertige Ergebnisse werden noch sicher gespeichert.' : 'Warteschlange starten oder fortsetzen, auch bei ausgeschalteter Ordnerüberwachung.'
+        ToolTip.text: stopMode ? 'Erkennung stoppen.\nWarteschlange bleibt erhalten.' : 'Warteschlange starten oder fortsetzen.\nÜberwachung ist separat schaltbar.'
+        ToolTip.delay: 700
         contentItem: Item {
             implicitWidth: 20
             implicitHeight: 20
@@ -57,6 +59,7 @@ RowLayout {
         onClicked: stopMode ? api.stopProcessing() : api.startProcessing()
     }
     Text {
+        visible: parent.showLabel
         Layout.fillWidth: true
         text: viewState.processingStopping ? 'Wird gestoppt …' : playback.stopMode ? 'Stopp' : 'Starten'
         color: '#ededed'

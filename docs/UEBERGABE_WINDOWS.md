@@ -1,6 +1,12 @@
 # Übergabeauftrag für Codex auf dem Windows-PC
 
-## Aktuell: Windows v1.3.5 – kompakter Play-/Stopp-Knopf
+## Aktuell: Arbeitsübersicht für Windows 1.4.0
+
+Queue und Verlauf stehen im breiten Fenster nebeneinander, im Mindestfenster als Reiter. Aktueller Auftrag, kompakter 44×44-Play-/Stopp-Knopf, Überwachungsstatus und GPU-Budget bleiben auch in den drei Einstellungsgruppen erreichbar. Entwürfe speichern/verwerfen; sofortige Aktionen sind getrennt. Alle bisherigen Such-, Detail-, Drop-, Abbruch-, Dateischutz-, Reset- und Lebensdauerfunktionen bleiben erhalten. Inkrementelle Qt-Listen erhalten Scrollanker und aufgeklappte Zeilen. Der Verlauf ist über 250er-Seiten vollständig zugänglich. [Funktionsmatrix, Architektur und reproduzierbare Prüfung](WORKSPACE_LAYOUT.md).
+
+Lokale Quellprüfung: **203 Tests in 74,412 s, 196 bestanden, sieben bekannte Plattformskips**. Nativer Windows-Qt-Lasttest mit 8.000 wartenden und 20.000 historischen Aufträgen bei 100/125/150 % Qt-Skalierung bestanden; 20.000 synthetische TXT durchsucht und Abbruch geprüft. Keine neue Abhängigkeit, kein Modell-/Laufzeitpinwechsel, keine DB-Migration. Die native Mac-Abnahme bleibt separat. Paket-/CUDA-/Installationsnachweis und exakter funktionaler SHA werden nach dem eingefrorenen Pakettest ergänzt.
+
+## Vorangegangener Stand: Windows v1.3.5 – kompakter Play-/Stopp-Knopf
 
 Normaler quadratischer **44 × 44**-Knopf an fester Stelle oben in der Mitte: grünes Play zum Starten, rotes Stopp zum Anhalten. Er wächst im Vollbild nicht mit. Stopp beendet die aktuelle Erkennung, erhält die Queue samt Reihenfolge und wartet vor erneutem Start auf deren tatsächliches Ende. Fertiger Export wird noch abgeschlossen. „Warteschlange leeren …“ bleibt getrennt. Die zunächst breite Variante wurde auf Nutzerkorrektur ersetzt. [Bedienung und Grenzen](PLAY_STOPP.md).
 

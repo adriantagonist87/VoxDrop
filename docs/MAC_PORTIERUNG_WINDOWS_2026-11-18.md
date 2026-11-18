@@ -7,11 +7,17 @@ Der Nutzer beauftragt am 18. November 2026 den Abschluss der Windows-Veröffentl
 | Referenz | Exakter Stand |
 | --- | --- |
 | Windows-Programm, identisch mit der abgenommenen PC-Installation | `a7166f0039f9aafb1c710079f167c22b4512595f` |
-| Finaler Windows-Download | [v1.3.5](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.5), SHA-256 `adc19a6ad86e299099050e545357e9435caf22df6c9d57b29efbfa2c52e33ec4` |
+| Finaler Windows-Download | [v1.4.0](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.4.0), SHA-256 `adc19a6ad86e299099050e545357e9435caf22df6c9d57b29efbfa2c52e33ec4` |
 | Letzte vollständige native CUDA-/Beenden-/Wiederaufnahmeabnahme | `53e69cee39ac5a0721f02eb79034db33e792c6a7`; ASR-/Sprecherdateien unverändert; Queue-Start separat ergänzt |
 | Letzter belegter nativer Mac-Code | `df207f79aa812f70d090e4306443436d51d48952`, v1.3.1 / Build 23 |
 | Aktuelle plattformübergreifende Quellen | `main`; vollständigen SHA beim Beginn mit `git rev-parse HEAD` erfassen |
-| Paket-/Dateinachweis | [Manifest mit allen 93 Dateien](../releases/v1.3.5/windows-release.json) und [Prüfwerkzeug](../scripts/verify_windows_release.py) |
+| Paket-/Dateinachweis | [Manifest mit allen Programmdateien](../releases/v1.4.0/windows-release.json) und [Prüfwerkzeug](../scripts/verify_windows_release.py) |
+
+## Ergänzung: neue gemeinsame Arbeitsübersicht
+
+Der neue Windows-Stand 1.4.0 enthält bereits die freigegebene gemeinsame Qt-Oberfläche. **Nicht den alten Drei-Spalten-Aufbau erneut portieren.** `desktop/rows_model.py` wird zusätzlich benötigt; beide Builder übernehmen den gesamten Desktop-Ordner. `Main.qml`, `QueuePane.qml`, `PlaybackButton.qml` und der Controller gehören zusammen mit dem neuen Engine-Statusfeld `global_history_counts` und `status --offset` in dasselbe Paket. [Vollständige Funktionsmatrix und Testbefehle](WORKSPACE_LAYOUT.md).
+
+Unter macOS zunächst die 203 gemeinsamen Regressionen und `scripts/check-workspace-ui.py --native --output <privat>` ausführen. Danach die echten nativen Adapter prüfen: Dock-/Menüleistenicon und Reaktivierung, X/Minimieren/Quit, Finder-Reveal und TXT-Standardapp, Login-Item, Datei-/Ordnerdialog, Metal/CPU, Qwen/Whisper/Sprecher/DOVER, SMB, Drop-/Dateiversionsschutz, Suche und Reset. Der CUDA-Budgetregler bleibt auf Metal deaktiviert; das ist ein dokumentierter Plattformunterschied. Qt-Skalierungsnachweise unter Windows zertifizieren macOS nicht. Bestehende Mac-DMG 1.3.1 bleibt bis dieser Abnahme unverändert. Die exakte Windows-Codeidentität steht im aktuellen Release-Manifest und Projektstatus.
 
 ## Im anderen Codex beginnen
 
@@ -72,7 +78,7 @@ Bei Abschluss: Funktionsmatrix mit tatsächlichen Mac-Ergebnissen aktualisieren,
 
 Weitere Belege: [Queue und Dateischutz](WARTESCHLANGE_UND_DATEISCHUTZ.md), [Suche und Drop-Konflikte](SUCHE_UND_DROP_KONFLIKTE.md), [Verlauf und Bereinigung](VERLAUF_BESTAND_BEREINIGUNG.md), [Lebensdauer](APP_BEENDEN_UND_LEBENSDAUER.md), [Tray/Taskleiste](FENSTER_TRAY_UND_TASKLEISTE.md), [Icon](APP_ICON_UND_LAYOUT.md).
 
-## Ergänzung v1.3.5
+## Ergänzung v1.4.0
 
 Sichtbaren grünen Start-/Fortsetzen-Knopf, separate Pause und eindeutigen Verarbeitungsstatus übernehmen. `start-queue` verarbeitet den aktuellen Queuebestand explizit auch ohne Ordnerüberwachung und ohne Konfigurationsänderung. Normale unpausierte Queues starten automatisch, bewusste Pause bleibt über Neustarts erhalten. Seen-Einträge werden bei explizitem Start sofort dem bestehenden sicheren Worker übergeben; offene Aufnahmen und Dateiversionen besonders auf Mac nativ prüfen. [Details und Nachweise](VERARBEITUNG_STARTEN.md).
 

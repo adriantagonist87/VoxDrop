@@ -1,13 +1,17 @@
 # VoxDrop für Windows 11
 
-VoxDrop überwacht mehrere Ordner und transkribiert neue Audio- und Videodateien lokal. Die Oberfläche bietet Einstellungen, aktuellen Auftrag und Verlauf. Windows nutzt CUDA für Qwen3-ASR 1.7B, Whisper Large v3 Turbo und pyannote. Qwen lädt den Forced Aligner nach der Spracherkennung, damit beide Modelle nicht gleichzeitig Grafikspeicher belegen.
+VoxDrop überwacht mehrere Ordner und transkribiert neue Audio- und Videodateien lokal. Die Arbeitsübersicht zeigt die Warteschlange und den Verlauf nebeneinander; im kleinen Fenster wechseln die Reiter zwischen den Listen. Der quadratische Play-/Stopp-Knopf und der aktuelle Auftrag bleiben auch in den Einstellungen erreichbar. Windows nutzt CUDA für Qwen3-ASR 1.7B, Whisper Large v3 Turbo und pyannote. Qwen lädt den Forced Aligner nach der Spracherkennung, damit beide Modelle nicht gleichzeitig Grafikspeicher belegen.
 
 ## Start
 
 1. Die ZIP vollständig in einen lokalen Ordner entpacken und dort **VoxDrop.exe** öffnen.
 2. Beim ersten Start lädt VoxDrop die Python- und CUDA-Laufzeit für das Benutzerkonto. Dafür braucht der PC Internet und freien Speicherplatz. Das Fenster öffnet sich nach der Einrichtung.
-3. Unter **Modell** die gewünschten Modelle herunterladen.
-4. Für eine einmalige Transkription Ordner ins Fenster ziehen. Für die laufende Überwachung lokale Ordner, Netzlaufwerke oder UNC-Pfade wie **\\Server\Freigabe\Aufnahmen** hinzufügen und **Ordnerüberwachung aktiv** sowie **Dienst starten** wählen. SMB-URLs wie **smb://Server/Freigabe/Aufnahmen** werden ebenfalls akzeptiert. Windows verwaltet die Anmeldedaten der Freigabe.
+3. Unter **Einstellungen → Transkription** die gewünschten Modelle herunterladen und Sprach-/Sprecheroptionen wählen.
+4. Für eine einmalige Transkription Dateien/Ordner ins Fenster ziehen oder oben hinzufügen. Für die laufende Überwachung unter **Einstellungen → Ordner & Überwachung** lokale Ordner, Netzlaufwerke oder UNC-Pfade wie **\\Server\Freigabe\Aufnahmen** hinzufügen und **Änderungen speichern** wählen. **Ordnerüberwachung aktiv** wirkt sofort. SMB-URLs wie **smb://Server/Freigabe/Aufnahmen** werden ebenfalls akzeptiert. Windows verwaltet die Anmeldedaten der Freigabe.
+
+Neue Aufträge werden automatisch verarbeitet, sofern die Warteschlange nicht gestoppt ist. **Play** setzt sie fort, **Stopp** hält kontrolliert an und erhält die Aufträge. **Nach diesem Auftrag pausieren** lässt den aktuellen Auftrag fertig werden. **Aktionen → Warteschlange leeren** entfernt wartende Aufträge separat. Auftragsdetails, Reihenfolge, Einzelentfernung, Wildcardsuche und explizite start-/stoppbare TXT-Detailsuche bleiben erreichbar. Der Verlauf enthält 250 Einträge je Seite; alle Seiten sind erreichbar.
+
+**Einstellungen → App & Daten** enthält den vollständigen Datenbankreset mit Bestätigung. Aufnahmen und TXT bleiben erhalten; aktive Überwachung liest danach erneut ein. Fenster-X blendet in den Tray aus, Minimieren geht in die Taskleiste. **VoxDrop beenden** beendet auch Überwachung und Modellprozesse. Es gibt keinen unabhängigen automatisierten Dienst.
 
 Bei abgelegten Ordnern und bei aktiver Option **Unterordner mit einbeziehen** speichert VoxDrop die TXT-Dateien direkt neben den Aufnahmen. Die Originaldateien bleiben an ihrem Platz.
 
