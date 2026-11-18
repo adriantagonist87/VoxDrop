@@ -8,6 +8,8 @@
 
 GitHub-ZIP/SHA/89 Dateien bestätigt, vollständiges Profil und Code gesichert. Leerlaufupdate mit regulärem Dienst-/GUI-Neustart; 9.143 vorhandene Aufträge, aktuelle Ordner/Pause und Modelle/Laufzeit erhalten. 8.869 wartend, weiter pausiert; sichtbare Zähler 1/0/1/0/273 für Alle/Fehler/Fertig/Abgebrochen/Bestand. Keine produktive Bereinigung als Test. Transparente Icon-Dateien und Übergabe auf main; funktionaler Code bis Mac-Gegenprüfung im Draft-PR.
 
+Der Mac-Icongenerator ist als Teil der Grafikänderung ebenfalls auf main aktualisiert und zeichnet keinen weißen Hintergrund mehr. Nativer Swift-/ICNS-Build ist unter Windows nicht geprüft. Gemeinsamer Backend-/QML-Code bleibt im PR.
+
 Mac zusätzlich: `history_store.py` im Bundle, fünf Kategorien/Zähler, Suchsperre/Revision, vollständigen Reset samt FTS-Dateien und erneuten regulären Intervall-/Inhaltssuchimport nativ prüfen. Transparentes ICNS/Dock/Finder gegenprüfen; bestehende Modelle und Einstellungen erhalten.
 
 ## Vorangegangener installierter Stand: Windows Preview 10

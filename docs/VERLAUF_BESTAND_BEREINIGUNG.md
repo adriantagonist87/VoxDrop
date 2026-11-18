@@ -4,7 +4,7 @@ Nutzerentscheidung vom 18.11.2026: Ein nie gestarteter, entfernter Queueeintrag 
 
 ## Aktueller Stand
 
-[Windows Preview 11](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.2-windows-preview.11), App-Code `2a1ae7feb5c9c2125b20e630875bed13b316250e`, ZIP-SHA-256 `83822f1f5d39d48cf8328c67013699d6001cfdb675deeaa40cf6940ba91b3a86`. ZIP `VoxDrop-1.3.1-Windows-x64-2a1ae7feb5c9.zip`, 45.983.289 Byte. Interne Version 1.3.1, keine neuen Abhängigkeiten oder Modell-/Lockfileänderungen. Windows installiert, gemeinsam geänderter App-Code im Draft-PR bis nativer Mac-Gegenprüfung. Icon-Dateien und Übergabedokumentation auch auf main aktualisiert.
+[Windows Preview 11](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.2-windows-preview.11), App-Code `2a1ae7feb5c9c2125b20e630875bed13b316250e`, ZIP-SHA-256 `83822f1f5d39d48cf8328c67013699d6001cfdb675deeaa40cf6940ba91b3a86`. ZIP `VoxDrop-1.3.1-Windows-x64-2a1ae7feb5c9.zip`, 45.983.289 Byte. Interne Version 1.3.1, keine neuen Abhängigkeiten oder Modell-/Lockfileänderungen. Windows installiert, gemeinsam geänderter App-Code im Draft-PR bis nativer Mac-Gegenprüfung. Icon-Dateien, Mac-Icongenerator und Übergabedokumentation auch auf main aktualisiert. Der Generator zeichnet keine zusätzliche weiße Kachel und erhält die Alpha-Vorlage; nativer Mac-Build/Dock bleiben ungeprüft.
 
 ## Sichtbare Kategorien
 

@@ -19,34 +19,15 @@ func writeIcon(_ size: Int, to url: URL) throws {
         throw CocoaError(.fileWriteUnknown)
     }
 
-    let scale = CGFloat(size) / 1024
-    context.scaleBy(x: scale, y: scale)
     context.interpolationQuality = .high
-    let bounds = CGRect(x: 96, y: 96, width: 832, height: 832)
-    let tile = CGPath(roundedRect: bounds, cornerWidth: 180, cornerHeight: 180, transform: nil)
-
-    context.saveGState()
-    context.setShadow(offset: CGSize(width: 0, height: -12), blur: 26,
-                      color: CGColor(red: 0.03, green: 0.16, blue: 0.09, alpha: 0.28))
-    context.setFillColor(CGColor(gray: 1, alpha: 1))
-    context.addPath(tile)
-    context.fillPath()
-    context.restoreGState()
-
-    context.addPath(tile)
-    context.clip()
-    let artwork = bounds.insetBy(dx: 30, dy: 30)
+    // The supplied artwork already includes its tile and margins.
+    let artwork = CGRect(x: 0, y: 0, width: CGFloat(size), height: CGFloat(size))
     let fit = min(artwork.width / CGFloat(logo.width), artwork.height / CGFloat(logo.height))
     let width = CGFloat(logo.width) * fit
     let height = CGFloat(logo.height) * fit
     let imageRect = CGRect(x: artwork.midX - width / 2, y: artwork.midY - height / 2,
                            width: width, height: height)
     context.draw(logo, in: imageRect)
-
-    context.setStrokeColor(CGColor(red: 0.05, green: 0.28, blue: 0.15, alpha: 0.15))
-    context.setLineWidth(9)
-    context.addPath(tile)
-    context.strokePath()
 
     guard let image = context.makeImage(),
           let output = CGImageDestinationCreateWithURL(url as CFURL, UTType.png.identifier as CFString, 1, nil) else {
