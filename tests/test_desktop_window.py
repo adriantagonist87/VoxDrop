@@ -296,6 +296,30 @@ class DesktopWindowTests(unittest.TestCase):
             QTest.qWait(20)
         command.assert_called_once_with('queue-pause', 'on')
 
+    def test_explicit_start_is_visible_and_resumes_processing_without_saving_monitor_settings(self):
+        self.queue_fixture(3)
+        self.controller.ready=True
+        self.controller.snapshot.update(queue_paused=True,running=True)
+        self.controller.changed.emit();QTest.qWait(30)
+        button=self.visual('startProcessingButton')
+        self.assertTrue(button.property('visible'));self.assertTrue(button.property('enabled'))
+        self.assertEqual(button.property('text'),'Fortsetzen')
+        self.assertIn('pausiert',self.visual('processingStatus').property('text'))
+        point=button.mapToScene(QPointF(button.width()/2,button.height()/2)).toPoint()
+        with patch.object(self.controller_module,'command',return_value='') as command,patch.object(self.controller,'action',side_effect=lambda operation,message:operation()):
+            QTest.mouseClick(self.window,Qt.MouseButton.LeftButton,Qt.KeyboardModifier.NoModifier,point)
+        self.assertEqual([call.args[0] for call in command.call_args_list],['start','start-queue'])
+
+    def test_running_job_has_clear_status_and_disabled_start_but_enabled_pause(self):
+        jobs=self.queue_fixture(2)
+        self.controller.ready=True
+        current={**jobs[0], 'state':'transcribing','started':100,'phase':'Qwen-Modell laden','progress':None}
+        self.controller.snapshot.update(current=current,running=True,queue_paused=False)
+        self.controller.changed.emit();QTest.qWait(30)
+        self.assertIn('Verarbeitung läuft',self.visual('processingStatus').property('text'))
+        self.assertFalse(self.visual('startProcessingButton').property('enabled'))
+        self.assertTrue(self.visual('pauseQueueButton').property('enabled'))
+
     def test_filtered_queue_menu_enables_moves_against_global_positions(self):
         self.queue_fixture(4)
         self.controller.setQueueSearch('* 3 mit*')

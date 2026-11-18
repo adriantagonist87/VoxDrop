@@ -78,6 +78,17 @@ def set_queue_paused(db, paused):
         db.execute('DELETE FROM immediate_jobs')
 
 
+def start_queue(db):
+    """Explicitly process the current queue, also with folder monitoring off."""
+    with db:
+        db.execute('BEGIN IMMEDIATE')
+        identifiers=[row['id'] for row in queue_jobs(db)]
+        db.execute('UPDATE queue_state SET paused=0 WHERE id=1')
+        db.executemany('INSERT OR IGNORE INTO immediate_jobs(job_id) VALUES (?)',
+                       [(identifier,) for identifier in identifiers])
+    return len(identifiers)
+
+
 def immediate_count(db):
     return db.execute("""SELECT COUNT(*) FROM immediate_jobs i JOIN jobs j ON j.id=i.job_id
         LEFT JOIN job_retries r ON r.job_id=j.id WHERE j.state IN

@@ -39,6 +39,25 @@ class QueueTests(unittest.TestCase):
     def row(self,identifier):
         return self.db.execute('select * from jobs where id=?',(identifier,)).fetchone()
 
+    def test_explicit_start_processes_queue_with_monitoring_off_without_reviving_cancelled(self):
+        first,one=self.add();second,two=self.add('cancelled.wav',b'cancelled media')
+        settings=json.loads(self.config.read_text());settings['monitoring']=False
+        self.config.write_text(json.dumps(settings))
+        before=self.config.read_bytes()
+        cancel_job(self.db,two);set_queue_paused(self.db,True)
+        order=[row['id'] for row in queue_jobs(self.db)]
+        self.assertEqual(service.start_queue(self.db),1)
+        self.assertEqual(service.start_queue(self.db),1)  # Repeated clicks remain idempotent.
+        self.assertFalse(queue_paused(self.db))
+        self.assertEqual([row['id'] for row in queue_jobs(self.db)],order)
+        self.assertTrue(service.next_job(self.db,self.state,self.engine,available_only=True,allow_automatic=False,config=self.config))
+        self.assertEqual(self.row(one)['state'],'done')
+        self.assertEqual(self.row(two)['state'],'cancelled')
+        self.engine.assert_called_once()
+        self.assertEqual(self.config.read_bytes(),before)
+        self.assertEqual(first.read_bytes(),b'synthetic media')
+        self.assertEqual(second.read_bytes(),b'cancelled media')
+
     def test_cleanup_error_cannot_replace_app_quit_preemption_or_user_cancel(self):
         from app_lifecycle import request_stop, register_owner
         for app_quit in (True, False):

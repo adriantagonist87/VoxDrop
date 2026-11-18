@@ -16,11 +16,12 @@ ColumnLayout {
     spacing: 8
 
     component QueueButton: Button {
+        property bool primary: false
         padding: 7
         font.pixelSize: 12
         palette.buttonText: "#e8e8e8"
         contentItem: Text { text: parent.text; font: parent.font; color: parent.enabled ? "#e8e8e8" : "#777"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter; wrapMode: Text.WordWrap }
-        background: Rectangle { radius: 5; color: parent.down ? "#456653" : parent.hovered ? "#383838" : "#282828"; border.color: "#454545" }
+        background: Rectangle { radius: 5; color: parent.down ? "#456653" : parent.primary && parent.enabled ? "#32644a" : parent.hovered ? "#383838" : "#282828"; border.color: parent.primary && parent.enabled ? "#8ac6a5" : "#454545" }
     }
     component QueueMenuAction: MenuItem {
         id: menuAction
@@ -43,6 +44,19 @@ ColumnLayout {
                 if (pane.searchOpen) queueSearch.forceActiveFocus()
                 else pane.api.setQueueSearch('')
             }
+        }
+    }
+    RowLayout {
+        Layout.fillWidth: true
+        QueueButton {
+            objectName: "startProcessingButton"
+            Layout.fillWidth: true
+            primary: true
+            text: pane.viewState.queuePaused ? (pane.viewState.queueImmediateCount > 0 ? 'Gesamte Queue starten' : 'Fortsetzen') : 'Verarbeitung starten'
+            enabled: Boolean(pane.viewState.canStartProcessing)
+            ToolTip.visible: hovered
+            ToolTip.text: pane.viewState.current.name && !pane.viewState.queuePaused ? 'Verarbeitung läuft bereits automatisch.' : 'Bereits eingereihte Dateien verarbeiten; die Ordnerüberwachung bleibt unverändert.'
+            onClicked: pane.api.startProcessing()
         }
         QueueButton {
             objectName: "pauseQueueButton"
@@ -85,10 +99,10 @@ ColumnLayout {
     }
     Text { text: pane.searching ? 'Reihenfolge und Griff gelten für die gesamte Warteschlange.' : "Am Griff ziehen oder Reihenfolge im Menü ändern"; color: "#ababab"; font.pixelSize: 11; wrapMode: Text.WordWrap; Layout.fillWidth: true }
     Text {
+        objectName: "processingStatus"
         Layout.fillWidth: true
-        visible: pane.viewState.queuePaused
-        text: pane.viewState.queueImmediateCount > 0 ? 'Nur die Sofort-Auswahl wird verarbeitet. Die übrige Warteschlange bleibt pausiert.' : "Pausiert. Der aktuelle Auftrag darf fertiglaufen. Neue Dateien werden weiter erfasst."
-        wrapMode: Text.WordWrap; color: "#d9bd83"; font.pixelSize: 12
+        text: pane.viewState.queuePaused && pane.viewState.queueImmediateCount > 0 ? 'Nur die Sofort-Auswahl wird verarbeitet. Die übrige Warteschlange bleibt pausiert.' : pane.viewState.processingStatus || ''
+        wrapMode: Text.WordWrap; color: pane.viewState.queuePaused ? "#d9bd83" : "#a4d8b9"; font.pixelSize: 12
     }
     Text {
         Layout.fillWidth: true
