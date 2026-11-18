@@ -14,11 +14,19 @@ Whisper delegiert die unveränderten CTranslate2-Aufrufe `encode`, `generate`, `
 
 Die vorhandenen Prozessbaum-/Abbruch-/App-Ende-Regeln bleiben zuständig. Eine GPU-Pause hält keine unabhängigen Dienste am Leben. Die Konfiguration ist eine globale Ressourcenregel; die Queue-Reihenfolge und gespeicherte Modell-/Sprachparameter bleiben erhalten.
 
-## Prüfstand
+## Geprüfter Stand – Windows v1.3.4
 
-Erste Windows-Regression: 173 Fälle in 51,087 s, 166 bestanden und sieben bekannte Plattformskips. Enthalten: reales QML-Tastaturereignis 100 → 50 mit Speicherung ohne fremde Entwurfsänderung, CPU-Sperre, alte Queueeinträge mit aktueller Budgetkonfiguration, verschachtelte echte Torch-Module mit unveränderten Ergebnissen/Hookbereinigung, native Whisper-Delegation, Livewechsel und ungültige Konfiguration.
+Regler links unter dem Rechengerät: 10–100 % für Windows-CUDA, unabhängig von anderen Entwurfsänderungen sofort gespeichert und auch für laufende/alte Queueaufträge wirksam. Qwen, Aligner, Whisper und beide Sprechermodelle geben gezielt Rechenzeit frei. Kein exaktes systemweites Prozent-/VRAM-Limit; CPU/Mac-Regler deaktiviert. [Umsetzung, Messungen und Mac-Aufgabe](GPU_ARBEITSBUDGET.md).
 
-Tatsächliche GPU-Messungen und Paket-/Modelltests folgen vor der Veröffentlichung; dieser Zwischenstand behauptet noch keine native Lastmessung. Der vollständige tatsächlich geprüfte Commit und Messwerte werden nachgetragen.
+Geprüfter Paket-Code `c2624c9e7465e273924e21d1ca279bd41f76f4a1`, [Windows v1.3.4](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.4), ZIP-SHA-256 `bea3500c659dfd8e8b703dc96de50cb0490e24e51c6368c30bdd710c8cef83b6`, [92-Dateien-Manifest](../releases/v1.3.4/windows-release.json). Laufzeit/Modellpins unverändert. 174 Fälle in 49,555 s: 167 bestanden, sieben Plattformskips. Nativer QML-Mauszug 100 → 50 einschließlich Mindestfenster und separater Speicherung bestanden; eine echte Status-/Speicherrace davor reproduziert und korrigiert.
+
+RTX-5060-Kontrolllast: 100 % Budget → durchschnittlich 92,44 % GPU; 50 % → 42,29 %, unveränderte Ergebnistensoren. Echter Livewechsel 100 → 50 → 100 am selben CUDA-Modell bestanden. Fünf echte GPU-Sprachläufe mit Qwen/Whisper und jeweils drei DOVER-Prüfungen erfolgreich; deutsche Texte bei 100/50 je Modell bytegleich, separate englische Qwen-Aufnahme bei 50 % vollständig anhand Testankern geprüft. Echter CUDA-Abbruch bei 50 % ohne Modell-/Audioreste bestanden. Keine Behauptung eines exakten systemweiten 50-%-Limits oder einer physischen Desktop-Latenzmessung.
+
+Die aufgeführten GPU-Werte stammen aus jeweils 14 Sekunden kontrollierter dichter CUDA-Rechenlast; die ersten zwei Sekunden jeder Stichprobe sind aus dem Mittel ausgeschlossen. Die 50-%-Variante erreichte 191 statt 405 Vorwärtsdurchläufe pro Sekunde. Natürliche CPU-/Lade-/I/O-Pausen der Transkription werden dadurch nicht beschleunigt. Der tatsächliche Laufzeitfaktor hängt vom Modell und Material ab. Beide deutschen ASR-Ausgaben waren einschließlich Zeitmarken bytegleich; die englische Aufnahme wurde separat geprüft.
+
+Der alte QML-Stand konnte eine Regleränderung durch einen Statusrefresh vor dem verzögerten Speichern verlieren. Die neue Regression reproduzierte 100 statt 50 am alten Paket. Jetzt wird der gewählte Wert sofort im Entwurf und separat im Timer gehalten; eine andere laufende Bedienaktion verzögert das Speichern, verwirft es aber nicht. Native Mausbedienung und gespeicherte Konfiguration bestätigen den Fix. Ein früher privater Testtreiber war zusätzlich während seiner QTest-Wartezeit erneut eingetreten; dieser Treiberfehler ist getrennt korrigiert und nicht als Produktfehler gezählt.
+
+Der Gesamtlauf vor der letzten Teststabilisierung meldete einmal die bereits falsche 30-ms-Annahme für eine Queue-Zeilenhöhe; die fertige kompakte Geometrie wird jetzt begrenzt auf dem Qt-Polish-Frame abgewartet. Keine Änderung am Produktverhalten dieser Queuefunktion.
 
 ## Mac-Übergabe
 

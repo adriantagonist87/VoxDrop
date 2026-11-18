@@ -6,7 +6,7 @@ VoxDrop ist eine kostenlose App für macOS und Windows auf Basis von aTrain. Sie
 
 | System | Download | Stand |
 | --- | --- | --- |
-| **Windows 11 x64 / NVIDIA CUDA** | **[Windows-ZIP herunterladen](https://github.com/adriantagonist87/VoxDrop/releases/download/v1.3.3/VoxDrop-1.3.3-Windows-x64.zip)** · [Release und Prüfsumme](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.3) | Geprüfter Windows-Stand vom 18. November 2026; dieselben 91 Programmdateien wie in der abgenommenen Installation. |
+| **Windows 11 x64 / NVIDIA CUDA** | **[Windows-ZIP herunterladen](https://github.com/adriantagonist87/VoxDrop/releases/download/v1.3.4/VoxDrop-1.3.4-Windows-x64.zip)** · [Release und Prüfsumme](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.4) | Geprüfter Windows-Stand vom 18. November 2026; dieselben 91 Programmdateien wie in der abgenommenen Installation. |
 | **macOS / Apple Silicon** | **[Mac-DMG herunterladen](https://github.com/adriantagonist87/VoxDrop/releases/download/v1.3.1/VoxDrop-1.3.1-macOS-arm64.dmg)** · [Mac-Release](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.1) | Bisherige native Mac-Ausgabe. Die unten beschriebenen neuen Windows-Funktionen werden auf dieser gemeinsamen Codebasis für Mac nachgezogen. |
 
 ## Windows einrichten
@@ -17,6 +17,7 @@ Bei einem Update die Ordner **Laufzeit** und **Modelle** erhalten. Einstellungen
 
 ## Funktionen der aktuellen Windows-Ausgabe
 
+- **GPU-Arbeitsbudget:** Regler von 10–100 % unter Windows-CUDA, während der Verarbeitung änderbar. Gezielte Rechenpausen entlasten den Desktop; kurze Spitzen und der Grafikspeicherbedarf bleiben bestehen. [Messungen und Grenzen](docs/GPU_ARBEITSBUDGET.md).
 - **Start und Automatik:** Sichtbarer grüner Knopf zum Starten/Fortsetzen der Queue, separate Pause und klarer Status „Verarbeitung läuft“. Eingereihte Dateien können ausdrücklich auch bei ausgeschalteter Ordnerüberwachung verarbeitet werden. Eine gespeicherte bewusste Pause wird beim App-Start nicht still aufgehoben.
 - **Vollständige Warteschlange:** Alle wartenden Dateien mit Dateiname, Pfad, Position und Status in der mittleren Spalte. Kompakte Ansicht sowie ausklappbare Details für die ganze Liste oder einzelne Aufträge.
 - **Reihenfolge und Abbruch:** Dateien per Drag-and-drop oder Menü vorziehen/verschieben, einzelne Einträge entfernen, die aktuelle Transkription oder die ganze Warteschlange abbrechen und pausieren/fortsetzen. Die Reihenfolge bleibt beim Neustart erhalten; Umordnen funktioniert auch in Suchergebnissen.
