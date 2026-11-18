@@ -2,7 +2,13 @@
 
 Stand vom 17. November 2026. Für jede Weiterentwicklung sind zusätzlich die Arbeitsregeln und die Entwicklungsanleitung zu lesen. [Arbeitsregeln](../AGENTS.md) · [Entwicklung](ENTWICKLUNG.md) · [Windows-Übergabeauftrag](UEBERGABE_WINDOWS.md)
 
-**Windows-Nachtrag vom 18.11.2026:** [Windows Preview 11](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.2-windows-preview.11), App-Code `2a1ae7feb5c9c2125b20e630875bed13b316250e`, ZIP-SHA-256 `83822f1f5d39d48cf8328c67013699d6001cfdb675deeaa40cf6940ba91b3a86`, ist installiert. Echter Verarbeitungsverlauf statt bloßer Queue-Abbrüche, separate Bestands-/Abbruchfilter und vollständige Auftrags-/Suchdatenbereinigung mit Neuerfassung beim nächsten Intervall. Icon außen transparent. 144 Fälle (137 bestanden, sieben Skips), finales EXE-/QML-/Reset-/Wiederimport-/Suchpaket bestanden. [Umsetzung und Mac-Aufgaben](VERLAUF_BESTAND_BEREINIGUNG.md). 9.143 produktive Aufträge und aktuelle Ordner/Pause erhalten; 8.869 weiter pausiert, keine produktive Bereinigung als Test. Main enthält Icon-Dateien/README und Übergabedokumentation, funktionaler Code bleibt bis Mac-Gegenprüfung im [Draft-PR #1](https://github.com/adriantagonist87/VoxDrop/pull/1).
+**Windows-Nachtrag vom 18.11.2026: Preview 12**
+
+[Windows Preview 12](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.2-windows-preview.12), App-Code `53e69cee39ac5a0721f02eb79034db33e792c6a7`, ZIP-SHA-256 `61596492494e5ac6cb8d9185144cb9f8561527dc8fb10a83f170d5c5d69cc0e4`. „VoxDrop beenden“ und Fenster-X stoppen jetzt die vollständige App einschließlich Überwachung, Dienst/Supervisor, Such-/Download-/Modellprozessen. Minimieren lässt die App laufen. RAM/VRAM wird freigegeben; Modelldateien, Warteschlange, Pause und Einstellungen bleiben auf dem Datenträger erhalten. Auch der unerwartete Verlust des GUI-Eigentümers stoppt den Dienst. [Verhalten, Ursachen, native Belege und Mac-Aufgaben](APP_BEENDEN_UND_LEBENSDAUER.md).
+
+153 Windows-Tests in 51,512 s: 146 bestanden, sieben bekannte Skips. Finales Paket nativ mit geladenem CUDA-Qwen über echte Tray-QAction beendet (5.844 s), keine weiteren Scans, erfolgreiche automatische Wiederaufnahme nach Neustart; echter Fenster-Schließevent (5.610 s) und tatsächlicher EXE-Einstieg mit GUI-Absturz ohne verwaiste Dienste geprüft. Gesamtabnahme 99.037 s, SQLite/Fremdschlüssel ok. Keine produktiven Abbruch-/Löschaktionen als Test.
+
+GitHub-ZIP/SHA und alle 91 installierten Dateien bestätigt, vollständiges Profil/Code hashgesichert. Beim Update aktueller Nutzerzustand: 0 bisherige Aufträge, Warteschlange pausiert, Überwachung laut gesicherter Konfiguration unverändert. Frühere Auftragszahlen/Ordner wurden nicht zurückgespielt. Modelle/Laufzeit erhalten. Dokumentation und verbindliche neue Lebensdauerregel auf main, gemeinsamer Funktionscode bis nativer Mac-Gegenprüfung im Draft-PR.
 
 ## Gemeinsamer Stand
 

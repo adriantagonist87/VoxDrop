@@ -1,5 +1,13 @@
 # Übergabeauftrag für Codex auf dem Windows-PC
 
+## Aktuell: Preview 12
+
+[Windows Preview 12](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.2-windows-preview.12), App-Code `53e69cee39ac5a0721f02eb79034db33e792c6a7`, ZIP-SHA-256 `61596492494e5ac6cb8d9185144cb9f8561527dc8fb10a83f170d5c5d69cc0e4`. „VoxDrop beenden“ und Fenster-X stoppen jetzt die vollständige App einschließlich Überwachung, Dienst/Supervisor, Such-/Download-/Modellprozessen. Minimieren lässt die App laufen. RAM/VRAM wird freigegeben; Modelldateien, Warteschlange, Pause und Einstellungen bleiben auf dem Datenträger erhalten. Auch der unerwartete Verlust des GUI-Eigentümers stoppt den Dienst. [Verhalten, Ursachen, native Belege und Mac-Aufgaben](APP_BEENDEN_UND_LEBENSDAUER.md).
+
+153 Windows-Tests in 51,512 s: 146 bestanden, sieben bekannte Skips. Finales Paket nativ mit geladenem CUDA-Qwen über echte Tray-QAction beendet (5.844 s), keine weiteren Scans, erfolgreiche automatische Wiederaufnahme nach Neustart; echter Fenster-Schließevent (5.610 s) und tatsächlicher EXE-Einstieg mit GUI-Absturz ohne verwaiste Dienste geprüft. Gesamtabnahme 99.037 s, SQLite/Fremdschlüssel ok. Keine produktiven Abbruch-/Löschaktionen als Test.
+
+GitHub-ZIP/SHA und alle 91 installierten Dateien bestätigt, vollständiges Profil/Code hashgesichert. Beim Update aktueller Nutzerzustand: 0 bisherige Aufträge, Warteschlange pausiert, Überwachung laut gesicherter Konfiguration unverändert. Frühere Auftragszahlen/Ordner wurden nicht zurückgespielt. Modelle/Laufzeit erhalten. Dokumentation und verbindliche neue Lebensdauerregel auf main, gemeinsamer Funktionscode bis nativer Mac-Gegenprüfung im Draft-PR.
+
 ## Auftrag und Ausgangspunkt
 
 Untersuche und behebe die vom Nutzer gemeldete funktionsgestörte Windows-Ausgabe von VoxDrop. Verwende zuerst das aktuelle Windows-Paket v1.3.1 und halte den Fehler mit Umgebung und Logs reproduzierbar fest. Arbeite anschließend auf einem eigenen Fix-Branch von `main` weiter und aktualisiere die gemeinsame Dokumentation.
