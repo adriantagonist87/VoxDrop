@@ -60,6 +60,14 @@ Wochenlanger Betrieb braucht einen entsprechenden Beobachtungszeitraum. Gemeinsa
 
 ## Bestätigte Funktionsläufe auf Preview 2
 
+### WIN-09: sichtbare Konsole beim Windows-Hintergrundstart
+
+Der Nutzer meldete ein regelmäßig aufpoppendes leeres Terminal mit Pfad zur VoxDrop-Python-Laufzeit. Die Untätigkeit des eigentlichen Produktivprüflaufs wurde geprüft: zu diesem Zeitpunkt null eingereihte/aktive Aufträge. Eigene GUI-Statusaufrufe und anschließend der eigene untätige Supervisor/Dienst wurden zur Diagnose angehalten; keine Nutzeraufträge abgebrochen.
+
+Konkreter nativer Vergleich aus einem GUI-Python-Elternprozess: normaler `CREATE_NO_WINDOW`-Start liefert `GetConsoleWindow() == 0`, erhält stdout/stderr. `DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP` mit dem ausgelieferten `python.exe`-Venv-Redirector liefert dagegen ein echtes Konsolenhandle; dieselbe Variante mit `pythonw.exe` nicht. Die erste Hypothese eines allgemeinen Fehlers bei `CREATE_NO_WINDOW` war damit widerlegt. Der tatsächliche Auslöser ist die bisher verwendete Hintergrund-Startvariante des Supervisors.
+
+Neue echte Regression in `test_process_lifecycle.py` scheitert am alten Code (`console != 0`). `process_options(background=True)` verwendet unter Windows jetzt `CREATE_NO_WINDOW | CREATE_NEW_PROCESS_GROUP` statt `DETACHED_PROCESS`. Ausgabeprotokolle, Prozessgruppe und Job-Object-Bereinigung bleiben geprüft. Vollständige Windows-Suite nach der Korrektur: 93 Fälle, 86 bestanden, sieben explizite Skips. Paketupdate und sichtbarer Dauerbetrieb werden separat nachgeprüft. Keine Änderung an Modellen, Lockfile oder ASR-/Sprecheralgorithmen; die Modell-/Sprachmessungen oben behalten ihren ursprünglichen SHA.
+
 Alle folgenden Ergebnisse verwenden App-Code `c86746f8cc98c2dce75fb95bd489563591640f9a` aus dem erneuten GitHub-Download.
 
 | Modell | Sprache | Stille überspringen / Sprecher / DOVER | Gesamtlauf |

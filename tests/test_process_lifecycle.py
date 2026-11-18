@@ -1,3 +1,4 @@
+import json
 import subprocess
 import sys
 import time
@@ -9,6 +10,25 @@ from platform_io import WINDOWS, child_process, process_options
 
 
 class ProcessLifecycleTests(unittest.TestCase):
+    @unittest.skipUnless(WINDOWS, "Windows background console regression")
+    def test_background_runtime_has_no_console_and_keeps_captured_streams(self):
+        program = (
+            "import ctypes,json,sys; "
+            "print(json.dumps({'console':int(ctypes.windll.kernel32.GetConsoleWindow())}),flush=True); "
+            "print('diagnostic output',file=sys.stderr,flush=True)"
+        )
+        result = subprocess.run(
+            [sys.executable, "-BEs", "-Xutf8", "-c", program],
+            stdin=subprocess.DEVNULL,
+            capture_output=True,
+            encoding="utf-8",
+            timeout=10,
+            **process_options(background=True),
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(result.stdout)["console"], 0)
+        self.assertEqual(result.stderr.strip(), "diagnostic output")
+
     def test_child_output_and_exit_status_survive_managed_launch(self):
         with child_process([sys.executable, "-c", "print('ready'); raise SystemExit(7)"],
                            stdout=subprocess.PIPE, text=True, **process_options()) as child:

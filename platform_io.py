@@ -179,7 +179,9 @@ def process_options(*, background=False):
 
         if background:
             return {
-                "creationflags": subprocess.DETACHED_PROCESS
+                # DETACHED_PROCESS makes this venv redirector allocate a new
+                # console in its real Python child. Keep the service windowless.
+                "creationflags": subprocess.CREATE_NO_WINDOW
                 | subprocess.CREATE_NEW_PROCESS_GROUP
             }
         return {"creationflags": subprocess.CREATE_NO_WINDOW}
