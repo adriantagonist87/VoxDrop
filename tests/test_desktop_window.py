@@ -112,6 +112,54 @@ class DesktopWindowTests(unittest.TestCase):
         command.assert_called_once_with('move-queue',1,3)
         self.assertFalse(self.controller.queue_dragging)
 
+    def test_history_buttons_show_global_counts_and_highlight_errors_until_zero(self):
+        self.controller.snapshot = dict(jobs=[], history_counts=dict(all=600, errors=3, done=595))
+        self.controller.changed.emit()
+        self.presenter.show()
+        self.window.resize(1010, 630)
+        QTest.qWait(100)
+        buttons = {value: self.visual('historyFilter_' + value) for value in ('all', 'errors', 'done')}
+        self.assertEqual([buttons[value].property('text') for value in buttons],
+                         ['Alle (600)', 'Fehler (3)', 'Fertig (595)'])
+        errors = buttons['errors']
+        self.assertEqual(errors.property('background').property('color').name(), '#b5303a')
+        self.controller.setFilter('errors')
+        QTest.qWait(20)
+        self.assertTrue(errors.property('checked'))
+        self.assertEqual(errors.property('background').property('color').name(), '#b5303a')
+        self.controller.snapshot['history_counts'] = dict(all=597, errors=0, done=595)
+        self.controller.changed.emit()
+        self.controller.setFilter('all')
+        QTest.qWait(20)
+        self.assertEqual(errors.property('text'), 'Fehler (0)')
+        self.assertFalse(errors.property('errorAlert'))
+        self.assertEqual(errors.property('background').property('color').name(), '#292929')
+
+    def test_compact_queue_expands_globally_and_per_row_and_saves_preference(self):
+        self.queue_fixture(12)
+        row = self.visual('queueRow1')
+        self.assertFalse(row.property('expanded'))
+        compact_height = row.height()
+        self.assertLess(compact_height, 80)
+        expand = self.visual('expandQueue1')
+        point = expand.mapToScene(QPointF(expand.width() / 2, expand.height() / 2)).toPoint()
+        QTest.mouseClick(self.window, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, point)
+        QTest.qWait(30)
+        self.assertTrue(row.property('expanded'))
+        self.assertGreater(row.height(), compact_height + 60)
+        toggle = self.visual('queueDetailsToggle')
+        point = toggle.mapToScene(QPointF(toggle.width() / 2, toggle.height() / 2)).toPoint()
+        QTest.mouseClick(self.window, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, point)
+        QTest.qWait(30)
+        self.assertFalse(self.controller.state['queueCompact'])
+        self.assertTrue(self.visual('queueRow2').property('expanded'))
+        self.assertFalse(self.controller.preferences.value('queueCompact', True, type=bool))
+        self.controller.setQueueCompact(True)
+        QTest.qWait(30)
+        self.assertFalse(row.property('expanded'))
+        self.assertFalse(self.visual('queueRow2').property('expanded'))
+        self.assertEqual(row.height(), compact_height)
+
     def test_programmatic_folder_edit_updates_saved_draft(self):
         self.controller.paths=[str(self.controller_module.PROFILE/'old')]
         self.controller.foldersChanged.emit();QTest.qWait(50)

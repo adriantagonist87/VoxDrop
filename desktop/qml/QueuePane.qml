@@ -8,6 +8,7 @@ ColumnLayout {
     required property var api
     required property var viewState
     property var items: api.queueItems
+    readonly property bool compact: viewState.queueCompact
     property bool dragging: false
     property real dragY: -1
     spacing: 8
@@ -16,13 +17,13 @@ ColumnLayout {
         padding: 7
         font.pixelSize: 12
         palette.buttonText: "#e8e8e8"
-        contentItem: Text { text: parent.text; font: parent.font; color: parent.enabled ? "#e8e8e8" : "#777"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+        contentItem: Text { text: parent.text; font: parent.font; color: parent.enabled ? "#e8e8e8" : "#777"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter; wrapMode: Text.WordWrap }
         background: Rectangle { radius: 5; color: parent.down ? "#456653" : parent.hovered ? "#383838" : "#282828"; border.color: "#454545" }
     }
 
     RowLayout {
         Layout.fillWidth: true
-        Text { text: "Warteschlange (" + pane.items.length + ")"; color: "#ededed"; font.pixelSize: 17; font.bold: true; Layout.fillWidth: true }
+        Text { text: "Warteschlange (" + pane.items.length + ")"; color: "#ededed"; font.pixelSize: 17; font.bold: true; wrapMode: Text.WordWrap; Layout.fillWidth: true }
         QueueButton {
             objectName: "pauseQueueButton"
             text: pane.viewState.queuePaused ? "Fortsetzen" : "Pausieren"
@@ -33,13 +34,21 @@ ColumnLayout {
     RowLayout {
         Layout.fillWidth: true
         QueueButton {
+            objectName: "queueDetailsToggle"
+            Layout.fillWidth: true
+            text: pane.compact ? "Details anzeigen" : "Details ausblenden"
+            enabled: !pane.dragging
+            onClicked: pane.api.setQueueCompact(!pane.compact)
+        }
+        QueueButton {
             objectName: "cancelQueueButton"
+            Layout.fillWidth: true
             text: "Alle abbrechen …"
             enabled: !pane.viewState.busy && (pane.items.length > 0 || Boolean(pane.viewState.current.name))
             onClicked: confirmCancelQueue.open()
         }
-        Text { text: "Am Griff ziehen oder Reihenfolge im Menü ändern"; color: "#ababab"; font.pixelSize: 11; wrapMode: Text.WordWrap; Layout.fillWidth: true }
     }
+    Text { text: "Am Griff ziehen oder Reihenfolge im Menü ändern"; color: "#ababab"; font.pixelSize: 11; wrapMode: Text.WordWrap; Layout.fillWidth: true }
     Text {
         Layout.fillWidth: true
         visible: pane.viewState.queuePaused
@@ -59,7 +68,7 @@ ColumnLayout {
         Layout.fillHeight: true
         Layout.minimumHeight: 100
         clip: true
-        spacing: 7
+        spacing: pane.compact ? 3 : 7
         model: pane.items
         boundsBehavior: Flickable.StopAtBounds
         ScrollBar.vertical: ScrollBar {}
@@ -67,6 +76,11 @@ ColumnLayout {
             id: row
             required property var modelData
             required property int index
+            property bool expanded: !pane.compact
+            Connections {
+                target: pane
+                function onCompactChanged() { row.expanded = !pane.compact }
+            }
             objectName: "queueRow" + modelData.id
             width: queueList.width - 12
             height: contents.implicitHeight + 20
@@ -106,12 +120,43 @@ ColumnLayout {
                 id: contents
                 x: 44; y: 9; width: Math.max(1, row.width - 54)
                 spacing: 5
-                Text { Layout.fillWidth: true; text: (row.index + 1) + ".  " + row.modelData.name; font.bold: true; font.pixelSize: 13; color: "#ededed"; wrapMode: Text.WrapAnywhere; maximumLineCount: 2; elide: Text.ElideRight }
-                Text { Layout.fillWidth: true; text: row.modelData.path; color: "#a9a9a9"; font.pixelSize: 11; elide: Text.ElideMiddle }
-                Text { Layout.fillWidth: true; text: row.modelData.status + " · " + row.modelData.size + " · Dauer " + row.modelData.audio; color: "#c8dfd3"; font.pixelSize: 11; wrapMode: Text.WordWrap }
-                Text { Layout.fillWidth: true; text: row.modelData.model + " · " + row.modelData.language + " · " + row.modelData.hardware; color: "#bcbcbc"; font.pixelSize: 11; wrapMode: Text.WordWrap }
-                Text { Layout.fillWidth: true; text: "Eingereiht " + row.modelData.added + (row.modelData.retryAt ? " · Wiederholung " + row.modelData.retryAt : "") + (row.modelData.options ? " · " + row.modelData.options : ""); color: "#aaa"; font.pixelSize: 11; wrapMode: Text.WordWrap }
                 RowLayout {
+                    Layout.fillWidth: true; spacing: 4
+                    Text { Layout.fillWidth: true; text: (row.index + 1) + ".  " + row.modelData.name; font.bold: true; font.pixelSize: 13; color: "#ededed"; wrapMode: row.expanded ? Text.WrapAnywhere : Text.NoWrap; maximumLineCount: row.expanded ? 2 : 1; elide: Text.ElideMiddle }
+                    QueueButton {
+                        objectName: "expandQueue" + row.modelData.id
+                        Layout.preferredWidth: 27
+                        contentItem: Item {
+                            implicitWidth: 13; implicitHeight: 14
+                            Item {
+                                anchors.centerIn: parent; width: 12; height: 12
+                                rotation: row.expanded ? 90 : 0
+                                Rectangle { x: 3; y: 2; width: 7; height: 2; radius: 1; color: "#e8e8e8"; rotation: 45 }
+                                Rectangle { x: 3; y: 6; width: 7; height: 2; radius: 1; color: "#e8e8e8"; rotation: -45 }
+                            }
+                        }
+                        Accessible.name: (row.expanded ? "Angaben einklappen: " : "Angaben ausklappen: ") + row.modelData.name
+                        enabled: !pane.dragging
+                        onClicked: row.expanded = !row.expanded
+                    }
+                    QueueButton {
+                        objectName: "queueActions" + row.modelData.id
+                        Layout.preferredWidth: 27
+                        contentItem: Item {
+                            implicitWidth: 13; implicitHeight: 14
+                            Row { anchors.centerIn: parent; spacing: 2; Repeater { model: 3; Rectangle { width: 2; height: 2; radius: 1; color: "#e8e8e8" } } }
+                        }
+                        Accessible.name: "Auftragsaktionen: " + row.modelData.name
+                        enabled: !pane.viewState.busy
+                        onClicked: moveMenu.open()
+                    }
+                }
+                Text { Layout.fillWidth: true; text: row.modelData.path; color: "#a9a9a9"; font.pixelSize: 11; elide: Text.ElideMiddle }
+                Text { visible: row.expanded; Layout.fillWidth: true; text: row.modelData.status + " · " + row.modelData.size + " · Dauer " + row.modelData.audio; color: "#c8dfd3"; font.pixelSize: 11; wrapMode: Text.WordWrap }
+                Text { visible: row.expanded; Layout.fillWidth: true; text: row.modelData.model + " · " + row.modelData.language + " · " + row.modelData.hardware; color: "#bcbcbc"; font.pixelSize: 11; wrapMode: Text.WordWrap }
+                Text { visible: row.expanded; Layout.fillWidth: true; text: "Eingereiht " + row.modelData.added + (row.modelData.retryAt ? " · Wiederholung " + row.modelData.retryAt : "") + (row.modelData.options ? " · " + row.modelData.options : ""); color: "#aaa"; font.pixelSize: 11; wrapMode: Text.WordWrap }
+                RowLayout {
+                    visible: row.expanded && pane.width >= 340
                     Layout.fillWidth: true; spacing: 4
                     QueueButton { text: "Reihenfolge"; enabled: !pane.viewState.busy; Accessible.name: "Reihenfolge ändern: " + row.modelData.name; onClicked: moveMenu.open() }
                     QueueButton { text: "Details"; enabled: !pane.viewState.busy; onClicked: pane.api.showDetails(row.modelData.id) }
@@ -125,6 +170,9 @@ ColumnLayout {
                 MenuItem { text: "Einen Platz nach oben"; enabled: row.index > 0; onTriggered: pane.api.moveQueueItem(row.modelData.id, pane.items[row.index - 1].id) }
                 MenuItem { text: "Einen Platz nach unten"; enabled: row.index + 1 < pane.items.length; onTriggered: pane.api.moveQueueItem(row.modelData.id, row.index + 2 < pane.items.length ? pane.items[row.index + 2].id : 0) }
                 MenuItem { text: "Ans Ende"; enabled: row.index + 1 < pane.items.length; onTriggered: pane.api.moveQueueItem(row.modelData.id, 0) }
+                MenuSeparator {}
+                MenuItem { text: "Auftragsdetails öffnen"; onTriggered: pane.api.showDetails(row.modelData.id) }
+                MenuItem { text: "Aus Warteschlange entfernen"; onTriggered: pane.api.cancelJob(row.modelData.id) }
             }
             DropArea {
                 id: drop

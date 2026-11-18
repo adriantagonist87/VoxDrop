@@ -322,6 +322,7 @@ class Controller(QObject):
         self.history = []
         self.queue = []
         self.queue_dragging = False
+        self.queue_compact = self.preferences.value("queueCompact", True, type=bool)
         self.order = self.preferences.value("historyOrder", "desc")
         self.filter = "all"
         self.ready = preview
@@ -386,6 +387,7 @@ class Controller(QObject):
             "waiting": self.snapshot.get("waiting", 0),
             "queueCount": len(self.snapshot.get('queue',[])),
             "queuePaused": self.snapshot.get('queue_paused',False),
+            "queueCompact": self.queue_compact,
             "dropMessage": self.drop_message,
             "dropError": self.drop_error,
             "checked": checked,
@@ -402,8 +404,9 @@ class Controller(QObject):
             "messageError": self.message_error,
             "logAvailable": self.message_error and DESKTOP_LOG.is_file(),
             "filter": self.filter,
+            "historyCounts": self.history_counts(),
             "order": self.order,
-            "canClear": bool(self.snapshot.get("jobs")) and not job and not self.busy,
+            "canClear": self.history_counts()["all"] > 0 and not job and not self.busy,
         }
 
     @Property("QVariantMap", notify=changed)
@@ -837,6 +840,7 @@ class Controller(QObject):
             return
         self.refreshing = True
         order = self.order
+        history_filter = self.filter
 
         def finished(result, error):
             self.refreshing = False
@@ -851,11 +855,12 @@ class Controller(QObject):
             self.update_status()
             self.update_history()
             self.update_queue()
-            if order != self.order:
+            if order != self.order or history_filter != self.filter:
                 self.refresh()
 
         self.submit(
-            lambda: json.loads(command("status", "--limit", "250", "--order", order)),
+            lambda: json.loads(command("status", "--limit", "250", "--order", order,
+                                       "--filter", history_filter)),
             finished,
         )
 
@@ -936,6 +941,7 @@ class Controller(QObject):
         self.filter = value
         self.changed.emit()
         self.update_history()
+        self.refresh()
 
     @Slot(str)
     def setOrder(self, value):
@@ -944,6 +950,17 @@ class Controller(QObject):
         self.changed.emit()
         self.update_history()
         self.refresh()
+
+    def history_counts(self):
+        counts = self.snapshot.get("history_counts")
+        if counts is not None:
+            return counts
+        jobs = self.snapshot.get("jobs", [])
+        return {
+            "all": sum(job["state"] not in {'seen', 'ready', 'copying', 'transcribing', 'exporting'} for job in jobs),
+            "errors": sum(job["state"] in {'blocked', 'failed'} for job in jobs),
+            "done": sum(job["state"] in {'done', 'existing', 'duplicate'} for job in jobs),
+        }
 
     def update_history(self):
         jobs = self.snapshot.get("jobs", [])
@@ -999,6 +1016,13 @@ class Controller(QObject):
         if queue!=self.queue:
             self.queue=queue
             self.queueChanged.emit()
+
+    @Slot(bool)
+    def setQueueCompact(self, compact):
+        self.queue_compact = compact
+        self.preferences.setValue("queueCompact", compact)
+        self.preferences.sync()
+        self.changed.emit()
 
     @Slot(bool)
     def setQueueDragging(self, active):

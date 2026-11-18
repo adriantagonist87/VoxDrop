@@ -1854,7 +1854,24 @@ def start_in_background(state, model_data, config):
         )
 
 
-def history_jobs(db, order, limit, *, terminal_only=False):
+HISTORY_FILTERS = {
+    "all": "j.state NOT IN ('seen','ready','copying','transcribing','exporting')",
+    "errors": "j.state IN ('blocked','failed')",
+    "done": "j.state IN ('done','existing','duplicate')",
+}
+
+
+def history_counts(db):
+    counts = dict(db.execute("SELECT state, COUNT(*) FROM jobs GROUP BY state"))
+    return {
+        "all": sum(count for state, count in counts.items()
+                   if state not in {'seen', 'ready', 'copying', 'transcribing', 'exporting'}),
+        "errors": counts.get('blocked', 0) + counts.get('failed', 0),
+        "done": sum(counts.get(state, 0) for state in ('done', 'existing', 'duplicate')),
+    }
+
+
+def history_jobs(db, order, limit, *, terminal_only=False, history_filter="all"):
     direction = "ASC" if order == "asc" else "DESC"
     return db.execute(
         f"""SELECT j.*, m.speech_seconds, m.speaker_seconds, m.peak_memory_bytes,
@@ -1868,7 +1885,7 @@ def history_jobs(db, order, limit, *, terminal_only=False):
         LEFT JOIN speaker_diarization AS d ON d.job_id=j.id
         LEFT JOIN audio_durations AS a ON a.job_id=j.id
         LEFT JOIN known_results k ON k.job_id=j.id
-        {"WHERE j.state NOT IN ('seen','ready','copying','transcribing','exporting')" if terminal_only else ""}
+        {"WHERE " + HISTORY_FILTERS[history_filter] if terminal_only or history_filter != "all" else ""}
         ORDER BY j.updated {direction}, j.id {direction} LIMIT ?""",
         (limit,),
     ).fetchall()
@@ -1898,6 +1915,7 @@ def main(argv=None):
     status_command = commands.add_parser("status")
     status_command.add_argument("--limit", type=int, default=-1)
     status_command.add_argument("--order", choices=("asc", "desc"), default="desc")
+    status_command.add_argument("--filter", dest="history_filter", choices=HISTORY_FILTERS, default="all")
     autostart = commands.add_parser("autostart")
     autostart.add_argument("mode", choices=("on", "off", "preview"))
     autostart.add_argument("config", type=Path)
@@ -2039,7 +2057,8 @@ def main(argv=None):
                 connection = db.execute(
                     "SELECT available,error FROM connection"
                 ).fetchone()
-                jobs = history_jobs(db, args.order, args.limit,terminal_only=True)
+                jobs = history_jobs(db, args.order, args.limit, terminal_only=True,
+                                    history_filter=args.history_filter)
                 current = db.execute(
                     """SELECT j.*, EXISTS(SELECT 1 FROM cancel_requests c WHERE c.job_id=j.id)
                     AS cancel_requested FROM jobs j WHERE state IN ('copying','transcribing','exporting')"""
@@ -2071,6 +2090,7 @@ def main(argv=None):
                             "queue": [dict(row) for row in queue_jobs(db)],
                             "current": dict(current) if current else None,
                             "jobs": [dict(job) for job in jobs],
+                            "history_counts": history_counts(db),
                         },
                         ensure_ascii=False,
                         indent=2,

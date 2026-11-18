@@ -1,11 +1,12 @@
 import hashlib
+import io
 import json
 import subprocess
 import sys
 import tempfile
 import time
 import unittest
-from contextlib import closing
+from contextlib import closing, redirect_stdout
 from pathlib import Path
 from unittest.mock import Mock, patch
 
@@ -60,6 +61,32 @@ class QueueTests(unittest.TestCase):
         service.retry(self.db,one)
         self.assertEqual([row['id'] for row in queue_jobs(self.db)],[two,one])
         self.assertEqual(first.read_bytes(),b'synthetic media')
+
+    def test_history_counts_and_error_filter_include_rows_beyond_display_limit(self):
+        for index in range(260):
+            (self.incoming / f'item-{index:03}.wav').write_bytes(str(index).encode())
+        service.scan(self.db, self.settings, 100)
+        service.scan(self.db, self.settings, 101)
+        identifiers = [row[0] for row in self.db.execute('SELECT id FROM jobs ORDER BY id')]
+        states = ('failed', 'blocked', 'existing', 'duplicate', 'cancelled', 'superseded',
+                  'ready', 'seen', 'copying', 'exporting', 'transcribing')
+        with self.db:
+            self.db.execute("UPDATE jobs SET state='done', updated=100")
+            self.db.executemany('UPDATE jobs SET state=?, updated=? WHERE id=?',
+                                [(state, index + 1, identifiers[index])
+                                 for index, state in enumerate(states)])
+        self.assertNotIn(identifiers[0], [job['id'] for job in service.history_jobs(
+            self.db, 'desc', 250, terminal_only=True)])
+        for selected, expected_size in [('all', 250), ('errors', 2), ('done', 250)]:
+            with redirect_stdout(io.StringIO()) as output:
+                result = service.main(['--state-dir', str(self.state), '--model-data', str(self.root / 'models'),
+                                       'status', '--limit', '250', '--filter', selected])
+            self.assertEqual(result, 0)
+            snapshot = json.loads(output.getvalue())
+            self.assertEqual(snapshot['history_counts'], dict(all=255, errors=2, done=251))
+            self.assertEqual(len(snapshot['jobs']), expected_size)
+            if selected == 'errors':
+                self.assertEqual({job['id'] for job in snapshot['jobs']}, set(identifiers[:2]))
 
     def test_cancel_all_pauses_and_cancels_automatic_retries_without_readding(self):
         source,one=self.add();_,two=self.add('two.wav',b'other')

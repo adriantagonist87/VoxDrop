@@ -92,6 +92,7 @@ ApplicationWindow {
     component Action: Button {
         id: action
         property bool primary: false
+        property bool errorAlert: false
         font.pixelSize: 12
         horizontalPadding: 10
         verticalPadding: 6
@@ -101,6 +102,7 @@ ApplicationWindow {
             textFormat: Text.PlainText
             font: action.font
             color: !action.enabled ? "#a0a0a4" :
+                action.errorAlert ? "#ffffff" :
                 (action.primary || action.checked ? "#14231c" : window.textColor)
             horizontalAlignment: Text.AlignHCenter
             verticalAlignment: Text.AlignVCenter
@@ -108,11 +110,14 @@ ApplicationWindow {
         }
         background: Rectangle {
             radius: 6
-            color: action.primary || action.checked ?
+            color: action.errorAlert && action.enabled ?
+                (action.down ? "#92252e" : action.hovered ? "#c5424b" : "#b5303a") :
+                action.primary || action.checked ?
                 (action.enabled ? (action.down ? "#76ac8e" : window.accent) : "#343d37") :
                 (action.down ? "#414141" : action.hovered ? "#353535" : window.surface)
-            border.color: action.activeFocus ? window.accent : window.line
-            border.width: action.activeFocus ? 2 : 1
+            border.color: action.activeFocus ? window.accent :
+                action.errorAlert ? (action.checked ? window.warningColor : "#d85f68") : window.line
+            border.width: action.activeFocus || (action.errorAlert && action.checked) ? 2 : 1
         }
     }
 
@@ -680,8 +685,11 @@ ApplicationWindow {
                         model: [{label: "Alle", value: "all"}, {label: "Fehler", value: "errors"}, {label: "Fertig", value: "done"}]
                         delegate: Action {
                             required property var modelData
+                            readonly property int itemCount: viewState.historyCounts[modelData.value] || 0
+                            objectName: "historyFilter_" + modelData.value
                             Layout.fillWidth: true
-                            text: modelData.label
+                            text: modelData.label + " (" + itemCount + ")"
+                            errorAlert: modelData.value === "errors" && itemCount > 0
                             checkable: true
                             checked: viewState.filter === modelData.value
                             onClicked: api.setFilter(modelData.value)
