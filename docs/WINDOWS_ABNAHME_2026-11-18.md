@@ -1,6 +1,6 @@
 # Windows-Neuinstallation und Produktivabnahme am 18.11.2026
 
-Status: **IN ARBEIT**, noch keine vollständige Abnahme. Dieser Bericht ergänzt die historischen Vorprüfungen und deren exakte Code-SHAs.
+Status: **Neuinstallation und Betrieb einschließlich echtem Neustart/Anmeldestart und S3-Standby geprüft; produktiv eingerichtet.** Die nachfolgend ausdrücklich ungeprüften physischen Bedien-, SMB-Serverausfall- und Langzeitfälle verhindern weiterhin eine pauschale vollständige Freigabe aller denkbaren Fälle. Dieser Bericht ergänzt die historischen Vorprüfungen und deren exakte Code-SHAs.
 
 ## Auftrag und Nutzungsumfang
 
@@ -52,13 +52,33 @@ Preview 2 erneut direkt von GitHub heruntergeladen, SHA-256 und Code-Identität 
 | Lokale/SMB-Überwachung, Pause, Rekursion und Ausfälle | Lokale/UNC-Dateipfade und funktionales Pause/Fortsetzen BESTANDEN; tatsächlicher SMB-Serverausfall ungeprüft |
 | Sichtbare Bedienung, Explorer-Drop, Fenster/Infobereich, Verlauf | Modelle/Optionen/Speichern/Verlauf/Minimierung/Maximierung bedient; physischer Explorer-Drop und Taskleisten-/Infobereichsklicks ungeprüft |
 | Dateischutz, Kollisionen, Neutranskription und Wiederaufnahme | BESTANDEN; Qwen-Prozessabbruch auch auf finalem Preview-4-Paket wiederholt |
-| Tatsächlicher Windows-Neustart/Anmeldestart | OFFEN |
+| Tatsächlicher Windows-Neustart/Anmeldestart | BESTANDEN auf Preview 4; neuer nativer Bootzeitpunkt, automatischer GUI-/Supervisor-/Dienststart, neuer Auftrag/TXT/Hash |
 | Tatsächlicher Sleep/Resume | BESTANDEN auf Preview 4; Windows-S3-Ereignisse, gleicher Prozessbaum und erfolgreicher neuer Folgeauftrag |
-| Produktive Ordner und Endeinstellungen | OFFEN |
+| Produktive Ordner und Endeinstellungen | BESTANDEN; freigegebener Ordner aktiv, gewünschte Optionen und Anmeldestart geprüft, eigene Prüfdaten/Helfer entfernt |
 
 Wochenlanger Betrieb braucht einen entsprechenden Beobachtungszeitraum. Gemeinsame Änderungen bleiben **UNGEPRÜFT unter macOS** und im Draft-PR #1. Mac-Prüfstand `df207f79aa812f70d090e4306443436d51d48952` bewahren.
 
-## Bestätigte Funktionsläufe auf Preview 2
+## Funktionsläufe mit jeweils angegebenem Paketstand
+
+### Neustart und produktiver Abschluss am 18.11.2026
+
+Aktuell installierter und geprüfter App-Code bleibt `f35bff9f8f1222d176b987382d3214dfbd9148c1` aus GitHub-Preview 4. Anschließende Commits ändern Dokumentation und den außerhalb des ausgelieferten Pakets liegenden Login-Prüfer; sie sind keine neue App-Paketversion.
+
+Normaler Windows-Neustart ohne erzwungenes Schließen angefordert. Der Nutzer meldete sich selbst an. Nativer Windows-Bootzeitpunkt wechselte von 07:46:32,5 auf 10:00:33,5 Uhr MEZ; Kernel-General-Ereignis 12 bestätigt den neuen Boot. Der einmalige Beobachter sah vor seiner Testdatei exakt eine Hintergrund-GUI, einen Supervisor und einen Dienst (jeweils tatsächlicher Interpreter ohne Redirector-Doppelzählung). Er startete VoxDrop niemals selbst. Neuer synthetischer Auftrag automatisch `done`, Verarbeitung 83,155 s, TXT neben Aufnahme und Originalhash erhalten. Der Test war bereits abgeschlossen, bevor die App später regulär zur Sichtprüfung geöffnet wurde.
+
+Vor Produktivaktivierung alle 335 vorhandenen Dateien im freigegebenen Ordner erneut gegen die privaten Ausgangshashes geprüft: unverändert. Konfiguration und konsistente SQLite-Datenbank gesichert. Zehn ausschließlich zu diesem Lauf gehörende Aufnahmen/TXT-Dateien privat kopiert, Hashes verglichen und aus dem Prüfordner entfernt. Der erste Abschlusshelfer stoppte anschließend beim Entfernen des leeren Ordners mit Windows-Sharing-Fehler 32; Ursache des offenen Handles nicht belegt, keine fremden Prozesse beendet. Der Fortsetzungsschritt prüfte Sicherung, Datenbankintegrität, Original-/TXT-Hashes und leeren Zielordner erneut. Danach leeren Prüfordner erfolgreich entfernt, Produktivkonfiguration validiert/atomar gespeichert und ausschließlich eigene temporäre Login-Helfer entfernt. Der Test-Run-Wert war bereits durch den Beobachter gelöscht; produktiver VoxDrop-Run-Wert bleibt erhalten.
+
+Endzustand: genau der privat freigegebene produktive Ordner, rekursiv, TXT neben Original, keine Archivverschiebung; Qwen3-ASR 1.7B, automatische Sprache, CUDA, Stilleüberspringen, Sprechererkennung und drei DOVER-Durchgänge, 30-s-Intervall, Überwachung und Anmeldestart aktiv. Erster produktiver Scan erfasste 236 Medien, die normale Verarbeitung begann. Das ist keine behauptete Fertigstellung dieses Altbestands. Vorhandene Ergebnisse bleiben durch den geprüften Kollisionsschutz erhalten.
+
+Erster echter produktiver Auftrag anschließend in 478,768 s erfolgreich abgeschlossen. Medienhash gegen die vor Aktivierung erstellte Bestandsliste und den gespeicherten Auftrags-Hash geprüft: Original unverändert. Neues TXT veröffentlicht und dessen Hash mit der Datenbank verglichen; alle 97 bereits zuvor vorhandenen TXT-Dateien weiterhin unverändert. Nächster produktiver Auftrag läuft. Abschließende native Prüfung bestätigt gespeicherte Produktivkonfiguration, Datenbankintegrität `ok`, jeweils einen GUI-/Supervisor-/Dienstbaum einschließlich Redirector-Paaren sowie entfernte eigene Prüfordner-/Autostarthilfen. Dienst und Supervisor behalten ihre PIDs vom tatsächlichen Anmeldestart.
+
+Auch die zwei synthetischen Dateien der isolierten SMB-Prüfung gegen die dort gespeicherten Medien-/TXT-Hashes verifiziert, privat archiviert und anschließend samt exakt zugeordneten leeren Prüfunterordnern entfernt. Andere SMB-Dateien und Freigabeeinstellungen nicht verändert.
+
+Bedienhilfe nach Neustart zunächst wieder mit vollständigen Bildern/Accessibility nutzbar. Normaler EXE-Aufruf zeigte dieselbe zuvor automatisch gestartete Instanz; Maximierung bedient, Status und Verlauf lesbar. Bei der anschließenden automatisierten Pfadzuweisung änderte `sky.set_value` den angezeigten Text, löste aber das in QML verwendete `textEdited`-Signal nicht aus. Der folgende Speichern-Klick meldete Erfolg, schrieb dabei jedoch den alten Controller-Entwurf mit entferntem Prüfordner. Die unabhängige Dateiprüfung erkannte diese Abweichung. Daher diese Interaktion ausdrücklich nicht als erfolgreiche Produktivpfad-Speicherung werten; Qt/UIA-Verhalten bei künftigen Accessibility-Prüfungen berücksichtigen.
+
+Die validierte atomare Konfigurationsschnittstelle stellte den freigegebenen Produktivzustand wieder her. Anschließend ausschließlich den eigenen GUI-Prozess neu geladen, damit er die gespeicherten Einstellungen frisch übernimmt; Supervisor und Dienst blieben dabei mit identischen PIDs/Erstellzeiten erhalten. Konfiguration, Datenbankintegrität, aktive Überwachung und Entfernung der temporären Helfer danach erneut unabhängig geprüft. Die Bedienhilfe lieferte beim weiteren Tastaturversuch wieder schwarze Aufnahmen nach `failed to activate captured window`; zusätzliche Sichtbedienung beendet. Keine neue VoxDrop-Konsole im zuvor beobachteten Fensterbestand. Physischer Explorer-Drop und physische Taskleisten-/Infobereichsklicks bleiben ungeprüft; die bereits dokumentierte fensterübergreifende Drag-Grenze wurde nicht durch andere Eingabemethoden umgangen.
+
+Verbleibende Grenzen: physischer Explorer-Drop, physische Taskleisten-/Infobereichsklicks, systemweiter DPI-Wechsel, tatsächlicher SMB-Serverausfall und mehrstündige/wochenlange Echtzeitserien. Gemeinsamer Code unter macOS ungeprüft, Draft-PR deshalb erhalten; stabile Release-Assets unverändert. WIN-05 technisch offen, für die vereinbarten getrennt deutsch-/englischsprachigen Meetings kein Abnahmekriterium.
 
 ### Aktueller Paketstand und Fortsetzung
 
