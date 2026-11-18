@@ -1200,6 +1200,17 @@ def keep_transcript_beside_source(db, job, settings, config):
     return db.execute("SELECT * FROM jobs WHERE id=?", (job["id"],)).fetchone()
 
 
+def finish_cancelled_job(db, state, work, job_id):
+    if work.resolve().parent == (state/'jobs').resolve() and not work.is_symlink():
+        with suppress(OSError):
+            shutil.rmtree(work)
+    if not restore_preempted(db, job_id):
+        error_state(db, job_id, 'cancelled', None)
+        with db:
+            db.execute('DELETE FROM cancel_requests WHERE job_id=?',(job_id,))
+            db.execute('DELETE FROM job_retries WHERE job_id=?',(job_id,))
+
+
 def next_job(
     db,
     state,
@@ -1460,14 +1471,7 @@ def next_job(
         with suppress(OSError):
             transcript.unlink(missing_ok=True)
     except JobCancelled:
-        if work.resolve().parent == (state/'jobs').resolve() and not work.is_symlink():
-            with suppress(OSError):
-                shutil.rmtree(work)
-        if not restore_preempted(db, job_id):
-            error_state(db, job_id, 'cancelled', None)
-            with db:
-                db.execute('DELETE FROM cancel_requests WHERE job_id=?',(job_id,))
-                db.execute('DELETE FROM job_retries WHERE job_id=?',(job_id,))
+        finish_cancelled_job(db, state, work, job_id)
     except MediaBusy as error:
         error_state(db,job_id,'failed',str(error))
         with db:
@@ -1477,6 +1481,11 @@ def next_job(
     except FileExistsError as error:
         error_state(db, job_id, "blocked", str(error))
     except Exception as error:  # noqa: BLE001 - job boundary, retains cached export for manual retry
+        # Cleanup errors must never replace a recorded cancellation/preemption.
+        publication=db.execute('SELECT publication_started FROM jobs WHERE id=?',(job_id,)).fetchone()
+        if cancellation_requested(db,job_id) and publication and not publication[0]:
+            finish_cancelled_job(db, state, work, job_id)
+            return True
         error_state(db, job_id, "failed", str(error) or type(error).__name__)
         if transient_file_error(error):
             previous = db.execute("SELECT delay FROM job_retries WHERE job_id=?", (job_id,)).fetchone()

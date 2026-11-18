@@ -44,7 +44,8 @@ class ProcessLifecycleTests(unittest.TestCase):
             leaf = ("import mmap,os,sys,time; f=open(sys.argv[1],'w+b'); f.truncate(64*1024*1024); "
                     "audio=mmap.mmap(f.fileno(),0); print(os.getpid(),flush=True); time.sleep(60)")
             branch = ("import subprocess,sys,time; p=subprocess.Popen([sys.executable,'-c',"
-                      + repr(leaf) + ",sys.argv[1]]); p.wait()")
+                      + repr(leaf) + ",sys.argv[1]],stdout=subprocess.PIPE,text=True); "
+                      "print(p.stdout.readline().strip(),flush=True); p.wait()")
             with child_process([sys.executable, '-c', branch, str(recording)], cancellable=True,
                                stdout=subprocess.PIPE, text=True, **process_options()) as child:
                 import concurrent.futures

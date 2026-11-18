@@ -39,6 +39,25 @@ class QueueTests(unittest.TestCase):
     def row(self,identifier):
         return self.db.execute('select * from jobs where id=?',(identifier,)).fetchone()
 
+    def test_cleanup_error_cannot_replace_app_quit_preemption_or_user_cancel(self):
+        from app_lifecycle import request_stop, register_owner
+        for app_quit in (True, False):
+            register_owner(self.db)
+            source, identifier = self.add(f'cleanup-{app_quit}.wav',str(app_quit).encode())
+            def interrupted(*args, **kwargs):
+                if app_quit:
+                    request_stop(self.db)
+                else:
+                    cancel_job(self.db,identifier)
+                raise PermissionError('Mapped audio still closing')
+            service.next_job(self.db,self.state,interrupted)
+            self.assertEqual(self.row(identifier)['state'], 'ready' if app_quit else 'cancelled')
+            self.assertIsNone(self.row(identifier)['error'])
+            self.assertFalse((self.state/'jobs'/str(identifier)).exists())
+            self.assertEqual(source.read_bytes(),str(app_quit).encode())
+            if app_quit:
+                cancel_job(self.db,identifier)
+
     def test_queue_contains_every_item_beyond_history_limit_and_order_survives_restart(self):
         for index in range(301):(self.incoming/f'item-{index:03}.wav').write_bytes(str(index).encode())
         service.scan(self.db,self.settings,100);service.scan(self.db,self.settings,101)
