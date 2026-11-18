@@ -1,5 +1,14 @@
 # Windows-Übergabe vom 17. November, fortgeführt am 18. November 2026
 
+## Gemeinsame Sitzung am 18.11.2026: Neuinstallation läuft
+
+Der Nutzer hat die vollständige Windows-Abnahme gestartet und Veröffentlichung/Weiterentwicklung autorisiert. Der aktuelle [GitHub-Vorabdownload ist Preview 2](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.2-windows-preview.2), App-Code `c86746f8cc98c2dce75fb95bd489563591640f9a`, ZIP-SHA-256 `3841a6ebcb882fb7e0642c1a390ea7475a98fe15e84e6b4ec67c068166ada426`. Stabile Assets bleiben unverändert. [Laufender Abnahmebericht im Windows-Branch](https://github.com/adriantagonist87/VoxDrop/blob/fix/windows-native-validation/docs/WINDOWS_ABNAHME_2026-11-18.md).
+
+Bestätigt: zugeordnete alte Windows-App-/Modell-/Laufzeit-/Profilbestände bereinigt, Einstellungen und Verlauf privat gesichert, rund 30,93 GiB auf C: und 8,27 GiB auf D: freigegeben. Preview 1 tatsächlich neu von GitHub geladen, per EXE frische Laufzeit eingerichtet, Modelle über die Oberfläche neu geladen. Echte Firewall-Freigabe durch den Nutzer selbst. Dabei WIN-08 reproduziert: veraltete Verweigerungsanzeige während eines aktiven Download-Retry. In Preview 2 korrigiert; neue Regression vorher fehlgeschlagen, danach erfolgreich. Gesamtsuite 92 Fälle: 85 bestanden, sieben explizite Skips, 15,160 s. Die frische Installation des korrigierten Pakets und weitere Funktionsprüfungen laufen; **noch keine vollständige Abnahme**.
+
+Nutzerpräzisierung: Meetings sind jeweils deutschsprachig oder englischsprachig. Beide Sprachen getrennt mit/ohne Stilleüberspringen prüfen; WIN-05 bleibt technisch dokumentiert, blockiert diesen vereinbarten Nutzungsumfang aber nicht. Produktive Ordner wurden privat festgelegt. macOS bleibt ungeprüft; auch den gemeinsamen WIN-08-Fix in `desktop/network_wait.py` und dessen Tests gegenprüfen. Gemeinsamen Code bis dahin im Draft-PR belassen.
+
+
 Dieser reine Dokumentationsstatus macht die Windows-Arbeit auf `main` sichtbar. Gemeinsame Codeänderungen bleiben im [Draft-PR #1](https://github.com/adriantagonist87/VoxDrop/pull/1) auf [fix/windows-native-validation](https://github.com/adriantagonist87/VoxDrop/tree/fix/windows-native-validation). Der freigegebene Release v1.3.1 und seine Assets wurden nicht überschrieben.
 
 ## Verbindlicher nächster Abschlusstest
