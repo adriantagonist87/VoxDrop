@@ -7,12 +7,20 @@ ColumnLayout {
     id: pane
     required property var api
     required property var viewState
+    signal configureFolders()
     property var items: api.queueItems
     readonly property bool compact: viewState.queueCompact
     property bool searchOpen: false
     readonly property bool searching: Boolean(viewState.queueSearch)
     property bool dragging: false
     property real dragY: -1
+    property var expandedJobs: ({})
+    onCompactChanged: expandedJobs = ({})
+    function toggleExpanded(identifier, expanded) {
+        var updated = Object.assign({}, expandedJobs)
+        updated[identifier] = !expanded
+        expandedJobs = updated
+    }
     spacing: 8
 
     component QueueButton: Button {
@@ -45,14 +53,13 @@ ColumnLayout {
                 else pane.api.setQueueSearch('')
             }
         }
-    }
-    QueueButton {
-        objectName: "pauseQueueButton"
-        Layout.fillWidth: true
-        text: "Nach diesem Auftrag pausieren"
-        visible: Boolean(pane.viewState.current.name) && !pane.viewState.processingStopping && (!pane.viewState.queuePaused || pane.viewState.queueImmediateCount > 0)
-        enabled: visible && !pane.viewState.busy
-        onClicked: pane.api.pauseQueue(true)
+        QueueButton {
+            objectName: "queueDetailsToggle"
+            text: pane.compact ? "Details anzeigen" : "Kompakte Liste"
+            enabled: !pane.dragging
+            onClicked: pane.api.setQueueCompact(!pane.compact)
+        }
+        QueueButton { id: queueActionTrigger; objectName: "queueActionsButton"; text: "Aktionen …"; Accessible.name: "Warteschlangenaktionen"; onClicked: queueActions.open() }
     }
     RowLayout {
         visible: pane.searchOpen
@@ -69,36 +76,14 @@ ColumnLayout {
         }
         QueueButton { text: '×'; Accessible.name: 'Warteschlangensuche zurücksetzen'; onClicked: pane.api.setQueueSearch('') }
     }
-    RowLayout {
-        Layout.fillWidth: true
-        QueueButton {
-            objectName: "queueDetailsToggle"
-            Layout.fillWidth: true
-            text: pane.compact ? "Details anzeigen" : "Details ausblenden"
-            enabled: !pane.dragging
-            onClicked: pane.api.setQueueCompact(!pane.compact)
-        }
-        QueueButton {
-            objectName: "cancelQueueButton"
-            Layout.fillWidth: true
-            text: "Warteschlange leeren …"
-            enabled: !pane.viewState.busy && (pane.items.length > 0 || Boolean(pane.viewState.current.name))
-            onClicked: confirmCancelQueue.open()
-        }
-    }
-    Text { text: pane.searching ? 'Reihenfolge und Griff gelten für die gesamte Warteschlange.' : "Am Griff ziehen oder Reihenfolge im Menü ändern"; color: "#ababab"; font.pixelSize: 11; wrapMode: Text.WordWrap; Layout.fillWidth: true }
-    Text {
-        objectName: "processingStatus"
-        Layout.fillWidth: true
-        text: pane.viewState.queuePaused && pane.viewState.queueImmediateCount > 0 ? 'Nur die Sofort-Auswahl wird verarbeitet. Die übrige Warteschlange bleibt pausiert.' : pane.viewState.processingStatus || ''
-        wrapMode: Text.WordWrap; color: pane.viewState.queuePaused ? "#d9bd83" : "#a4d8b9"; font.pixelSize: 12
-    }
+    Text { visible: pane.searching; text: 'Positionen und Reihenfolgeaktionen gelten für die gesamte Warteschlange.'; color: "#b7b7bc"; font.pixelSize: 12; wrapMode: Text.WordWrap; Layout.fillWidth: true }
     Text {
         Layout.fillWidth: true
         visible: pane.items.length === 0
-        text: pane.searching ? 'Keine passenden Aufträge.' : "Keine Aufträge in der Warteschlange."
+        text: pane.searching ? 'Keine passenden Aufträge.' : "Keine wartenden Aufträge. Dateien oder Ordner hier ablegen oder oben hinzufügen."
         color: "#ababab"; font.pixelSize: 13
     }
+    QueueButton { text: "Ordnerüberwachung einrichten"; visible: !pane.searching && pane.items.length === 0 && pane.viewState.folderCount === 0; onClicked: pane.configureFolders() }
     ListView {
         id: queueList
         objectName: "queueList"
@@ -107,21 +92,17 @@ ColumnLayout {
         Layout.minimumHeight: 100
         clip: true
         spacing: pane.compact ? 3 : 7
-        model: pane.items
+        model: pane.api.queueModel
         boundsBehavior: Flickable.StopAtBounds
         ScrollBar.vertical: ScrollBar {}
         delegate: Item {
             id: row
             required property var modelData
             required property int index
-            property bool expanded: !pane.compact
-            Connections {
-                target: pane
-                function onCompactChanged() { row.expanded = !pane.compact }
-            }
+            property bool expanded: Object.prototype.hasOwnProperty.call(pane.expandedJobs, modelData.id) ? pane.expandedJobs[modelData.id] : !pane.compact
             objectName: "queueRow" + modelData.id
             width: queueList.width - 12
-            height: contents.implicitHeight + 20
+            height: contents.implicitHeight + 16
             Rectangle { anchors.fill: parent; radius: 7; color: "#242424"; border.color: drop.containsDrag ? "#8dc5ac" : "#3a3a3a"; opacity: dragMouse.drag.active ? .55 : 1 }
             Rectangle {
                 id: token
@@ -175,9 +156,10 @@ ColumnLayout {
                         }
                         Accessible.name: (row.expanded ? "Angaben einklappen: " : "Angaben ausklappen: ") + row.modelData.name
                         enabled: !pane.dragging
-                        onClicked: row.expanded = !row.expanded
+                        onClicked: pane.toggleExpanded(row.modelData.id, row.expanded)
                     }
                     QueueButton {
+                        id: rowActionTrigger
                         objectName: "queueActions" + row.modelData.id
                         Layout.preferredWidth: 27
                         contentItem: Item {
@@ -189,7 +171,7 @@ ColumnLayout {
                         onClicked: moveMenu.open()
                     }
                 }
-                Text { Layout.fillWidth: true; text: row.modelData.path; color: "#a9a9a9"; font.pixelSize: 11; elide: Text.ElideMiddle }
+                Text { Layout.fillWidth: true; text: row.modelData.path; color: "#b7b7bc"; font.pixelSize: 12; elide: row.expanded ? Text.ElideNone : Text.ElideMiddle; wrapMode: row.expanded ? Text.WrapAnywhere : Text.NoWrap }
                 Text { visible: row.expanded; Layout.fillWidth: true; text: row.modelData.status + " · " + row.modelData.size + " · Dauer " + row.modelData.audio; color: "#c8dfd3"; font.pixelSize: 11; wrapMode: Text.WordWrap }
                 Text { visible: row.expanded; Layout.fillWidth: true; text: row.modelData.model + " · " + row.modelData.language + " · " + row.modelData.hardware; color: "#bcbcbc"; font.pixelSize: 11; wrapMode: Text.WordWrap }
                 Text { visible: row.expanded; Layout.fillWidth: true; text: "Eingereiht " + row.modelData.added + (row.modelData.retryAt ? " · Wiederholung " + row.modelData.retryAt : "") + (row.modelData.options ? " · " + row.modelData.options : ""); color: "#aaa"; font.pixelSize: 11; wrapMode: Text.WordWrap }
@@ -205,6 +187,8 @@ ColumnLayout {
             Menu {
                 id: moveMenu
                 objectName: 'queueMoveMenu' + row.modelData.id
+                x: Math.max(0, Math.min(row.width - width, rowActionTrigger.mapToItem(row, 0, 0).x))
+                y: rowActionTrigger.mapToItem(row, 0, rowActionTrigger.height).y
                 QueueMenuAction { objectName: 'queueMoveFirst' + row.modelData.id; text: "Als Nächstes"; enabled: !pane.viewState.busy && row.modelData.position > 1; onTriggered: pane.api.moveQueueRelative(row.modelData.id, 'first') }
                 QueueMenuAction { objectName: 'queueMoveUp' + row.modelData.id; text: "Einen Platz nach oben"; enabled: !pane.viewState.busy && row.modelData.position > 1; onTriggered: pane.api.moveQueueRelative(row.modelData.id, 'up') }
                 QueueMenuAction { objectName: 'queueMoveDown' + row.modelData.id; text: "Einen Platz nach unten"; enabled: !pane.viewState.busy && row.modelData.position < pane.viewState.queueCount; onTriggered: pane.api.moveQueueRelative(row.modelData.id, 'down') }
@@ -235,6 +219,18 @@ ColumnLayout {
             }
         }
     }
+    Menu {
+        id: queueActions
+        objectName: "queueActionsMenu"
+        x: Math.max(0, Math.min(pane.width - width, queueActionTrigger.mapToItem(pane, 0, 0).x))
+        y: queueActionTrigger.mapToItem(pane, 0, queueActionTrigger.height).y
+        QueueMenuAction {
+            objectName: "cancelQueueButton"
+            text: "Warteschlange leeren …"
+            enabled: !pane.viewState.busy && (pane.viewState.queueCount > 0 || Boolean(pane.viewState.current.name))
+            onTriggered: confirmCancelQueue.open()
+        }
+    }
     Dialog {
         id: confirmCancelQueue
         objectName: "confirmCancelQueue"
@@ -245,7 +241,7 @@ ColumnLayout {
         standardButtons: Dialog.Cancel | Dialog.Ok
         background: Rectangle { color: "#292929"; radius: 8; border.color: "#454545" }
         contentItem: Text {
-            text: "Wartende Aufträge werden entfernt und die aktuelle Transkription wird abgebrochen. Ein bereits begonnener Export wird fertiggestellt. Originale und vorhandene Transkripte bleiben erhalten.\n\nZum bloßen Anhalten nutze stattdessen den großen Stopp-Knopf. Nach dem Leeren werden abgebrochene Dateiversionen nicht automatisch erneut eingereiht."
+            text: pane.viewState.queueCount + " wartende Aufträge werden entfernt" + (pane.viewState.current.name ? " und der aktuelle Auftrag wird abgebrochen" : "") + ". Ein bereits begonnener Export wird fertiggestellt. Originale und vorhandene Transkripte bleiben erhalten.\n\nZum bloßen Anhalten nutze Stopp. Ungestartete Aufträge zählen nicht als Verarbeitung im Verlauf. Nach dem Leeren werden abgebrochene Dateiversionen nicht automatisch erneut eingereiht."
             wrapMode: Text.WordWrap; color: "#ddd"; font.pixelSize: 13
         }
         onAccepted: pane.api.cancelQueue()

@@ -15,6 +15,7 @@ from model_storage import data_directory
 from file_actions import reveal_in_explorer
 from transcript_search import path_matches, run_content_search, transcript_path, history_category
 from command_process import CommandProcesses
+from rows_model import StableRows
 from network_wait import NetworkPermissionError, retry_network_permission
 from PySide6.QtCore import (
     Property,
@@ -320,12 +321,14 @@ class Controller(QObject):
         self.quitting=False
         self.shutdown_complete=False
         self.playback_stopping=False
+        self.stop_command_pending=False
         self.playback_stop_job=None
         self.preferences = QSettings(
             str(PROFILE / "layout.ini"), QSettings.Format.IniFormat
         )
         self.preview = preview
         self.draft = DEFAULTS.copy()
+        self.saved_config = DEFAULTS.copy()
         self.paths = []
         self.snapshot = {}
         self.direct = {}
@@ -333,9 +336,13 @@ class Controller(QObject):
         self.selected = None
         self.history = []
         self.queue = []
+        self.queue_model = StableRows(self)
+        self.history_model = StableRows(self)
+        self.history_model_scope = None
         self.queue_all = []
         self.queue_query = ''
         self.history_query = ''
+        self.history_page = 0
         self.content_token = ''
         self.content_running = False
         self.content_status = ''
@@ -360,6 +367,7 @@ class Controller(QObject):
         QApplication.instance().aboutToQuit.connect(self.network_cancel.set)
         self.message = ""
         self.message_error = False
+        self.message_at = 0
         self.drop_message = ""
         self.drop_error = False
         self.drop_plan = {}
@@ -376,6 +384,15 @@ class Controller(QObject):
         self.history_search_timer.timeout.connect(self.refresh)
 
     settings = Property("QVariantMap", lambda self: self.draft, notify=changed)
+
+    @property
+    def drop_message(self):
+        return self._drop_message
+
+    @drop_message.setter
+    def drop_message(self, text):
+        self._drop_message = text
+        self.drop_message_at = time() if text else 0
     folderPaths = Property(
         "QStringList", lambda self: self.paths, notify=foldersChanged
     )
@@ -383,10 +400,13 @@ class Controller(QObject):
         "QVariantList", lambda self: self.history, notify=historyChanged
     )
     queueItems = Property('QVariantList',lambda self:self.queue,notify=queueChanged)
+    queueModel = Property(QObject, lambda self:self.queue_model, constant=True)
+    historyModel = Property(QObject, lambda self:self.history_model, constant=True)
     dropPlan = Property('QVariantMap', lambda self: self.drop_plan, notify=changed)
 
     @Property("QVariantMap", notify=changed)
     def state(self):
+        busy = self.busy or self.stop_command_pending
         running = self.snapshot.get("running", False)
         service = self.snapshot.get("service") or {}
         job = self.snapshot.get("current")
@@ -403,9 +423,13 @@ class Controller(QObject):
                 else "",
                 "model": MODELS.get(settings.get("model"), MODELS["large-v3-turbo"]),
                 "hardware": GPU_NAME.get(settings.get("hardware"), "CPU"),
+                "hardwareValue": settings.get("hardware", "cpu"),
                 "canCancel": job['state'] in ('copying','transcribing') and not job.get('publication_started') and not job.get('cancel_requested'),
             }
         checked = {path: self.folder_status(path) for path in self.paths}
+        saved_paths = list(dict.fromkeys(self.saved_config.get('folders', [])))
+        saved_checked = [self.folder_status(path) for path in saved_paths]
+        drop_latest = self.drop_message_at > self.message_at
         paused=self.snapshot.get('queue_paused',False)
         count=len(self.snapshot.get('queue',[]))
         finishing=bool(job and (job['state']=='exporting' or job.get('publication_started') or job.get('text_hash')))
@@ -425,7 +449,7 @@ class Controller(QObject):
             processing_status='Bereit. Neue Aufträge werden automatisch verarbeitet.'
         return {
             "ready": self.ready,
-            "busy": self.busy,
+            "busy": busy,
             "downloading": self.downloading,
             "waitingForNetwork": self.waiting_for_network,
             "running": running,
@@ -433,6 +457,12 @@ class Controller(QObject):
             if running
             else "Dienst aus",
             "serviceError": service.get("error") or "",
+            "monitoringEnabled": bool(self.saved_config.get('monitoring')),
+            "folderCount": len(saved_paths),
+            "availableFolderCount": sum(bool(item.get('available') and not item.get('error')) for item in saved_checked),
+            "folderWarnings": [item for item in saved_checked if item.get('error')],
+            "settingsDirty": self.settings_dirty(),
+            "settingsExist": CONFIG.is_file(),
             "current": current,
             "waiting": self.snapshot.get("waiting", 0),
             "queueCount": len(self.snapshot.get('queue',[])),
@@ -440,8 +470,8 @@ class Controller(QObject):
             "processingStatus": processing_status,
             "processingActive": active or stopping,
             "processingStopping": stopping,
-            "canStopProcessing": self.ready and not self.busy and not self.quitting and active and not stopping,
-            "canStartProcessing": self.ready and not self.busy and not self.quitting and
+            "canStopProcessing": self.ready and not self.quitting and active and not stopping,
+            "canStartProcessing": self.ready and not busy and not self.quitting and
                 not stopping and (paused or not running or (not job and count>0)),
             "queueImmediateCount": self.snapshot.get('immediate_count', 0),
             "queueCompact": self.queue_compact,
@@ -465,12 +495,19 @@ class Controller(QObject):
             "modelsReady": self.models_present(),
             "message": self.message,
             "messageError": self.message_error,
+            "feedbackText": self.drop_message if drop_latest else self.message,
+            "feedbackError": self.drop_error if drop_latest else self.message_error,
+            "feedbackDetails": '\n\n'.join(text for text in (self.message, self.drop_message) if text),
             "logAvailable": self.message_error and DESKTOP_LOG.is_file(),
             "filter": self.filter,
             "historyCounts": self.history_counts(),
+            "globalHistoryCounts": self.snapshot.get('global_history_counts', self.history_counts()),
+            "historyTotal": self.history_counts().get(self.filter, 0),
+            "historyOffset": self.history_page * 250,
+            "historyPage": self.history_page,
             "order": self.order,
             "canClear": bool(self.snapshot.get('has_stored_data',self.snapshot.get('stored_jobs',0)
-                or self.snapshot.get('jobs') or self.snapshot.get('queue') or self.history_counts()['all'])) and not job and not self.busy,
+                or self.snapshot.get('jobs') or self.snapshot.get('queue') or self.history_counts()['all'])) and not job and not busy,
             'quitting': self.quitting,
             'shutdownComplete': self.shutdown_complete,
         }
@@ -483,6 +520,7 @@ class Controller(QObject):
         settings = job_settings(job)
         speakers = settings.get("speakers", True)
         known_result = job.get('result_kind') in ('existing','reused','duplicate')
+        pending = job['state'] in ('seen', 'ready') and not known_result
         memory = job.get("peak_memory_bytes")
         method = {
             "dover-lap": f"DOVER-Lap ({job.get('speaker_passes') or 3} Durchgänge)",
@@ -512,7 +550,7 @@ class Controller(QObject):
                     ("Ende", clock(job.get("finished"), "%d.%m.%Y %H:%M")),
                     ("Versuche", job.get("attempt", 0)),
                     (
-                        "Modell verwendet",
+                        "Modell für diesen Auftrag" if pending else "Modell verwendet",
                         ('Nicht bekannt (Bestandsdatei)' if job.get('result_kind')=='existing'
                          else 'Siehe Ursprungsauftrag') if known_result
                         else MODELS.get(settings.get("model"), MODELS["large-v3-turbo"]),
@@ -526,7 +564,9 @@ class Controller(QObject):
                     ("Dauer Spracherkennung", 'Nicht erneut ausgeführt' if known_result else duration(job.get("speech_seconds"))),
                     (
                         "Verfahren der Sprecherzuordnung",
-                        'Nicht neu bestimmt' if known_result else method if speakers else "Deaktiviert",
+                        'Nicht neu bestimmt' if known_result else
+                        ('DOVER-Lap geplant' if settings.get('dover_lap') else 'Einzellauf geplant') if pending and speakers else
+                        ('Noch nicht ermittelt' if job['state'] in ('copying','transcribing','exporting') and not job.get('speaker_method') else method) if speakers else "Deaktiviert",
                     ),
                     (
                         "Dauer Sprecherzuordnung",
@@ -557,6 +597,7 @@ class Controller(QObject):
     def notify(self, text="", error=False):
         self.message = text
         self.message_error = error
+        self.message_at = time() if text else 0
         self.changed.emit()
 
     @Slot(bool)
@@ -577,7 +618,7 @@ class Controller(QObject):
         self.network_cancel.set()
 
     def action(self, operation, success, *, downloading=False):
-        if self.busy or not self.ready:
+        if self.busy or self.stop_command_pending or not self.ready:
             return
         self.busy = True
         self.downloading = downloading
@@ -590,6 +631,8 @@ class Controller(QObject):
         def finished(result, error):
             self.busy = False
             self.downloading = False
+            if not error:
+                self.refresh_saved_settings()
             self.notify(error or success, bool(error))
             self.refresh()
 
@@ -620,6 +663,7 @@ class Controller(QObject):
                 self.notify(error, True)
                 return
             self.draft = settings
+            self.saved_config = dict(settings)
             self.paths = list(settings.get("folders", []))
             self.ready = True
             self.foldersChanged.emit()
@@ -631,7 +675,12 @@ class Controller(QObject):
 
     @Slot()
     def retryPreparation(self):
-        self.start()
+        if self.ready:
+            self.refresh()
+            self.notify('Laufzeit bereit. Modelle installiert.' if self.models_present()
+                        else 'Die gewählten Modelle müssen noch heruntergeladen werden.', not self.models_present())
+        else:
+            self.start()
 
     @Slot(str, "QVariant")
     def setSetting(self, key, value):
@@ -678,6 +727,62 @@ class Controller(QObject):
             "folders": [path.strip() for path in self.paths if path.strip()],
             "output_subfolder": self.draft["output_subfolder"].strip(),
         }
+
+    def refresh_saved_settings(self):
+        # Preview/isolated tests must never read another profile's configuration.
+        if not self.preview and CONFIG.parent == PROFILE:
+            with suppress(OSError, ValueError):
+                self.saved_config = read_settings()
+
+    def settings_dirty(self):
+        draft, saved = self.config(), dict(self.saved_config)
+        for key in ('gpu_budget_percent', 'monitoring'):
+            draft.pop(key, None)
+            saved.pop(key, None)
+        return draft != saved
+
+    @Slot()
+    def discardSettings(self):
+        if self.busy:
+            return
+        self.refresh_saved_settings()
+        self.draft = dict(self.saved_config)
+        self.paths = list(self.saved_config.get('folders', []))
+        self.foldersChanged.emit()
+        self.changed.emit()
+
+    @Property(str, notify=changed)
+    def workspaceView(self):
+        return self.preferences.value('workspace/view', 'auto')
+
+    @Slot(str)
+    def setWorkspaceView(self, value):
+        if value in ('auto', 'focus'):
+            self.preferences.setValue('workspace/view', value)
+            self.preferences.sync()
+            self.changed.emit()
+
+    @Property(int, notify=changed)
+    def workspaceHistoryWidth(self):
+        return max(340, min(720, self.preferences.value('workspace/historyWidth', 390, type=int)))
+
+    @Slot(int)
+    def saveWorkspaceHistoryWidth(self, value):
+        self.preferences.setValue('workspace/historyWidth', max(340, min(720, value)))
+        self.preferences.sync()
+
+    @Slot()
+    def pickMedia(self):
+        paths, _ = QFileDialog.getOpenFileNames(None, 'Aufnahmen einmalig hinzufügen', '',
+            'Audio und Video (*.mp4 *.mkv *.mov *.webm *.avi *.wav *.mp3 *.m4a *.aac *.flac *.ogg *.opus *.wma);;Alle Dateien (*)')
+        if paths:
+            self.enqueueFolders([QUrl.fromLocalFile(path) for path in paths])
+
+    @Slot()
+    def pickDropFolder(self):
+        path = QFileDialog.getExistingDirectory(None, 'Ordner einmalig samt Unterordnern hinzufügen')
+        if path:
+            self.enqueueFolders([QUrl.fromLocalFile(path)])
 
     @Slot("QVariantList")
     def enqueueFolders(self, urls):
@@ -833,7 +938,7 @@ class Controller(QObject):
 
     @Slot(int)
     def setGpuBudget(self, percent):
-        if self.busy or self.quitting:
+        if self.busy or self.stop_command_pending or self.quitting:
             return
         if not 10 <= percent <= 100:
             self.notify('Das GPU-Arbeitsbudget muss zwischen 10 und 100 % liegen.', True)
@@ -849,10 +954,10 @@ class Controller(QObject):
 
     @Slot(bool)
     def setAutostart(self, enabled):
-        settings = self.config()
+        settings = dict(self.saved_config)
 
         def register():
-            if enabled:
+            if enabled and not CONFIG.exists():
                 save_settings(settings)
             if sys.platform == "win32":
                 windows_login_item(enabled)
@@ -868,13 +973,20 @@ class Controller(QObject):
 
     @Slot()
     def toggleMonitor(self):
-        if not self.snapshot.get("running"):
-            self.save(True)
+        self.setMonitoring(not self.saved_config.get('monitoring', False))
+
+    @Slot(bool)
+    def setMonitoring(self, enabled):
+        if self.busy or self.stop_command_pending or not self.ready:
             return
-        settings = read_settings()
-        settings["monitoring"] = not settings["monitoring"]
-        self.draft["monitoring"] = settings["monitoring"]
-        self.action(lambda: save_settings(settings), "Ordnerüberwachung aktualisiert.")
+        def apply():
+            settings = read_settings()
+            settings['monitoring'] = enabled
+            save_settings(settings)
+            if not self.snapshot.get('running'):
+                command('start', CONFIG)
+        self.draft['monitoring'] = enabled
+        self.action(apply, 'Ordnerüberwachung eingeschaltet.' if enabled else 'Ordnerüberwachung ausgeschaltet. Die Warteschlange wird separat gesteuert.')
 
     def models_present(self):
         if self.preview:
@@ -950,7 +1062,10 @@ class Controller(QObject):
 
     @Slot()
     def openLog(self):
-        QDesktopServices.openUrl(QUrl.fromLocalFile(str(DESKTOP_LOG)))
+        if DESKTOP_LOG.is_file():
+            QDesktopServices.openUrl(QUrl.fromLocalFile(str(DESKTOP_LOG)))
+        else:
+            self.notify('Es wurde noch kein Diagnoseprotokoll angelegt.')
 
     @Slot(str)
     def checkFolders(self, path):
@@ -992,6 +1107,7 @@ class Controller(QObject):
         order = self.order
         history_filter = self.filter
         query, token = self.history_query, self.content_token
+        page = self.history_page
         reset_generation=self.reset_generation
 
         def finished(result, error):
@@ -1002,10 +1118,16 @@ class Controller(QObject):
             if error:
                 self.notify(error, True)
                 return
-            if (order, history_filter, query, token) != (self.order, self.filter, self.history_query, self.content_token):
+            if (order, history_filter, query, token, page) != (self.order, self.filter, self.history_query, self.content_token, self.history_page):
                 self.refresh()
                 return
             self.snapshot = result
+            self.refresh_saved_settings()
+            last_page = max(0, (self.history_counts().get(self.filter, 0) - 1) // 250)
+            if self.history_page > last_page:
+                self.history_page = last_page
+                self.refresh()
+                return
             if self.playback_stopping and result.get('queue_paused') and (
                     not result.get('current') or result['current']['id'] != self.playback_stop_job):
                 self.playback_stopping=False
@@ -1019,7 +1141,7 @@ class Controller(QObject):
             self.update_queue()
         def status():
             arguments = ['status', '--limit', '250', '--order', order, '--filter', history_filter,
-                         '--search', query]
+                         '--search', query, '--offset', str(page * 250)]
             if token:
                 arguments += ['--content-results', str(PROFILE / 'service/content-search-result.json'),
                               '--content-token', token]
@@ -1087,6 +1209,8 @@ class Controller(QObject):
             if error:
                 self.quitting=False
                 self.busy=False
+                self.stop_command_pending=False
+                self.playback_stopping=False
                 COMMANDS.reset()
                 if self.tray:self.quit_action.setEnabled(True)
                 self.notify('VoxDrop konnte noch nicht vollständig beendet werden: '+error,True)
@@ -1115,7 +1239,7 @@ class Controller(QObject):
 
     def update_status(self):
         if self.tray:
-            paths = [self.folder_status(path) for path in self.paths if path.strip()]
+            paths = [self.folder_status(path) for path in self.saved_config.get('folders', []) if path.strip()]
             available = bool(paths) and all(
                 path.get("available") and not path.get("error") for path in paths
             )
@@ -1131,11 +1255,11 @@ class Controller(QObject):
             self.monitor_action.setText(
                 (
                     "Ordnerüberwachung pausieren"
-                    if self.draft["monitoring"]
+                    if self.saved_config["monitoring"]
                     else "Ordnerüberwachung fortsetzen"
                 )
                 if running
-                else "Dienst starten"
+                else "Ordnerüberwachung einschalten"
             )
             self.monitor_action.setEnabled(self.ready and not self.busy)
             if running:
@@ -1153,6 +1277,7 @@ class Controller(QObject):
 
     @Slot(str)
     def setFilter(self, value):
+        self.history_page = 0
         self.filter = value
         self.changed.emit()
         self.update_history()
@@ -1160,11 +1285,21 @@ class Controller(QObject):
 
     @Slot(str)
     def setOrder(self, value):
+        self.history_page = 0
         self.order = value
         self.preferences.setValue("historyOrder", value)
         self.changed.emit()
         self.update_history()
         self.refresh()
+
+    @Slot(int)
+    def setHistoryPage(self, page):
+        last_page = max(0, (self.history_counts().get(self.filter, 0) - 1) // 250)
+        page = max(0, min(last_page, page))
+        if page != self.history_page:
+            self.history_page = page
+            self.changed.emit()
+            self.refresh()
 
     def history_counts(self):
         counts = self.snapshot.get("history_counts")
@@ -1205,10 +1340,14 @@ class Controller(QObject):
                     "finished": finished,
                     "repeat": bool(job.get("origin_job_id")),
                     "error": job["state"] in {"blocked", "failed"},
+                    "errorText": job.get('error') or '',
                 }
             )
-        if history != self.history:
+        scope = (self.filter, self.order, self.history_query, self.content_token, self.history_page)
+        if history != self.history or scope != self.history_model_scope:
             self.history = history
+            self.history_model.update(history, reset=scope != self.history_model_scope)
+            self.history_model_scope = scope
             self.historyChanged.emit()
 
     def update_queue(self):
@@ -1232,16 +1371,19 @@ class Controller(QObject):
         self.queue_all = queue
         self.apply_queue_search()
 
-    def apply_queue_search(self):
+    def apply_queue_search(self, *, reset=False):
         queue = [job for job in self.queue_all if path_matches(job['path'], self.queue_query)] if self.queue_query else self.queue_all
         if queue != self.queue:
             self.queue = queue
+            self.queue_model.update(queue, reset=reset)
             self.queueChanged.emit()
 
     @Slot(str)
     def setQueueSearch(self, query):
+        if query == self.queue_query:
+            return
         self.queue_query = query
-        self.apply_queue_search()
+        self.apply_queue_search(reset=True)
         self.changed.emit()
 
     @Slot(str)
@@ -1249,6 +1391,7 @@ class Controller(QObject):
         if query == self.history_query:
             return
         self.history_query = query
+        self.history_page = 0
         self.content_token = ''
         if self.content_running:
             self.content_cancel.set()
@@ -1367,10 +1510,10 @@ class Controller(QObject):
             return
         self.playback_stopping=True
         self.playback_stop_job=(self.snapshot.get('current') or {}).get('id')
-        self.busy=True
+        self.stop_command_pending=True
         self.notify('Warteschlange und aktuelle Transkription werden gestoppt …')
         def finished(result,error):
-            self.busy=False
+            self.stop_command_pending=False
             if error:
                 self.playback_stopping=False
                 self.playback_stop_job=None
@@ -1415,7 +1558,8 @@ class Controller(QObject):
 
     @Slot()
     def openTranscript(self):
-        if self.selected is None or self.selected['state'] not in ('done','existing','duplicate'):
+        if self.selected is None or (self.selected['state'] not in ('done','existing','duplicate')
+                                     and not self.selected.get('known_transcript_path')):
             return
         path=output_path(self.selected,transcript=True)
 
@@ -1448,7 +1592,7 @@ class Controller(QObject):
 
     @Slot()
     def clearHistory(self):
-        if self.busy or not self.ready or self.snapshot.get('current'):
+        if self.busy or self.stop_command_pending or not self.ready or self.snapshot.get('current'):
             return
         self.busy=True
         self.clearing=True
@@ -1469,6 +1613,7 @@ class Controller(QObject):
             self.busy=False
             if not error:
                 self.filter='all'
+                self.history_page=0
                 self.selected=None
                 self.drop_plan={}
                 self.drop_backlog=[]
@@ -1488,6 +1633,15 @@ class Controller(QObject):
             "left": self.preferences.value("columns/left", 340, type=int),
             "right": self.preferences.value("columns/right", 424, type=int),
         }
+
+    @Property(str, constant=True)
+    def buildInformation(self):
+        info = {}
+        with suppress(OSError, ValueError):
+            info = json.loads((ROOT / 'build-info.json').read_text(encoding='utf-8'))
+        version = info.get('release_version', info.get('version', 'Entwicklung'))
+        code = info.get('code_commit', 'Quellstart')
+        return f'VoxDrop {version}\nProgrammcode: {code}\nLokale Audio-/Videotranskription · AGPL-3.0-only'
 
     @Slot(int, int)
     def saveColumnWidths(self, left, right):

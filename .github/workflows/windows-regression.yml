@@ -36,3 +36,5 @@ jobs:
         run: uv pip install --python .runtime/ci-venv/Scripts/python.exe --constraint .runtime/ci/constraints.txt --requirement .runtime/ci/requirements.txt
       - name: Test SQLite, queue, search, Qt and Windows process lifecycle
         run: .runtime/ci-venv/Scripts/python.exe -BEs -Xutf8 scripts/ci-tests.py run
+      - name: Check workspace with 8000 queued and 20000 historical jobs
+        run: .runtime/ci-venv/Scripts/python.exe -BEs -Xutf8 scripts/check-workspace-ui.py --output .runtime/workspace-check

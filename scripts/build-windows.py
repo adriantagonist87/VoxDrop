@@ -69,9 +69,12 @@ def build(args):
         raise ValueError("Commit untracked sources before building: " + untracked)
     commit = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
     version = plistlib.loads((ROOT / "macos/Info.plist").read_bytes())["CFBundleShortVersionString"]
+    release_version = getattr(args, 'release_version', None) or version
+    if not re.fullmatch(r'\d+\.\d+\.\d+(?:[-.][A-Za-z0-9.-]+)?', release_version):
+        raise ValueError('Invalid release version')
     reference = re.search(r"^commit=(\w+)$", (ROOT / "scripts/bootstrap.sh").read_text(), re.M)[1]
     args.output.mkdir(parents=True, exist_ok=True)
-    name = f"VoxDrop-{version}-Windows-x64-{commit[:12]}"
+    name = f"VoxDrop-{release_version}-Windows-x64-{commit[:12]}"
     target = args.output / (name + ".zip")
     if target.exists():
         raise FileExistsError(target)
@@ -127,7 +130,7 @@ def build(args):
                         str(app / "windows/launcher.c"), str(resources),
                         "-luser32", "-lshell32", "-o", str(app / "VoxDrop.exe")], check=True)
         (app / "build-info.json").write_text(json.dumps({
-            "code_commit": commit, "version": version,
+            "code_commit": commit, "version": version, "release_version": release_version,
             "base_zip_sha256": args.base_sha256.lower(), "atrain_commit": reference,
             "runtime": f"runtime-{runtime_hash}",
             "zig_version": subprocess.check_output([str(args.zig), "version"], text=True).strip(),
@@ -147,6 +150,7 @@ if __name__ == "__main__":
     cli.add_argument("--base-zip", type=Path, required=True)
     cli.add_argument("--base-sha256", required=True)
     cli.add_argument("--output", type=Path, default=ROOT / ".runtime/package")
+    cli.add_argument("--release-version", help="Public Windows version; preserve the pinned runtime base version")
     args = cli.parse_args()
     args.zig = args.zig.resolve(strict=True)
     args.base_zip = args.base_zip.resolve(strict=True)

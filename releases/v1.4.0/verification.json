@@ -1,0 +1,71 @@
+{
+  "passed": true,
+  "release": "v1.4.0",
+  "code_commit": "48ff35f43f07c07b4b7abd0b22561c9096fbe1cc",
+  "suite": {
+    "total": 203,
+    "passed": 196,
+    "skipped": 7,
+    "seconds": 74.412
+  },
+  "native_qt": {
+    "platform": "windows",
+    "queue": 8000,
+    "history": 20000,
+    "scales": [
+      1,
+      1.25,
+      1.5
+    ],
+    "content_files": 20000,
+    "content_matches": 206,
+    "content_seconds": 12.969,
+    "cancelled": true
+  },
+  "native_package": {
+    "play_stop_play": true,
+    "stop_seconds": 0.6559999999990396,
+    "queue_and_originals_preserved": true,
+    "cached_export": true,
+    "sqlite_integrity": "ok",
+    "foreign_keys": "ok",
+    "normal_exe_and_owner_watchdog": true
+  },
+  "cuda_cases": [
+    {
+      "model": "qwen3-asr-1.7b",
+      "language": "de",
+      "budget_percent": 75,
+      "seconds": 31.755,
+      "speaker_passes": 3,
+      "source_hash_preserved": true
+    },
+    {
+      "model": "large-v3-turbo",
+      "language": "de",
+      "budget_percent": 75,
+      "seconds": 16.744,
+      "speaker_passes": 3,
+      "source_hash_preserved": true
+    },
+    {
+      "model": "qwen3-asr-1.7b",
+      "language": "en",
+      "budget_percent": 75,
+      "seconds": 31.195,
+      "speaker_passes": 3,
+      "source_hash_preserved": true
+    }
+  ],
+  "installation": {
+    "all_program_files_verified": 94,
+    "settings_and_queue_preserved": true,
+    "model_and_runtime_pins_unchanged": true
+  },
+  "mac_native_verified": false,
+  "limits": [
+    "Native Qt scaling; physical OS DPI/mouse not newly certified",
+    "Existing Mac DMG unchanged pending native Mac acceptance",
+    "ASR quality limitations not solved by workspace redesign"
+  ]
+}

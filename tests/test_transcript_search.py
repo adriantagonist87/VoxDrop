@@ -37,6 +37,22 @@ class TranscriptSearchTests(unittest.TestCase):
         return search_transcripts(self.state / 'jobs.sqlite3', self.index, self.results, query,
             lambda job: service.targets(job)[1], self.cancelled, progress)
 
+    def test_history_pagination_covers_all_records_and_filters_before_offset(self):
+        with self.db:
+            self.db.executemany('INSERT INTO jobs(source,completed_dir,size,mtime_ns,settings,detected,updated,state) '
+                'VALUES (?,?,1,1,?,1,?,?)',
+                ((str(self.root/f'Page {i:04}.wav'),str(self.root),'{}',i,'failed' if i%2 else 'done') for i in range(601)))
+        pages = [service.history_jobs(self.db, 'asc', 250, terminal_only=True, offset=offset) for offset in (0,250,500)]
+        ids = [row['id'] for page in pages for row in page]
+        self.assertEqual(len(ids), 601)
+        self.assertEqual(len(set(ids)), 601)
+        self.assertEqual(ids, sorted(ids))
+        filtered = service.history_jobs(self.db, 'asc', 20, terminal_only=True, history_filter='errors', offset=250)
+        self.assertEqual(len(filtered), 20)
+        self.assertTrue(all(row['state']=='failed' for row in filtered))
+        self.assertGreater(filtered[0]['id'], 500)
+        self.assertEqual(service.history_counts(self.db)['all'], 601)
+
     def test_wildcards_unicode_and_literal_sql_metacharacters(self):
         identifier, path = self.add('Ärzte 100%_[Plan] .wav', 'Content')
         self.add('Other.wav', 'Other')
