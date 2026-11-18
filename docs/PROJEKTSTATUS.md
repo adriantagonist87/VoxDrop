@@ -2,7 +2,7 @@
 
 Stand vom 17. November 2026. Für jede Weiterentwicklung sind zusätzlich die Arbeitsregeln und die Entwicklungsanleitung zu lesen. [Arbeitsregeln](../AGENTS.md) · [Entwicklung](ENTWICKLUNG.md) · [Windows-Übergabeauftrag](UEBERGABE_WINDOWS.md)
 
-**Windows-Nachtrag:** Die native Windows-Arbeit ist im [Draft-PR #1](https://github.com/adriantagonist87/VoxDrop/pull/1) veröffentlicht; final geprüfter Code `8b80572b1fc8196f310a89b82b526fa2112098a3`. Dieser `main`-Commit enthält ausschließlich Dokumentation. Die nachstehenden bisherigen Release-Prüfstände bleiben erhalten; neue Ergebnisse, Grenzen und konkrete Mac-Aufgaben stehen im [Windows-Übergabestatus](WINDOWS_STATUS_2026-11-17.md) und in der PR-Dokumentation. Gemeinsamer neuer Code ist **UNGEPRÜFT unter macOS** und bleibt zunächst im PR.
+**Windows-Nachtrag vom 18.11.2026:** [Preview 6](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.2-windows-preview.6), App-Code `97cbfb81ed3b91b927f51db9d412adb6536387c9`, ist installiert und im [Draft-PR #1](https://github.com/adriantagonist87/VoxDrop/pull/1) dokumentiert: vollständige bedienbare Warteschlange, TXT-Standardöffner und robuste Dateierkennung. 109 Windows-Testfälle (102 bestanden, sieben Skips), abschließende Qt-Regressionen und native EXE-/CUDA-Engineprüfung auf bytegleichem Preview-5-Stand bestanden. Dieser `main`-Commit enthält ausschließlich Dokumentation. Die nachstehenden bisherigen Release-Prüfstände bleiben erhalten; genaue Code-SHAs, Ergebnisse, Grenzen und Mac-Aufgaben stehen im [Windows-Übergabestatus](WINDOWS_STATUS_2026-11-17.md). Gemeinsamer neuer Code ist **UNGEPRÜFT unter macOS** und bleibt bis zur Gegenprüfung im PR.
 
 ## Gemeinsamer Stand
 
