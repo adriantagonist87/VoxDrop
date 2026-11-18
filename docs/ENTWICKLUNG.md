@@ -350,6 +350,6 @@ Nach relevanten Änderungen Projektstatus und betroffene Anleitung aktualisieren
 
 Quellcode, gemeinsame Dokumentation und der geprüfte Mac-Build werden auf `main` zusammengeführt. Windows-Prüfstände bleiben nach tatsächlich durchgeführten Tests gekennzeichnet.
 
-### Windows-Übergabe am 17.11.2026
+### Windows-Übergabe am 18.11.2026
 
-Der [Windows-Übergabestatus](WINDOWS_STATUS_2026-11-17.md) verweist auf PR #1, den nativ geprüften Code `8b80572b1fc8196f310a89b82b526fa2112098a3` und die neuen Build-/Testbefehle im Aufgabenbranch. Portable Modell-/Laufzeitablage, native Windows-Builds sowie Netzwerk- und Vollbildkorrekturen sind dort umgesetzt, noch nicht auf `main` integriert. Vor Integration die dokumentierten Mac-Gegenprüfungen ausführen; bisherigen Mac-Prüfstand bewahren.
+Der [Windows-Übergabestatus](WINDOWS_STATUS_2026-11-17.md) verweist auf PR #1 und den installierten Preview-6-Code `97cbfb81ed3b91b927f51db9d412adb6536387c9`. Warteschlange und Abbruch, TXT-Standardöffner, Ergebnis-/Inhaltserkennung und Schutz offener Windows-Schreiber ergänzen die bisherigen Laufzeit-/Modell-, Netzwerk- und Hintergrundkorrekturen. Implementierung, Build-/Testbefehle, genaue native Prüfstände und additive Datenbankmigration stehen im Aufgabenbranch; App-Code ist noch nicht auf `main` integriert. Vor Integration die dokumentierten Mac-Gegenprüfungen einschließlich Paketlisten, SQLite, QML und Prozessgruppen ausführen; bisherigen Mac-Prüfstand bewahren.
