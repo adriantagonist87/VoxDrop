@@ -1,6 +1,10 @@
 # Übergabeauftrag für Codex auf dem Windows-PC
 
-## Aktuell: Preview 6
+## Aktuell: Preview 7
+
+[Preview 7](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.2-windows-preview.7), App-Code `f4f5287679652579a74ec244255f5b7872fbe265`, SHA-256 `e07abafa47a911f0f3d353dd5f3c93b83b67e30941a58cc378850bde452b7658`. Globale Verlaufszähler/roter Fehlerbutton und kompakte, global/zeilenweise ausklappbare Queue installiert. 112 Fälle (105 bestanden, sieben Skips), danach neun Qt-Regressionen bestanden; QML bei 1500×1000 und 1010×630 geprüft. Konfiguration/Layout und konsistente SQLite-Kopie plus Code gesichert. Direkter GitHub-Update ohne Dienstneustart; derselbe aktive Auftrag, Dienst/Supervisor und alle bisherigen Dateiversionen erhalten. Echte installierte CLI-Filter, 84 Paketdateien und 97 ursprüngliche TXT verifiziert. [Details](WARTESCHLANGE_UND_DATEISCHUTZ.md). Mac: neue Zähler/SQL-Filter sowie kompakte/ausgeklappte QML-Ansicht und gespeicherte Präferenz zusätzlich gegenprüfen.
+
+## Vorangegangener Stand: Preview 6
 
 Aktuell installierter App-Code `97cbfb81ed3b91b927f51db9d412adb6536387c9`, [Preview 6](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.2-windows-preview.6), SHA-256 `944ebeb82e89115bd148ba6099f73193a7b4735ce34126bd538d308074d53484`. Historische Detailangaben importierter Ergebnisse zeigen Modell/Sprecher nicht als neu ermittelt. 109 Tests (102 bestanden, sieben Skips), dazu abschließende sieben Qt-Regressionen bestanden. Alle 32 Engine-Dateien sind bytegleich mit dem darunter beschriebenen realen EXE-/CUDA-Prüfstand von Preview 5. Erneutes GitHub-Update mit Null-Aktiv-Guard und vollständiger Profil-/Codesicherung durchgeführt; Queue und Überwachung wieder fortgesetzt. Mac-Gegenprüfung weiter erforderlich.
 
