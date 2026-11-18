@@ -2,7 +2,11 @@
 
 Nutzeraufträge vom 18.11.2026: Suchfelder hinter Lupenbuttons in Warteschlange und Verlauf, schnelle Wildcardsuche, ausdrücklich gestartete/gestoppte Inhaltssuche auch bei 20.000 Transkripten, verständliche Konfliktentscheidungen bei gemischten Datei-/Ordnerdrops und Korrektur der Explorer-Auswahl.
 
-## Aktuell ausgeliefert: Preview 9 und Queue-Menükorrektur
+## Nachfolgendes Icon-/Layoutupdate
+
+[Preview 10](APP_ICON_UND_LAYOUT.md) übernimmt die neue Icon-Vorlage und entfernt die Logo-Kopfzeile. Die folgenden Such-/Drop-/Queue-Funktionsprüfungen behalten ihre exakten Code-SHAs und gelten für die unveränderte Engine weiter.
+
+## Queue-Funktionsstand: Preview 9 und Menükorrektur
 
 [Windows Preview 9](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.2-windows-preview.9), App-Code `c434d5c4921873d387cefc8cdc55f23f201e61de`, ZIP-SHA-256 `7dd6e52dadff40a73f8ce9b79c09609f2d2cd21ed3a6917d338af10937422da4`. ZIP `VoxDrop-1.3.1-Windows-x64-c434d5c49218.zip`, 45.729.489 Byte; 456 Byte mehr als Preview 8. Keine zusätzliche Abhängigkeit, Modell-/Lockfileänderung oder Datenbankmigration. Gemeinsamer Code bleibt bis Mac-Gegenprüfung im Draft-PR #1.
 

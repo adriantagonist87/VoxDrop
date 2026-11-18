@@ -12,6 +12,8 @@ Die DMG öffnen, den gesamten Ordner **VoxDrop** nach **Programme** ziehen und d
 
 Über **Modelle herunterladen** werden die gewünschten Modelle und ihr Download-Cache im Programmordner unter **VoxDrop/Modelle** eingerichtet. Zum Entfernen der App samt Modellen den gesamten Ordner **VoxDrop** löschen. Bei Updates die neue **VoxDrop.app** in den vorhandenen VoxDrop-Ordner kopieren. Einstellungen und Verlauf liegen im Benutzerordner unter **Library/Application Support/VoxDrop**.
 
+Der aktuelle native Windows-Prüfstand ist [Preview 10](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.2-windows-preview.10) mit neuem App-Icon und allen bisherigen Queue-/Suchfunktionen. Der gemeinsame macOS-Funktionsstand wartet noch auf die native Gegenprüfung; die stabile Mac-Ausgabe bleibt oben verlinkt.
+
 Die Windows-Ausgabe richtet sich an Windows 11 x64 mit NVIDIA-RTX-GPU. [VoxDrop für Windows](windows/README.md)
 
 Für die gemeinsame Weiterentwicklung gelten die Arbeitsregeln sowie Projektstatus und Entwicklungsanleitung. [AGENTS.md](AGENTS.md) · [Projektstatus](docs/PROJEKTSTATUS.md) · [Entwicklung](docs/ENTWICKLUNG.md) · [Windows-Übergabe](docs/UEBERGABE_WINDOWS.md)

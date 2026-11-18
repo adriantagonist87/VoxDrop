@@ -2,9 +2,11 @@
 
 Nutzerauftrag vom 18.11.2026: Die mittlere Spalte muss sämtliche wartenden Aufträge sichtbar und bedienbar machen. Zusätzlich TXT direkt mit der OS-Standardanwendung öffnen, frühere Ergebnisse erkennen und laufende Aufnahmen vor verfrühter Verarbeitung schützen.
 
-## Aktueller geprüfter Windows-Stand
+## Queue-Funktionsstand und nachfolgendes Iconupdate
 
-Aktuell installiert ist [Windows Preview 9](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.2-windows-preview.9), App-Code `c434d5c4921873d387cefc8cdc55f23f201e61de`, ZIP-SHA-256 `7dd6e52dadff40a73f8ce9b79c09609f2d2cd21ed3a6917d338af10937422da4`. Reihenfolge-Menü und Drag-and-drop funktionieren auch in gefilterten Suchergebnissen und berücksichtigen die vollständige Queue. 135 Tests: 128 bestanden, sieben bekannte Skips, 33,482 s. Native finale Paketprüfung mit EXE-Einstieg, allen vier Reihenfolgeaktionen und echtem QML-Menüklick gegen SQLite bestanden. GitHub-Update mit Datenbank-/Einstellungssicherung und Codekopie: 88 Dateien identisch, 9.385 bisherige Aufträge erhalten; 27 wartend, Pause und aktuelle Ordner unverändert. Supervisor/Dienst weitergelaufen, Modelle/Laufzeit unverändert. [Fehlerursache, konkrete Tests und Mac-Aufgaben](SUCHE_UND_DROP_KONFLIKTE.md).
+Der aktuelle Icon-/Layoutstand ist [Preview 10](APP_ICON_UND_LAYOUT.md). Die folgende Queue-Abnahme auf Preview 9 bleibt mit ihrem tatsächlichen Code-SHA erhalten; Engine und Controller sind im Iconupdate unverändert.
+
+Der geprüfte Queue-Funktionsstand ist [Windows Preview 9](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.2-windows-preview.9), App-Code `c434d5c4921873d387cefc8cdc55f23f201e61de`, ZIP-SHA-256 `7dd6e52dadff40a73f8ce9b79c09609f2d2cd21ed3a6917d338af10937422da4`. Reihenfolge-Menü und Drag-and-drop funktionieren auch in gefilterten Suchergebnissen und berücksichtigen die vollständige Queue. 135 Tests: 128 bestanden, sieben bekannte Skips, 33,482 s. Native finale Paketprüfung mit EXE-Einstieg, allen vier Reihenfolgeaktionen und echtem QML-Menüklick gegen SQLite bestanden. GitHub-Update mit Datenbank-/Einstellungssicherung und Codekopie: 88 Dateien identisch, 9.385 bisherige Aufträge erhalten; 27 wartend, Pause und aktuelle Ordner unverändert. Supervisor/Dienst weitergelaufen, Modelle/Laufzeit unverändert. [Fehlerursache, konkrete Tests und Mac-Aufgaben](SUCHE_UND_DROP_KONFLIKTE.md).
 
 ### Vorangegangener Prüfstand: Preview 8
 

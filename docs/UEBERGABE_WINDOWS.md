@@ -1,6 +1,10 @@
 # Übergabeauftrag für Codex auf dem Windows-PC
 
-## Aktuell: Preview 9
+## Aktuell: Preview 10
+
+Installiert und veröffentlicht: [Windows Preview 10](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.2-windows-preview.10), App-Code `4e565d426167b55a900a2c35d449ae0f29a98493`, ZIP-SHA-256 `4bcdc831057c93227530f73a08b553c4a725a78962945097dc3dd91cb0bd6e0d`. Nutzervorlage als neues App-/EXE-/Taskleistenicon, vollständige Logo-Kopfzeile entfernt. Statussymbole unverändert. [Quellen, native Ressourcenprüfung und Mac-Arbeit](APP_ICON_UND_LAYOUT.md). 15 Qt-Fälle in 5,972 s, finales EXE-/Icon-/Queuepaket in 8,712 s bestanden; alle 32 Engine-Dateien bytegleich zu Preview 9. GitHub-ZIP/SHA/88 Dateien bestätigt, Einstellungen/SQLite/Code gesichert, Dienst weitergelaufen. Bereits vor Update leeres Auftragsprofil/Pause aus erhalten; keine alte Historie zurückspielen. Auf main Icon-Dateien/README und Dokumentation; Mac-Code/-Fenster bis Cocoa-/Dock-Gegenprüfung weiter im PR.
+
+## Vorangegangener Stand: Preview 9
 
 Installiert und veröffentlicht: [Windows Preview 9](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.2-windows-preview.9), App-Code `c434d5c4921873d387cefc8cdc55f23f201e61de`, ZIP-SHA-256 `7dd6e52dadff40a73f8ce9b79c09609f2d2cd21ed3a6917d338af10937422da4`. Die vier Queue-Menüaktionen waren bei Suchfilter pauschal gesperrt. Nun bestimmen neue relative Datenbankaktionen die vollständige aktuelle Position; Drag-and-drop verwendet einen konkreten Vor-/Nach-Anker. Unsichtbare Nachbarn werden nicht übersprungen, echte Grenzaktionen erkennbar deaktiviert. [Genauer Bericht](SUCHE_UND_DROP_KONFLIKTE.md). 135 Fälle (128 bestanden, sieben Skips), finales Paket einschließlich EXE-Einstieg und gefiltertem QML-Menüklick gegen echte SQLite-Reihenfolge in 8,584 s bestanden. ASR-/Export-/Schutzlogik unverändert, native CUDA-Abnahme weiterhin exakt auf Preview 8.
 
