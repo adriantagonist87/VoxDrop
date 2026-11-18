@@ -528,11 +528,22 @@ ApplicationWindow {
                             border.width: gpuBudgetSlider.activeFocus ? 2 : 1
                             border.color: gpuBudgetSlider.activeFocus ? window.textColor : "#242424"
                         }
-                        onMoved: gpuBudgetSave.restart()
+                        onMoved: {
+                            gpuBudgetSave.pendingValue = Math.round(value)
+                            api.setSetting("gpu_budget_percent", gpuBudgetSave.pendingValue)
+                            gpuBudgetSave.restart()
+                        }
                         Timer {
                             id: gpuBudgetSave
+                            property int pendingValue: 100
                             interval: 250
-                            onTriggered: api.setGpuBudget(Math.round(gpuBudgetSlider.value))
+                            onTriggered: {
+                                if (viewState.busy) {
+                                    restart()
+                                    return
+                                }
+                                api.setGpuBudget(pendingValue)
+                            }
                         }
                     }
                     RowLayout {

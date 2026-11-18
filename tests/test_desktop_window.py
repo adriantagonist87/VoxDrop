@@ -109,11 +109,33 @@ class DesktopWindowTests(unittest.TestCase):
             slider.forceActiveFocus()
             for _ in range(10):
                 QTest.keyClick(self.window, Qt.Key.Key_Left)
+            self.controller.notify('Status wurde während des Ziehens aktualisiert.')
             QTest.qWait(350)
         self.assertEqual(save.call_args.args[0]['gpu_budget_percent'], 50)
         self.assertEqual(save.call_args.args[0]['language'], 'de')
         self.assertEqual(self.controller.draft['language'], 'en')
         self.assertEqual(self.controller.draft['gpu_budget_percent'], 50)
+
+    def test_gpu_slider_waits_for_busy_action_without_losing_pending_value(self):
+        self.queue_fixture()
+        self.controller.draft['hardware'] = 'cuda'
+        self.controller.changed.emit()
+        with patch.object(self.controller_module, 'GPU', 'cuda'), \
+             patch.object(self.controller_module, 'save_settings') as save, \
+             patch.object(self.controller_module, 'read_settings', return_value=self.controller_module.DEFAULTS.copy()), \
+             patch.object(self.controller, 'action', side_effect=lambda operation, message: operation()):
+            self.controller.changed.emit()
+            slider = self.visual('gpuBudgetSlider')
+            slider.forceActiveFocus()
+            QTest.keyClick(self.window, Qt.Key.Key_Left)
+            self.controller.busy = True
+            self.controller.changed.emit()
+            QTest.qWait(350)
+            save.assert_not_called()
+            self.controller.busy = False
+            self.controller.changed.emit()
+            QTest.qWait(350)
+            self.assertEqual(save.call_args.args[0]['gpu_budget_percent'], 95)
 
     def test_gpu_slider_is_disabled_for_cpu(self):
         self.queue_fixture()
@@ -193,6 +215,11 @@ class DesktopWindowTests(unittest.TestCase):
         QTest.qWait(30)
         self.assertFalse(row.property('expanded'))
         self.assertFalse(self.visual('queueRow2').property('expanded'))
+        # Geometry is polished on a later Qt frame under load.
+        for _ in range(50):
+            if row.height() == compact_height:
+                break
+            QTest.qWait(20)
         self.assertEqual(row.height(), compact_height)
 
     def test_programmatic_folder_edit_updates_saved_draft(self):
