@@ -9,6 +9,7 @@ ApplicationWindow {
     property var viewState: api.state
     property var settings: api.settings
     property var selected: api.detail
+    property bool historySearchOpen: false
     readonly property var initialColumns: api.columnWidths()
     readonly property color canvas: "#1e1e1e"
     readonly property color sidebar: "#242424"
@@ -89,7 +90,7 @@ ApplicationWindow {
         font.weight: Font.DemiBold
     }
 
-    component Action: Button {
+    component AppActionButton: Button {
         id: action
         property bool primary: false
         property bool errorAlert: false
@@ -376,20 +377,20 @@ ApplicationWindow {
                                     ToolTip.delay: 500
                                     onTextChanged: api.editFolder(folder.index, text)
                                 }
-                                Action {
+                                AppActionButton {
                                     text: "↻"
                                     Layout.preferredWidth: 30
                                     Accessible.name: "Ordner jetzt prüfen"
                                     enabled: pathField.text.trim().length > 0
                                     onClicked: api.checkFolders(pathField.text.trim())
                                 }
-                                Action {
+                                AppActionButton {
                                     text: "…"
                                     Layout.preferredWidth: 30
                                     Accessible.name: "Ordner auswählen"
                                     onClicked: api.pickFolder(folder.index)
                                 }
-                                Action {
+                                AppActionButton {
                                     text: "−"
                                     Layout.preferredWidth: 30
                                     Accessible.name: "Pfad entfernen"
@@ -416,8 +417,8 @@ ApplicationWindow {
                     }
                     RowLayout {
                         Layout.fillWidth: true
-                        Action { text: "+ Pfad hinzufügen"; Layout.fillWidth: true; enabled: viewState.ready; onClicked: api.addFolder() }
-                        Action { text: "Alle prüfen"; Accessible.name: "Alle Ordner prüfen"; enabled: viewState.ready; onClicked: api.checkFolders("") }
+                        AppActionButton { text: "+ Pfad hinzufügen"; Layout.fillWidth: true; enabled: viewState.ready; onClicked: api.addFolder() }
+                        AppActionButton { text: "Alle prüfen"; Accessible.name: "Alle Ordner prüfen"; enabled: viewState.ready; onClicked: api.checkFolders("") }
                     }
                     Toggle {
                         objectName: "includeSubfolders"
@@ -469,7 +470,7 @@ ApplicationWindow {
                         Layout.fillWidth: true
                         text: viewState.modelsReady ? "Modelle installiert" : "Modell-Setup erforderlich"
                     }
-                    Action {
+                    AppActionButton {
                         Layout.fillWidth: true
                         text: "Modelle herunterladen"
                         visible: !viewState.modelsReady
@@ -491,7 +492,7 @@ ApplicationWindow {
                         color: warningColor
                         text: "Netzwerkzugriff verweigert (10013). Bestätige eine eventuell angezeigte Freigabeanfrage selbst. Ohne sichtbare Anfrage: Protokoll öffnen. Der Download wird automatisch erneut geprüft."
                     }
-                    Action {
+                    AppActionButton {
                         Layout.fillWidth: true
                         visible: viewState.waitingForNetwork
                         objectName: "cancelNetworkWait"
@@ -554,7 +555,7 @@ ApplicationWindow {
                     Rectangle { Layout.fillWidth: true; height: 1; color: line }
                     RowLayout {
                         Layout.fillWidth: true
-                        Action {
+                        AppActionButton {
                             objectName: "saveButton"
                             text: "Speichern"
                             primary: true
@@ -562,7 +563,7 @@ ApplicationWindow {
                             enabled: viewState.ready && !viewState.busy
                             onClicked: api.save(false)
                         }
-                        Action {
+                        AppActionButton {
                             text: "Dienst starten"
                             Layout.fillWidth: true
                             enabled: viewState.ready && !viewState.busy
@@ -577,8 +578,8 @@ ApplicationWindow {
                         text: viewState.message || ""
                         color: viewState.messageError ? warningColor : muted
                     }
-                    Action { text: "Protokoll öffnen"; visible: viewState.logAvailable; onClicked: api.openLog() }
-                    Action {
+                    AppActionButton { text: "Protokoll öffnen"; visible: viewState.logAvailable; onClicked: api.openLog() }
+                    AppActionButton {
                         text: "Erneut prüfen"
                         visible: !viewState.ready && !viewState.busy && viewState.messageError
                         onClicked: api.retryPreparation()
@@ -645,7 +646,7 @@ ApplicationWindow {
                         Muted { text: viewState.current.elapsed ? "Laufzeit  " + viewState.current.elapsed : ""; Layout.fillWidth: true }
                         Copy { text: "Modell  " + (viewState.current.model || ""); Layout.fillWidth: true }
                         Copy { text: "Rechengerät  " + (viewState.current.hardware || ""); Layout.fillWidth: true }
-                        Action {
+                        AppActionButton {
                             objectName: "cancelCurrentButton"
                             text: "Aktuelle Transkription abbrechen"
                             enabled: !viewState.busy && Boolean(viewState.current.canCancel)
@@ -655,7 +656,7 @@ ApplicationWindow {
                     Rectangle { Layout.fillWidth: true; height: 1; color: line }
                     QueuePane { api: window.api; viewState: window.viewState; Layout.fillWidth: true; Layout.fillHeight: true }
                     Muted {
-                        text: viewState.dropMessage || "Ordner für eine einmalige Transkription hier ablegen."
+                        text: viewState.dropMessage || "Dateien oder Ordner für eine einmalige Transkription hier ablegen."
                         color: viewState.dropError ? warningColor : muted
                         Layout.fillWidth: true
                     }
@@ -676,14 +677,51 @@ ApplicationWindow {
                 RowLayout {
                     Layout.fillWidth: true
                     Heading { text: "Verlauf"; Layout.fillWidth: true }
-                    Action { text: "Verlauf leeren …"; enabled: viewState.canClear; onClicked: confirmClear.open() }
+                    SearchToggle {
+                        objectName: 'historySearchToggle'
+                        checked: window.historySearchOpen
+                        Accessible.name: window.historySearchOpen ? 'Verlaufssuche schließen und zurücksetzen' : 'Verlauf durchsuchen'
+                        onClicked: {
+                            window.historySearchOpen = !window.historySearchOpen
+                            if (window.historySearchOpen) historySearch.forceActiveFocus()
+                            else { api.setHistorySearch(''); api.stopContentSearch() }
+                        }
+                    }
+                    AppActionButton { text: "Verlauf leeren …"; enabled: viewState.canClear; onClicked: confirmClear.open() }
+                }
+                ColumnLayout {
+                    visible: window.historySearchOpen
+                    Layout.fillWidth: true
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Field {
+                            id: historySearch
+                            objectName: 'historySearchField'
+                            Layout.fillWidth: true
+                            placeholderText: 'Dateiname/Pfad (* und ?) oder Suchtext'
+                            Accessible.name: 'Verlauf durchsuchen'
+                            text: viewState.historySearch
+                            onTextChanged: api.setHistorySearch(text)
+                        }
+                        AppActionButton { text: '×'; Accessible.name: 'Verlaufssuche zurücksetzen'; onClicked: api.setHistorySearch('') }
+                    }
+                    AppActionButton {
+                        objectName: 'contentSearchButton'
+                        text: viewState.contentSearchRunning ? 'Detailsuche stoppen' : viewState.contentSearchActive ? 'Detailsuche beenden' : 'Detailsuche starten'
+                        enabled: !viewState.contentSearchStopping && (viewState.contentSearchRunning || viewState.contentSearchActive || viewState.historySearch.trim().length > 0)
+                        onClicked: {
+                            if (viewState.contentSearchRunning || viewState.contentSearchActive) api.stopContentSearch()
+                            else api.startContentSearch()
+                        }
+                    }
+                    Muted { Layout.fillWidth: true; text: viewState.contentSearchStatus; visible: text.length > 0 }
                 }
                 RowLayout {
                     Layout.fillWidth: true
                     spacing: 4
                     Repeater {
                         model: [{label: "Alle", value: "all"}, {label: "Fehler", value: "errors"}, {label: "Fertig", value: "done"}]
-                        delegate: Action {
+                        delegate: AppActionButton {
                             required property var modelData
                             readonly property int itemCount: viewState.historyCounts[modelData.value] || 0
                             objectName: "historyFilter_" + modelData.value
@@ -757,7 +795,11 @@ ApplicationWindow {
     Connections {
         target: api
         function onDetailsOpened() { detail.open() }
+        function onDropConflictOpened() { dropConflicts.open() }
+        function onDropResolved() { dropConflicts.close() }
     }
+
+    DropConflictDialog { id: dropConflicts; api: window.api }
 
     Dialog {
         id: detail
@@ -798,12 +840,12 @@ ApplicationWindow {
         }
         footer: RowLayout {
             spacing: 6
-            Action { text: "Erneut versuchen"; visible: selected.retry || false; enabled: !viewState.busy; onClicked: { api.retryJob(false); detail.close() } }
-            Action { text: "Neu transkribieren"; visible: selected.repeat || false; enabled: !viewState.busy; onClicked: { api.retryJob(true); detail.close() } }
-            Action { objectName: "openTranscriptButton"; text: "Transkript öffnen"; visible: selected.openTranscript || false; enabled: !viewState.busy; onClicked: api.openTranscript() }
-            Action { text: Qt.platform.os === "osx" ? "Im Finder zeigen" : "Im Explorer zeigen"; visible: selected.reveal || false; onClicked: api.revealOutput() }
+            AppActionButton { text: "Erneut versuchen"; visible: selected.retry || false; enabled: !viewState.busy; onClicked: { api.retryJob(false); detail.close() } }
+            AppActionButton { text: "Neu transkribieren"; visible: selected.repeat || false; enabled: !viewState.busy; onClicked: { api.retryJob(true); detail.close() } }
+            AppActionButton { objectName: "openTranscriptButton"; text: "Transkript öffnen"; visible: selected.openTranscript || false; enabled: !viewState.busy; onClicked: api.openTranscript() }
+            AppActionButton { text: Qt.platform.os === "osx" ? "Im Finder zeigen" : "Im Explorer zeigen"; visible: selected.reveal || false; onClicked: api.revealOutput() }
             Item { Layout.fillWidth: true }
-            Action { text: "Schließen"; onClicked: detail.close() }
+            AppActionButton { text: "Schließen"; onClicked: detail.close() }
         }
     }
 

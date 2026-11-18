@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from PySide6.QtCore import QObject, Qt, QUrl, QPoint, QPointF
+from PySide6.QtCore import QCoreApplication, QEvent, QObject, Qt, QUrl, QPoint, QPointF
 from PySide6.QtQml import QQmlApplicationEngine
 from PySide6.QtQuickControls2 import QQuickStyle
 from PySide6.QtTest import QTest
@@ -32,12 +32,20 @@ class DesktopWindowTests(unittest.TestCase):
         self.enterContext(patch.object(self.controller_module, "MODEL_DATA", Path(directory.name) / "data"))
         self.controller = self.controller_module.Controller(preview=True)
         self.engine = QQmlApplicationEngine()
+        self.controller.setParent(self.engine)
         self.engine.setInitialProperties({"api": self.controller})
         self.engine.load(QUrl.fromLocalFile(str(DESKTOP / "qml/Main.qml")))
         self.assertTrue(self.engine.rootObjects())
         self.window = self.engine.rootObjects()[0]
         self.presenter = WindowPresenter(self.window)
-        self.addCleanup(self.window.close)
+        self.addCleanup(self.dispose_window)
+
+    def dispose_window(self):
+        self.controller.content_cancel.set()
+        self.window.hide()
+        self.engine.deleteLater()
+        QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+        self.app.processEvents()
 
     def test_full_qml_fullscreen_survives_minimization_and_native_activation(self):
         self.presenter.show()
@@ -192,3 +200,85 @@ class DesktopWindowTests(unittest.TestCase):
             job['result_kind']=kind
             rows={row['label']:row['value'] for row in self.controller.detail['rows']}
             self.assertEqual(rows['Modell verwendet'],'Siehe Ursprungsauftrag')
+
+    def test_reveal_uses_known_transcript_path_and_reports_shell_failure(self):
+        job = self.queue_fixture(1)[0]
+        transcript = self.controller_module.PROFILE / 'Bestands TXT, Prüfung + Test.txt'
+        transcript.write_text('Synthetic transcript', encoding='utf-8')
+        job.update(state='existing', result_kind='existing', known_transcript_path=str(transcript))
+        self.controller.selected = job
+        def immediately(operation, finished):
+            try:
+                result = operation()
+            except Exception as error:
+                finished(None, str(error))
+            else:
+                finished(result, None)
+        with patch.object(self.controller_module.sys, 'platform', 'win32'), patch.object(self.controller, 'submit', side_effect=immediately):
+            with patch.object(self.controller_module, 'reveal_in_explorer') as reveal:
+                self.controller.revealOutput()
+            reveal.assert_called_once_with(transcript)
+            with patch.object(self.controller_module, 'reveal_in_explorer', side_effect=OSError('Shell selection failed')):
+                self.controller.revealOutput()
+            self.assertTrue(self.controller.message_error)
+            self.assertEqual(self.controller.message, 'Shell selection failed')
+
+    def test_search_fields_toggle_filter_queue_and_content_search_requires_start(self):
+        self.queue_fixture(12)
+        def click(name):
+            item = self.visual(name)
+            point = item.mapToScene(QPointF(item.width() / 2, item.height() / 2)).toPoint()
+            QTest.mouseClick(self.window, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, point)
+            QTest.qWait(25)
+        self.assertFalse(self.visual('queueSearchField').property('visible'))
+        click('queueSearchToggle')
+        self.assertTrue(self.visual('queueSearchField').property('visible'))
+        self.visual('queueSearchField').setProperty('text', '* 2 mit*')
+        QTest.qWait(25)
+        self.assertEqual([job['id'] for job in self.controller.queue], [2])
+        self.assertEqual(self.controller.queue[0]['position'], 2)
+        self.assertFalse(self.visual('queueDragHandle2').property('enabled'))
+        click('queueSearchToggle')
+        self.assertEqual(len(self.controller.queue), 12)
+        self.assertEqual(self.controller.queue_query, '')
+        click('historySearchToggle')
+        self.visual('historySearchField').setProperty('text', 'Suchbegriff')
+        QTest.qWait(25)
+        self.assertFalse(self.controller.content_running)
+        self.assertFalse((self.controller_module.PROFILE / 'service/transcript-search.sqlite3').exists())
+        pending = []
+        with patch.object(self.controller, 'submit', side_effect=lambda operation, finished: pending.append((operation, finished))):
+            click('contentSearchButton')
+            self.assertTrue(self.controller.content_running)
+            self.assertEqual(len(pending), 1)
+            click('contentSearchButton')
+            self.assertTrue(self.controller.content_cancel.is_set())
+            self.assertFalse(self.visual('contentSearchButton').property('enabled'))
+            pending[0][1](None, 'Detailsuche gestoppt.')
+        self.assertFalse(self.controller.content_running)
+        self.assertFalse(self.controller.content_token)
+
+    def test_drop_conflict_dialog_shows_batch_and_prioritises_only_after_click(self):
+        self.presenter.show()
+        self.controller.drop_plan = dict(token='synthetic-batch', counts=dict(new=1, queued=1, active=0, done=1, existing=0, problem=0),
+            warnings=[], items=[dict(source=str(self.controller_module.PROFILE / 'Queued.wav'), kind='queued', status='Bereits in der Warteschlange')])
+        self.controller.changed.emit()
+        self.controller.dropConflictOpened.emit()
+        QTest.qWait(50)
+        dialog = self.window.findChild(QObject, 'dropConflictDialog')
+        self.addCleanup(self.controller.dismissDrop)
+        self.assertTrue(dialog.property('visible'))
+        self.assertEqual(dialog.findChild(QObject, 'dropConflictList').property('count'), 1)
+        result = dict(queued=1, selected=2, ignored=1, active=0, interrupted=None, pending=True, warnings=[])
+        config = self.controller_module.PROFILE / 'config.json'; config.write_text('{}')
+        def command(*arguments):
+            return json.dumps(result) if arguments[0] == 'resolve-drop' else ''
+        with patch.object(self.controller_module, 'CONFIG', config), patch.object(self.controller_module, 'command', side_effect=command) as sent, patch.object(self.controller, 'submit', side_effect=lambda operation, finished: finished(operation(), None)):
+            sent.assert_not_called()
+            button = dialog.findChild(QObject, 'dropFrontButton')
+            point = button.mapToScene(QPointF(button.width()/2, button.height()/2)).toPoint()
+            QTest.mouseClick(self.window, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, point)
+            QTest.qWait(30)
+            self.assertEqual(sent.call_args_list[0].args, ('resolve-drop', 'synthetic-batch', 'front'))
+            self.assertFalse(dialog.property('visible'))
+        self.assertFalse(self.controller.drop_plan)

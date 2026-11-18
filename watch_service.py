@@ -43,6 +43,7 @@ from runtime_logs import RollingLog
 from queue_control import (
     JobCancelled, initialise_queue, queue_jobs, queue_paused, set_queue_paused,
     move_queue_item, cancel_job, cancel_queue, cancellation_requested, poll_cancellation,
+    prioritise_jobs, restore_preempted,
 )
 from media_history import MediaBusy, initialise_media_history, remember_result, previously_transcribed
 from voxdrop import (
@@ -594,6 +595,152 @@ def recognise_existing_results(db):
             error_state(db,job['id'],'existing',None)
 
 
+def inspect_drop_path(settings, path):
+    candidate = Path(os.path.abspath(path))
+    metadata = candidate.lstat()
+    if stat.S_ISREG(metadata.st_mode):
+        if candidate.suffix.lower() not in MEDIA_EXTENSIONS:
+            raise ValueError('Diese Datei hat kein unterstütztes Audio-/Videoformat.')
+        return str(candidate.parent), None, [(str(candidate), metadata.st_size, metadata.st_mtime_ns)], ''
+    if not stat.S_ISDIR(metadata.st_mode) or candidate.is_symlink():
+        raise ValueError('Bitte reguläre Aufnahmen oder Ordner ablegen; Verknüpfungen werden nicht verfolgt.')
+    profile = {**folder_profile(settings, str(candidate)), 'monitoring': True,
+               'include_subfolders': True, 'create_output_subfolder': False, 'probe_write': False}
+    validate_folder_path(str(candidate))
+    return inspect_folders_with_deadline(profile)
+
+
+def drop_previous(db, candidate):
+    comparison = 'source COLLATE NOCASE' if WINDOWS else 'source'
+    return db.execute(f"""SELECT * FROM jobs WHERE {comparison}=? AND size=? AND mtime_ns=?
+        ORDER BY CASE WHEN state IN ('copying','transcribing','exporting') THEN 0
+            WHEN state IN ('seen','ready') THEN 1 ELSE 2 END, id DESC LIMIT 1""", candidate).fetchone()
+
+
+def prepare_drop(db, settings, paths):
+    """Inspect the entire drop without altering an existing job or starting new work."""
+    candidates, warnings = {}, []
+    for path in dict.fromkeys(paths):
+        try:
+            root, _, versions, warning = inspect_drop_path(settings, path)
+            if warning:
+                warnings.append(f'{path}: {warning}')
+            for version in versions:
+                candidates[os.path.normcase(version[0])] = (version, root)
+        except (OSError, ValueError) as error:
+            warnings.append(f'{path}: {error}')
+    items = []
+    labels = dict(new='Neue Aufnahme', queued='Bereits in der Warteschlange', active='Wird gerade verarbeitet',
+                  done='Bereits transkribiert', existing='TXT bereits vorhanden', problem='Fehlgeschlagen oder abgebrochen')
+    for version, root in candidates.values():
+        previous = drop_previous(db, version)
+        if previous:
+            state = previous['state']
+            kind = ('queued' if state in ('seen','ready') else 'active' if state in ('copying','transcribing','exporting')
+                    else 'existing' if state == 'existing' else 'done' if state in ('done','duplicate','superseded') else 'problem')
+        else:
+            kind = 'existing' if Path(version[0]).with_suffix('.txt').is_file() else 'new'
+        profile = {**folder_profile(settings, root), 'watch_path': root, 'folder_drop': True,
+                   'include_subfolders': True, 'create_output_subfolder': False, 'move_media': False}
+        items.append(dict(source=version[0], size=version[1], mtime_ns=version[2], profile=profile,
+                          job_id=previous['id'] if previous else None, kind=kind, status=labels[kind]))
+    token = uuid.uuid4().hex
+    with db:
+        db.execute('INSERT INTO drop_batches VALUES (?,?,?,NULL)',
+                   (token, time.time(), json.dumps(dict(items=items, warnings=warnings), ensure_ascii=False)))
+        db.execute('DELETE FROM drop_batches WHERE created<?', (time.time()-7*86400,))
+    counts = {kind: sum(item['kind'] == kind for item in items) for kind in labels}
+    return dict(token=token, items=[{key:value for key,value in item.items() if key != 'profile'} for item in items],
+                counts=counts, warnings=warnings, has_conflicts=bool(warnings) or any(item['kind'] != 'new' for item in items))
+
+
+def resolve_drop(db, token, action):
+    if action not in ('queue','front','retranscribe','immediate','ignore'):
+        raise ValueError('Unbekannte Drop-Aktion.')
+    batch = db.execute('SELECT * FROM drop_batches WHERE token=?', (token,)).fetchone()
+    if batch is None:
+        raise ValueError('Dieser Drop ist nicht mehr verfügbar. Bitte erneut ablegen.')
+    if batch['result']:
+        return json.loads(batch['result'])
+    plan = json.loads(batch['items'])
+    warnings = list(plan['warnings'])
+    valid = []
+    # Network I/O happens before the short write transaction.
+    for item in plan['items']:
+        try:
+            metadata = Path(item['source']).lstat()
+            if not stat.S_ISREG(metadata.st_mode) or (metadata.st_size,metadata.st_mtime_ns) != (item['size'],item['mtime_ns']):
+                raise OSError('Datei wurde inzwischen verändert. Bitte erneut ablegen.')
+            item['text_exists'] = Path(item['source']).with_suffix('.txt').is_file()
+            valid.append(item)
+        except OSError as error:
+            warnings.append(f"{item['source']}: {error}")
+    identifiers, queued, ignored, active = [], 0, 0, 0
+    with db:
+        db.execute('BEGIN IMMEDIATE')
+        current_batch = db.execute('SELECT result FROM drop_batches WHERE token=?', (token,)).fetchone()
+        if current_batch is None:
+            raise ValueError('Dieser Drop ist nicht mehr verfügbar. Bitte erneut ablegen.')
+        if current_batch['result']:
+            return json.loads(current_batch['result'])
+        for item in valid:
+            source = item['source']
+            version = (source, item['size'], item['mtime_ns'])
+            previous = drop_previous(db, version)
+            state = previous['state'] if previous else None
+            if action == 'ignore' and (previous is not None or item['kind'] != 'new'):
+                ignored += 1
+                continue
+            if state in ('copying','transcribing','exporting'):
+                identifiers.append(previous['id'])
+                active += 1
+                continue
+            profile = item['profile']
+            now = time.time()
+            if state in ('seen','ready') and item['text_exists'] and action in ('retranscribe','immediate'):
+                db.execute("UPDATE jobs SET state='existing',updated=? WHERE id=?", (now, previous['id']))
+                remember_result(db, previous['id'], 'existing', Path(source).with_suffix('.txt'))
+                previous = db.execute('SELECT * FROM jobs WHERE id=?', (previous['id'],)).fetchone()
+                state = 'existing'
+            if state in ('seen','ready') or (state in ('failed','blocked','cancelled') and action in ('front','queue','immediate') and not (item['text_exists'] and action == 'immediate')):
+                identifier = previous['id']
+                db.execute("UPDATE jobs SET state='ready',completed_dir=?,settings=?,updated=?,error=NULL WHERE id=?",
+                    (str(Path(source).parent), json.dumps(profile, ensure_ascii=False), now, identifier))
+                db.execute('DELETE FROM job_retries WHERE job_id=?', (identifier,))
+                db.execute('DELETE FROM cancel_requests WHERE job_id=?', (identifier,))
+            elif previous is not None or item['kind'] == 'existing':
+                if action not in ('retranscribe','immediate'):
+                    ignored += 1
+                    continue
+                if previous is None:
+                    base = db.execute("INSERT INTO jobs(source,size,mtime_ns,completed_dir,settings,detected,updated,state) VALUES (?,?,?,?,?,?,?,'existing')",
+                        (*version, str(Path(source).parent), json.dumps(profile, ensure_ascii=False), now, now))
+                    remember_result(db, base.lastrowid, 'existing', Path(source).with_suffix('.txt'))
+                    previous = db.execute('SELECT * FROM jobs WHERE id=?', (base.lastrowid,)).fetchone()
+                origin = previous['origin_job_id'] or previous['id']
+                planned = db.execute("SELECT id FROM jobs WHERE origin_job_id=? AND state IN ('seen','ready','copying','transcribing','exporting') ORDER BY id LIMIT 1", (origin,)).fetchone()
+                if planned:
+                    identifier = planned['id']
+                else:
+                    profile = {**profile, 'original_media_hash': previous['media_hash']}
+                    inserted = db.execute("INSERT INTO jobs(source,size,mtime_ns,completed_dir,settings,detected,updated,state,origin_job_id) VALUES (?,?,?,?,?,?,?,'ready',?)",
+                        (*version, str(Path(source).parent), json.dumps(profile, ensure_ascii=False), now, now, origin))
+                    identifier = inserted.lastrowid
+                    queued += 1
+            else:
+                inserted = db.execute("INSERT INTO jobs(source,size,mtime_ns,completed_dir,settings,detected,updated,state) VALUES (?,?,?,?,?,?,?,'ready')",
+                    (*version, str(Path(source).parent), json.dumps(profile, ensure_ascii=False), now, now))
+                identifier = inserted.lastrowid
+                queued += 1
+            identifiers.append(identifier)
+        interrupted = prioritise_jobs(db, identifiers, interrupt=action == 'immediate') if action in ('front','immediate') else None
+        result = dict(queued=queued, selected=len(set(identifiers)), ignored=ignored, active=active,
+                      interrupted=interrupted, pending=bool(identifiers), warnings=warnings,
+                      export_finishes=action == 'immediate' and bool(db.execute("SELECT 1 FROM jobs WHERE state='exporting' OR (state IN ('copying','transcribing') AND publication_started=1)").fetchone()))
+        db.execute('UPDATE drop_batches SET result=? WHERE token=?', (json.dumps(result, ensure_ascii=False), token))
+    return result
+
+
 def enqueue_folders(db, settings, folders):
     """Queue fixed file versions without subscribing to their directories."""
     queued = skipped = 0
@@ -608,8 +755,7 @@ def enqueue_folders(db, settings, folders):
             "probe_write": False,
         }
         try:
-            validate_folder_path(folder)
-            root, _, versions, warning = inspect_folders_with_deadline(source_settings)
+            root, _, versions, warning = inspect_drop_path(settings, folder)
         except (OSError, ValueError) as error:
             warnings.append(f"{folder}: {error}")
             continue
@@ -1293,13 +1439,14 @@ def next_job(
         with suppress(OSError):
             transcript.unlink(missing_ok=True)
     except JobCancelled:
-        error_state(db, job_id, 'cancelled', None)
-        with db:
-            db.execute('DELETE FROM cancel_requests WHERE job_id=?',(job_id,))
-            db.execute('DELETE FROM job_retries WHERE job_id=?',(job_id,))
         if work.resolve().parent == (state/'jobs').resolve() and not work.is_symlink():
             with suppress(OSError):
                 shutil.rmtree(work)
+        if not restore_preempted(db, job_id):
+            error_state(db, job_id, 'cancelled', None)
+            with db:
+                db.execute('DELETE FROM cancel_requests WHERE job_id=?',(job_id,))
+                db.execute('DELETE FROM job_retries WHERE job_id=?',(job_id,))
     except MediaBusy as error:
         error_state(db,job_id,'failed',str(error))
         with db:
@@ -1346,13 +1493,14 @@ def recover(db, state):
     for job in jobs:
         work = state / "jobs" / str(job["id"])
         if cancellation_requested(db, job['id']) and not job['publication_started']:
-            error_state(db,job['id'],'cancelled',None)
-            with db:
-                db.execute('DELETE FROM cancel_requests WHERE job_id=?',(job['id'],))
-                db.execute('DELETE FROM job_retries WHERE job_id=?',(job['id'],))
             if work.resolve().parent == (state/'jobs').resolve() and not work.is_symlink():
                 with suppress(OSError):
                     shutil.rmtree(work)
+            if not restore_preempted(db, job['id']):
+                error_state(db,job['id'],'cancelled',None)
+                with db:
+                    db.execute('DELETE FROM cancel_requests WHERE job_id=?',(job['id'],))
+                    db.execute('DELETE FROM job_retries WHERE job_id=?',(job['id'],))
             continue
         for leftover in work.glob("media.*"):
             leftover.unlink(missing_ok=True)
@@ -1861,8 +2009,31 @@ HISTORY_FILTERS = {
 }
 
 
-def history_counts(db):
-    counts = dict(db.execute("SELECT state, COUNT(*) FROM jobs GROUP BY state"))
+def history_search_scope(db, query, content_matches=False):
+    query = query.strip()
+    if not query:
+        return '', ()
+    def paths(source, completed, origin, identifier, known):
+        media = os.path.join(completed, os.path.basename(source))
+        stem = os.path.splitext(os.path.basename(source))[0]
+        transcript = os.path.splitext(media)[0] + '.txt'
+        if origin:
+            name = f'{stem} (Neu {identifier}).txt'
+            transcript = os.path.join(completed, name if len(name.encode('utf-8')) <= 255 else f'Neutranskription {identifier}.txt')
+        return '\n'.join((source, media, transcript, known or '')).replace('\\', '/').casefold()
+    db.create_function('history_search_paths', 5, paths, deterministic=True)
+    pattern = query.replace('\\', '/').casefold().replace('!', '!!').replace('%', '!%').replace('_', '!_')
+    pattern = '%' + pattern.replace('*', '%').replace('?', '_') + '%'
+    clause = "history_search_paths(j.source,j.completed_dir,j.origin_job_id,j.id,k.transcript_path) LIKE ? ESCAPE '!'"
+    if content_matches:
+        clause += ' OR j.id IN (SELECT job_id FROM temp.content_matches)'
+    return ' AND (' + clause + ')', (pattern,)
+
+
+def history_counts(db, *, search='', content_matches=False):
+    clause, arguments = history_search_scope(db, search, content_matches)
+    counts = dict(db.execute('SELECT j.state, COUNT(*) FROM jobs j LEFT JOIN known_results k ON k.job_id=j.id '
+                             'WHERE 1' + clause + ' GROUP BY j.state', arguments))
     return {
         "all": sum(count for state, count in counts.items()
                    if state not in {'seen', 'ready', 'copying', 'transcribing', 'exporting'}),
@@ -1871,8 +2042,10 @@ def history_counts(db):
     }
 
 
-def history_jobs(db, order, limit, *, terminal_only=False, history_filter="all"):
+def history_jobs(db, order, limit, *, terminal_only=False, history_filter="all", search='', content_matches=False):
     direction = "ASC" if order == "asc" else "DESC"
+    clause, arguments = history_search_scope(db, search, content_matches)
+    scope = HISTORY_FILTERS[history_filter] if terminal_only or history_filter != 'all' else '1'
     return db.execute(
         f"""SELECT j.*, m.speech_seconds, m.speaker_seconds, m.peak_memory_bytes,
         d.speaker_method, d.speaker_passes, d.speaker_note,
@@ -1885,9 +2058,9 @@ def history_jobs(db, order, limit, *, terminal_only=False, history_filter="all")
         LEFT JOIN speaker_diarization AS d ON d.job_id=j.id
         LEFT JOIN audio_durations AS a ON a.job_id=j.id
         LEFT JOIN known_results k ON k.job_id=j.id
-        {"WHERE " + HISTORY_FILTERS[history_filter] if terminal_only or history_filter != "all" else ""}
+        WHERE {scope}{clause}
         ORDER BY j.updated {direction}, j.id {direction} LIMIT ?""",
-        (limit,),
+        (*arguments, limit),
     ).fetchall()
 
 
@@ -1916,6 +2089,9 @@ def main(argv=None):
     status_command.add_argument("--limit", type=int, default=-1)
     status_command.add_argument("--order", choices=("asc", "desc"), default="desc")
     status_command.add_argument("--filter", dest="history_filter", choices=HISTORY_FILTERS, default="all")
+    status_command.add_argument('--search', default='')
+    status_command.add_argument('--content-results', type=Path)
+    status_command.add_argument('--content-token')
     autostart = commands.add_parser("autostart")
     autostart.add_argument("mode", choices=("on", "off", "preview"))
     autostart.add_argument("config", type=Path)
@@ -1931,6 +2107,10 @@ def main(argv=None):
     rerun.add_argument("config", type=Path)
     commands.add_parser("clear-history")
     commands.add_parser("enqueue-folders").add_argument("config", type=Path)
+    commands.add_parser('prepare-drop').add_argument('config', type=Path)
+    drop_command = commands.add_parser('resolve-drop')
+    drop_command.add_argument('token')
+    drop_command.add_argument('action', choices=('queue','front','retranscribe','immediate','ignore'))
     args = cli.parse_args(argv)
     try:
         if args.command == "prepare-app-data":
@@ -2018,7 +2198,7 @@ def main(argv=None):
                 login_agent.update(args.mode == "on", definition)
             return 0
         with closing(database(state)) as db:
-            if args.command == "enqueue-folders":
+            if args.command in ('enqueue-folders', 'prepare-drop'):
                 settings = read_settings(args.config)
                 folders = json.loads(args.config.read_text(encoding="utf-8")).get(
                     "dropped_folders"
@@ -2026,8 +2206,11 @@ def main(argv=None):
                 if not isinstance(folders, list) or not all(
                     isinstance(folder, str) for folder in folders
                 ):
-                    raise ValueError("Eine Liste abgelegter Ordner ist erforderlich.")
-                print(json.dumps(enqueue_folders(db, settings, folders), ensure_ascii=True))
+                    raise ValueError("Eine Liste abgelegter Dateien und Ordner ist erforderlich.")
+                operation = prepare_drop if args.command == 'prepare-drop' else enqueue_folders
+                print(json.dumps(operation(db, settings, folders), ensure_ascii=True))
+            elif args.command == 'resolve-drop':
+                print(json.dumps(resolve_drop(db, args.token, args.action), ensure_ascii=True))
             elif args.command == "retry":
                 retry(db, args.job_id)
             elif args.command == 'cancel-job':
@@ -2057,8 +2240,19 @@ def main(argv=None):
                 connection = db.execute(
                     "SELECT available,error FROM connection"
                 ).fetchone()
+                content_matches = False
+                if args.content_results:
+                    content = json.loads(args.content_results.read_text(encoding='utf-8'))
+                    if not args.content_token or content.get('token') != args.content_token or content.get('query') != args.search:
+                        raise ValueError('Die Detailsuche ist nicht mehr aktuell. Bitte erneut starten.')
+                    identifiers = content.get('job_ids', [])
+                    if not isinstance(identifiers, list) or any(type(identifier) is not int for identifier in identifiers):
+                        raise ValueError('Ungültiges Detailsuchergebnis. Bitte erneut starten.')
+                    db.execute('CREATE TEMP TABLE content_matches(job_id INTEGER PRIMARY KEY)')
+                    db.executemany('INSERT OR IGNORE INTO content_matches VALUES (?)', ((identifier,) for identifier in identifiers))
+                    content_matches = True
                 jobs = history_jobs(db, args.order, args.limit, terminal_only=True,
-                                    history_filter=args.history_filter)
+                                    history_filter=args.history_filter, search=args.search, content_matches=content_matches)
                 current = db.execute(
                     """SELECT j.*, EXISTS(SELECT 1 FROM cancel_requests c WHERE c.job_id=j.id)
                     AS cancel_requested FROM jobs j WHERE state IN ('copying','transcribing','exporting')"""
@@ -2090,7 +2284,7 @@ def main(argv=None):
                             "queue": [dict(row) for row in queue_jobs(db)],
                             "current": dict(current) if current else None,
                             "jobs": [dict(job) for job in jobs],
-                            "history_counts": history_counts(db),
+                            "history_counts": history_counts(db, search=args.search, content_matches=content_matches),
                         },
                         ensure_ascii=False,
                         indent=2,

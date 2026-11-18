@@ -12,6 +12,8 @@ from threading import Event
 from time import time
 
 from model_storage import data_directory
+from file_actions import reveal_in_explorer
+from transcript_search import path_matches, run_content_search, transcript_path
 from network_wait import NetworkPermissionError, retry_network_permission
 from PySide6.QtCore import (
     Property,
@@ -238,20 +240,11 @@ def job_settings(job):
 
 
 def output_path(job, *, transcript=False):
-    if transcript and job.get('result_kind') in ('existing','duplicate'):
-        return Path(job['known_transcript_path']) if job.get('known_transcript_path') else Path(job['source']).with_suffix('.txt')
+    if transcript:
+        return transcript_path(job)
     source = Path(job["source"])
     archived = Path(job["completed_dir"]) / source.name
     settings = job_settings(job)
-    if transcript:
-        if job.get("origin_job_id"):
-            name = f"{archived.stem} (Neu {job['id']}).txt"
-            return archived.with_name(
-                name
-                if len(name.encode("utf-8")) <= 255
-                else f"Neutranskription {job['id']}.txt"
-            )
-        return archived.with_suffix(".txt")
     moved = not settings.get("watch_path") or settings.get("move_media")
     return (
         archived
@@ -299,6 +292,9 @@ class Controller(QObject):
     foldersChanged = Signal()
     historyChanged = Signal()
     queueChanged = Signal()
+    contentSearchProgress = Signal(int, str)
+    dropConflictOpened = Signal()
+    dropResolved = Signal()
     detailsOpened = Signal()
     windowRequested = Signal()
     networkPermissionChanged = Signal(bool)
@@ -321,6 +317,16 @@ class Controller(QObject):
         self.selected = None
         self.history = []
         self.queue = []
+        self.queue_all = []
+        self.queue_query = ''
+        self.history_query = ''
+        self.content_token = ''
+        self.content_running = False
+        self.content_status = ''
+        self.content_cancel = Event()
+        self.content_generation = 0
+        self.contentSearchProgress.connect(self.content_search_progress)
+        QApplication.instance().aboutToQuit.connect(self.content_cancel.set)
         self.queue_dragging = False
         self.queue_compact = self.preferences.value("queueCompact", True, type=bool)
         self.order = self.preferences.value("historyOrder", "desc")
@@ -336,12 +342,18 @@ class Controller(QObject):
         self.message_error = False
         self.drop_message = ""
         self.drop_error = False
+        self.drop_plan = {}
+        self.drop_backlog = []
+        self.drop_timer = QTimer(self, interval=250)
+        self.drop_timer.timeout.connect(self.drain_drops)
         self.refreshing = False
         self.checking = False
         self.next_probe = 0
         self.tray = None
         self.timer = QTimer(self, interval=2000)
         self.timer.timeout.connect(self.refresh)
+        self.history_search_timer = QTimer(self, interval=180, singleShot=True)
+        self.history_search_timer.timeout.connect(self.refresh)
 
     settings = Property("QVariantMap", lambda self: self.draft, notify=changed)
     folderPaths = Property(
@@ -351,6 +363,7 @@ class Controller(QObject):
         "QVariantList", lambda self: self.history, notify=historyChanged
     )
     queueItems = Property('QVariantList',lambda self:self.queue,notify=queueChanged)
+    dropPlan = Property('QVariantMap', lambda self: self.drop_plan, notify=changed)
 
     @Property("QVariantMap", notify=changed)
     def state(self):
@@ -388,6 +401,12 @@ class Controller(QObject):
             "queueCount": len(self.snapshot.get('queue',[])),
             "queuePaused": self.snapshot.get('queue_paused',False),
             "queueCompact": self.queue_compact,
+            "queueSearch": self.queue_query,
+            "historySearch": self.history_query,
+            "contentSearchRunning": self.content_running,
+            "contentSearchStopping": self.content_running and self.content_cancel.is_set(),
+            "contentSearchActive": bool(self.content_token),
+            "contentSearchStatus": self.content_status,
             "dropMessage": self.drop_message,
             "dropError": self.drop_error,
             "checked": checked,
@@ -406,7 +425,7 @@ class Controller(QObject):
             "filter": self.filter,
             "historyCounts": self.history_counts(),
             "order": self.order,
-            "canClear": self.history_counts()["all"] > 0 and not job and not self.busy,
+            "canClear": self.history_counts()["all"] > 0 and not job and not self.busy and not self.history_query,
         }
 
     @Property("QVariantMap", notify=changed)
@@ -608,7 +627,15 @@ class Controller(QObject):
 
     @Slot("QVariantList")
     def enqueueFolders(self, urls):
-        if not self.ready or self.busy:
+        if not self.ready:
+            return
+        if self.busy or self.drop_plan:
+            self.drop_backlog.extend(urls)
+            self.drop_timer.start()
+            self.drop_message = 'Weitere abgelegte Dateien/Ordner werden anschließend gemeinsam geprüft.'
+            if self.drop_plan:
+                self.drop_plan = {**self.drop_plan, 'notice': self.drop_message}
+            self.changed.emit()
             return
         files = [url if isinstance(url, QUrl) else QUrl(url) for url in urls]
         paths = [url.toLocalFile() for url in files if url.isLocalFile()]
@@ -616,7 +643,7 @@ class Controller(QObject):
             self.drop_message = (
                 "Lade zuerst die Modelle für die gewählte Konfiguration herunter."
                 if paths
-                else "Lege einen Ordner aus dem Dateimanager ab."
+                else "Lege Dateien oder Ordner aus dem Dateimanager ab."
             )
             self.drop_error = True
             self.changed.emit()
@@ -631,48 +658,99 @@ class Controller(QObject):
             "dropped_folders": paths,
         }
         self.busy = True
-        self.drop_message = "Ordner werden für die Warteschlange durchsucht …"
+        self.drop_message = "Dateien und Ordner werden auf bestehende Aufträge geprüft …"
         self.drop_error = False
         self.changed.emit()
 
         def queue():
-            result = with_settings(
-                settings, lambda file: json.loads(command("enqueue-folders", file))
+            plan = with_settings(
+                settings, lambda file: json.loads(command("prepare-drop", file))
             )
-            if result["queued"] or result["pending"]:
-                if not CONFIG.exists():
-                    save_settings(DEFAULTS)
-                command("start", CONFIG)
-            return result
+            if not plan['has_conflicts']:
+                plan['result'] = json.loads(command('resolve-drop', plan['token'], 'queue'))
+                self.ensure_drop_service(plan['result'])
+            return plan
 
         def queued(result, error):
             self.busy = False
             if error:
                 self.drop_message, self.drop_error = error, True
             else:
-                count, skipped = result["queued"], result["skipped"]
-                parts = []
-                if count:
-                    parts.append(
-                        "1 Aufnahme eingereiht."
-                        if count == 1 else f"{count} Aufnahmen eingereiht."
-                    )
-                if skipped:
-                    parts.append(
-                        "1 Aufnahme war bereits erfasst."
-                        if skipped == 1 else f"{skipped} Aufnahmen waren bereits erfasst."
-                    )
-                warnings = result["warnings"]
-                if warnings:
-                    parts.append(warnings[0])
-                    if len(warnings) > 1:
-                        parts.append(f"Weitere Meldungen: {len(warnings) - 1}.")
-                self.drop_message = "\n".join(parts) or "Keine Mediendateien gefunden."
-                self.drop_error = bool(warnings)
+                if 'result' in result:
+                    self.show_drop_result(result['result'])
+                else:
+                    self.drop_plan = result
+                    self.drop_message = 'Bereits bekannte Aufnahmen oder Probleme gefunden. Bitte im Dialog entscheiden.'
+                    self.drop_error = bool(result['warnings'])
+                    self.changed.emit()
+                    self.dropConflictOpened.emit()
             self.changed.emit()
             self.refresh()
 
         self.submit(queue, queued)
+
+    def ensure_drop_service(self, result):
+        if result['pending']:
+            if not CONFIG.exists():
+                save_settings(DEFAULTS)
+            command('start', CONFIG)
+
+    def drain_drops(self):
+        if not self.drop_backlog:
+            self.drop_timer.stop()
+        elif self.ready and not self.busy and not self.drop_plan:
+            urls, self.drop_backlog = self.drop_backlog, []
+            self.drop_timer.stop()
+            self.enqueueFolders(urls)
+
+    def show_drop_result(self, result):
+        self.drop_message = (f"Neu eingereiht: {result['queued']}. Auswahl berücksichtigt: {result['selected']}. "
+                             f"Ignoriert: {result['ignored']}. Bereits laufend: {result['active']}.")
+        if result.get('interrupted'):
+            self.drop_message += ' Der unterbrochene Auftrag wird anschließend erneut verarbeitet.'
+        if result.get('export_finishes'):
+            self.drop_message += ' Der begonnene Export wird zuerst sicher abgeschlossen.'
+        self.drop_error = bool(result['warnings'])
+        if result['warnings']:
+            self.drop_plan = dict(resolved=True, items=[], counts={}, warnings=result['warnings'], message=self.drop_message)
+            self.changed.emit()
+            self.dropConflictOpened.emit()
+        else:
+            self.drop_plan = {}
+            self.dropResolved.emit()
+
+    @Slot(str)
+    def resolveDrop(self, action):
+        if self.busy or not self.drop_plan or self.drop_plan.get('resolved'):
+            return
+        token = self.drop_plan['token']
+        self.busy = True
+        self.changed.emit()
+        def apply():
+            result = json.loads(command('resolve-drop', token, action))
+            self.ensure_drop_service(result)
+            return result
+        def finished(result, error):
+            self.busy = False
+            if error:
+                self.drop_plan = {**self.drop_plan, 'error': error}
+                self.drop_error = True
+            else:
+                self.show_drop_result(result)
+            self.changed.emit()
+            self.refresh()
+        self.submit(apply, finished)
+
+    @Slot()
+    def dismissDrop(self):
+        if self.busy:
+            return
+        if not self.drop_plan.get('resolved'):
+            self.drop_message = 'Drop verworfen. Bestehende Aufträge bleiben unverändert.'
+            self.drop_error = False
+        self.drop_plan = {}
+        self.changed.emit()
+        self.dropResolved.emit()
 
     @Slot(bool)
     def save(self, start):
@@ -841,11 +919,15 @@ class Controller(QObject):
         self.refreshing = True
         order = self.order
         history_filter = self.filter
+        query, token = self.history_query, self.content_token
 
         def finished(result, error):
             self.refreshing = False
             if error:
                 self.notify(error, True)
+                return
+            if (order, history_filter, query, token) != (self.order, self.filter, self.history_query, self.content_token):
+                self.refresh()
                 return
             self.snapshot = result
             if not result.get("running") and time() >= self.next_probe:
@@ -855,14 +937,14 @@ class Controller(QObject):
             self.update_status()
             self.update_history()
             self.update_queue()
-            if order != self.order or history_filter != self.filter:
-                self.refresh()
-
-        self.submit(
-            lambda: json.loads(command("status", "--limit", "250", "--order", order,
-                                       "--filter", history_filter)),
-            finished,
-        )
+        def status():
+            arguments = ['status', '--limit', '250', '--order', order, '--filter', history_filter,
+                         '--search', query]
+            if token:
+                arguments += ['--content-results', str(PROFILE / 'service/content-search-result.json'),
+                              '--content-token', token]
+            return json.loads(command(*arguments))
+        self.submit(status, finished)
 
     def folder_status(self, path):
         path = path.strip()
@@ -999,11 +1081,11 @@ class Controller(QObject):
         if self.queue_dragging:
             return
         queue=[]
-        for job in self.snapshot.get('queue',[]):
+        for position, job in enumerate(self.snapshot.get('queue',[]), 1):
             settings=job_settings(job)
             size=job['size']
             queue.append(dict(
-                id=job['id'],name=Path(job['source']).name,path=job['source'],
+                id=job['id'],position=position,name=Path(job['source']).name,path=job['source'],
                 status=('Aufnahme läuft / Datei gesperrt' if (job.get('error') or '').startswith('Aufnahme wird noch geschrieben') else 'Wartet auf Wiederholung') if job['state']=='failed' else STATES.get(job['state'],job['state']),
                 size=f'{size/2**30:.2f} GiB' if size>=2**30 else f'{size/2**20:.1f} MiB',
                 model=MODELS.get(settings.get('model'),settings.get('model','—')),
@@ -1013,9 +1095,85 @@ class Controller(QObject):
                 retryAt=clock(job.get('retry_at')) if job.get('retry_at') else '',
                 options=' · '.join(name for name,key in [('Stille','skip_silence'),('Sprecher','speakers'),('DOVER','dover_lap')] if settings.get(key)),
             ))
-        if queue!=self.queue:
-            self.queue=queue
+        self.queue_all = queue
+        self.apply_queue_search()
+
+    def apply_queue_search(self):
+        queue = [job for job in self.queue_all if path_matches(job['path'], self.queue_query)] if self.queue_query else self.queue_all
+        if queue != self.queue:
+            self.queue = queue
             self.queueChanged.emit()
+
+    @Slot(str)
+    def setQueueSearch(self, query):
+        self.queue_query = query
+        self.apply_queue_search()
+        self.changed.emit()
+
+    @Slot(str)
+    def setHistorySearch(self, query):
+        if query == self.history_query:
+            return
+        self.history_query = query
+        self.content_token = ''
+        if self.content_running:
+            self.content_cancel.set()
+            self.content_status = 'Detailsuche wird beendet …'
+        else:
+            self.content_status = ''
+        self.changed.emit()
+        self.history_search_timer.start()
+
+    @Slot(int, str)
+    def content_search_progress(self, generation, text):
+        if generation == self.content_generation and self.content_running and not self.content_cancel.is_set():
+            self.content_status = text
+            self.changed.emit()
+
+    @Slot()
+    def startContentSearch(self):
+        if self.content_running or not self.history_query.strip():
+            return
+        self.content_generation += 1
+        generation, query = self.content_generation, self.history_query
+        self.content_cancel.clear()
+        self.content_token = ''
+        self.content_running = True
+        self.content_status = 'Detailsuche wird vorbereitet …'
+        self.changed.emit()
+
+        def search():
+            if str(ENGINE) not in sys.path:
+                sys.path.append(str(ENGINE))
+            from platform_io import child_process
+            return run_content_search(PROFILE / 'service/jobs.sqlite3', PROFILE / 'service/transcript-search.sqlite3',
+                PROFILE / 'service/content-search-result.json', query, self.content_cancel,
+                lambda text: self.contentSearchProgress.emit(generation, text),
+                lambda arguments, **options: child_process(arguments, cancellable=True, **options))
+
+        def finished(result, error):
+            if generation != self.content_generation:
+                return
+            self.content_running = False
+            if self.content_cancel.is_set() or query != self.history_query:
+                self.content_status = 'Detailsuche gestoppt. Dateiname/Pfad wird weiter gefiltert.'
+            elif error:
+                self.content_status = error
+            else:
+                self.content_token = result['token']
+                self.content_status = (f"Detailsuche: {result['matches']} Inhaltstreffer · "
+                    f"{result['files']} Dateien geprüft · {result['skipped']} übersprungen")
+            self.changed.emit()
+            self.refresh()
+        self.submit(search, finished)
+
+    @Slot()
+    def stopContentSearch(self):
+        self.content_cancel.set()
+        self.content_token = ''
+        self.content_status = 'Detailsuche wird beendet …' if self.content_running else ''
+        self.changed.emit()
+        self.refresh()
 
     @Slot(bool)
     def setQueueCompact(self, compact):
@@ -1100,7 +1258,10 @@ class Controller(QObject):
         if self.selected is not None:
             path = output_path(self.selected, transcript=True)
             if sys.platform == "win32":
-                subprocess.Popen(["explorer.exe", f"/select,{path}"])
+                def revealed(result, error):
+                    if error:
+                        self.notify(error, True)
+                self.submit(lambda: reveal_in_explorer(path), revealed)
             elif sys.platform == "darwin":
                 subprocess.Popen(["/usr/bin/open", "-R", str(path)])
             else:

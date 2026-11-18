@@ -88,6 +88,117 @@ class QueueTests(unittest.TestCase):
             if selected == 'errors':
                 self.assertEqual({job['id'] for job in snapshot['jobs']}, set(identifiers[:2]))
 
+    def plan_drop(self, paths):
+        with patch.object(service, 'inspect_folders_with_deadline', side_effect=service.inspect_folders):
+            return service.prepare_drop(self.db, self.settings, [str(path) for path in paths])
+
+    def test_mixed_drop_preflight_is_read_only_deduplicated_and_ignore_is_idempotent(self):
+        done, one = self.add('Done.wav', b'finished')
+        self.assertTrue(service.next_job(self.db, self.state, self.engine))
+        queued, two = self.add('Queued.wav', b'waiting')
+        new = self.incoming / 'New.wav'; new.write_bytes(b'new')
+        subfolder = self.incoming / 'Sub'; subfolder.mkdir()
+        nested = subfolder / 'Nested.wav'; nested.write_bytes(b'nested')
+        plan = self.plan_drop([self.incoming, queued, subfolder, done])
+        self.assertTrue(plan['has_conflicts'])
+        self.assertEqual((plan['counts']['new'], plan['counts']['queued'], plan['counts']['done']), (2, 1, 1))
+        self.assertEqual(self.db.execute('select count(*) from jobs').fetchone()[0], 2)
+        result = service.resolve_drop(self.db, plan['token'], 'ignore')
+        self.assertEqual((result['queued'], result['ignored']), (2, 2))
+        self.assertEqual(service.resolve_drop(self.db, plan['token'], 'immediate'), result)
+        self.assertEqual(self.db.execute('select count(*) from jobs').fetchone()[0], 4)
+        self.assertEqual(self.row(two)['state'], 'ready')
+        self.assertEqual(done.read_bytes(), b'finished')
+
+    def test_drop_of_completed_file_explicitly_retranscribes_to_separate_txt(self):
+        source, one = self.add()
+        self.assertTrue(service.next_job(self.db, self.state, self.engine))
+        old = source.with_suffix('.txt').read_bytes()
+        plan = self.plan_drop([source])
+        result = service.resolve_drop(self.db, plan['token'], 'retranscribe')
+        self.assertEqual(result['queued'], 1)
+        new = queue_jobs(self.db)[0]
+        self.assertEqual(new['origin_job_id'], one)
+        self.assertTrue(json.loads(new['settings'])['folder_drop'])
+        self.assertTrue(service.next_job(self.db, self.state, self.engine))
+        self.assertEqual(source.with_suffix('.txt').read_bytes(), old)
+        self.assertTrue(service.targets(self.row(new['id']))[1].is_file())
+
+    def test_immediate_drop_preempts_and_restores_current_job_after_selected_batch(self):
+        source, one = self.add(); priority, two = self.add('Priority.wav', b'other')
+        def engine(*args, **options):
+            with closing(service.database(self.state)) as other:
+                plan = service.prepare_drop(other, self.settings, [str(priority)])
+                result = service.resolve_drop(other, plan['token'], 'immediate')
+                self.assertEqual(result['interrupted'], one)
+            self.assertTrue(options['cancelled']())
+            return 'Interrupted result must not publish.'
+        self.assertTrue(service.next_job(self.db, self.state, engine))
+        self.assertEqual(self.row(one)['state'], 'ready')
+        self.assertFalse(source.with_suffix('.txt').exists())
+        self.assertFalse((self.state / 'jobs' / str(one)).exists())
+        self.assertEqual([job['id'] for job in queue_jobs(self.db)], [two, one])
+        self.assertTrue(service.next_job(self.db, self.state, self.engine))
+        self.assertEqual(self.row(two)['state'], 'done')
+        self.assertTrue(service.next_job(self.db, self.state, self.engine))
+        self.assertEqual(self.row(one)['state'], 'done')
+        self.assertEqual(source.read_bytes(), b'synthetic media')
+
+    def test_preemption_survives_recovery_and_explicit_cancel_overrides_resume(self):
+        _, one = self.add(); priority, two = self.add('Priority.wav', b'other')
+        with self.db:
+            self.db.execute("update jobs set state='transcribing' where id=?", (one,))
+        plan = self.plan_drop([priority])
+        service.resolve_drop(self.db, plan['token'], 'immediate')
+        service.recover(self.db, self.state)
+        self.assertEqual([job['id'] for job in queue_jobs(self.db)], [two, one])
+        with self.db:
+            self.db.execute("update jobs set state='transcribing' where id=?", (one,))
+        plan = self.plan_drop([priority])
+        service.resolve_drop(self.db, plan['token'], 'immediate')
+        cancel_queue(self.db)
+        service.recover(self.db, self.state)
+        self.assertEqual(self.row(one)['state'], 'cancelled')
+        self.assertTrue(queue_paused(self.db))
+        self.assertEqual(len(queue_jobs(self.db)), 0)
+
+    def test_immediate_drop_waits_for_export_and_does_not_cancel_selected_active_job(self):
+        current, one = self.add(); priority, two = self.add('Priority.wav', b'other')
+        with self.db:
+            self.db.execute("update jobs set state='exporting',publication_started=1 where id=?", (one,))
+        plan = self.plan_drop([priority])
+        result = service.resolve_drop(self.db, plan['token'], 'immediate')
+        self.assertIsNone(result['interrupted'])
+        self.assertTrue(result['export_finishes'])
+        with self.db:
+            self.db.execute("update jobs set state='transcribing',publication_started=0 where id=?", (one,))
+        plan = self.plan_drop([current, priority])
+        result = service.resolve_drop(self.db, plan['token'], 'immediate')
+        self.assertEqual(result['active'], 1)
+        self.assertIsNone(result['interrupted'])
+        self.assertFalse(service.cancellation_requested(self.db, one))
+
+    def test_drop_reports_changed_and_unsupported_files_without_losing_valid_items(self):
+        changed = self.incoming / 'Changed.wav'; changed.write_bytes(b'original')
+        valid = self.incoming / 'Valid.wav'; valid.write_bytes(b'valid')
+        unsupported = self.incoming / 'Notes.txt'; unsupported.write_text('Not media')
+        plan = self.plan_drop([changed, valid, unsupported])
+        self.assertEqual(len(plan['warnings']), 1)
+        changed.write_bytes(b'changed version')
+        result = service.resolve_drop(self.db, plan['token'], 'front')
+        self.assertEqual(result['queued'], 1)
+        self.assertEqual(len(result['warnings']), 2)
+        self.assertEqual([job['source'] for job in queue_jobs(self.db)], [str(valid)])
+
+    @unittest.skipUnless(WINDOWS, 'Windows path case')
+    def test_drop_path_case_and_dot_segments_do_not_duplicate_a_waiting_file(self):
+        source, one = self.add()
+        plan = self.plan_drop([str(source).upper(), self.incoming / 'Sub' / '..' / source.name])
+        self.assertEqual(len(plan['items']), 1)
+        self.assertEqual(plan['counts']['queued'], 1)
+        service.resolve_drop(self.db, plan['token'], 'front')
+        self.assertEqual([job['id'] for job in queue_jobs(self.db)], [one])
+
     def test_cancel_all_pauses_and_cancels_automatic_retries_without_readding(self):
         source,one=self.add();_,two=self.add('two.wav',b'other')
         with self.db:

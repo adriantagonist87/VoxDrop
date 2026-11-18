@@ -9,6 +9,8 @@ ColumnLayout {
     required property var viewState
     property var items: api.queueItems
     readonly property bool compact: viewState.queueCompact
+    property bool searchOpen: false
+    readonly property bool searching: Boolean(viewState.queueSearch)
     property bool dragging: false
     property real dragY: -1
     spacing: 8
@@ -23,13 +25,38 @@ ColumnLayout {
 
     RowLayout {
         Layout.fillWidth: true
-        Text { text: "Warteschlange (" + pane.items.length + ")"; color: "#ededed"; font.pixelSize: 17; font.bold: true; wrapMode: Text.WordWrap; Layout.fillWidth: true }
+        Text { text: "Warteschlange (" + (pane.searching ? pane.items.length + " / " : "") + pane.viewState.queueCount + ")"; color: "#ededed"; font.pixelSize: 17; font.bold: true; wrapMode: Text.WrapAnywhere; Layout.fillWidth: true }
+        SearchToggle {
+            objectName: 'queueSearchToggle'
+            checked: pane.searchOpen
+            Accessible.name: pane.searchOpen ? 'Warteschlangensuche schließen und zurücksetzen' : 'Warteschlange durchsuchen'
+            onClicked: {
+                pane.searchOpen = !pane.searchOpen
+                if (pane.searchOpen) queueSearch.forceActiveFocus()
+                else pane.api.setQueueSearch('')
+            }
+        }
         QueueButton {
             objectName: "pauseQueueButton"
             text: pane.viewState.queuePaused ? "Fortsetzen" : "Pausieren"
             enabled: !pane.viewState.busy
             onClicked: pane.api.pauseQueue(!pane.viewState.queuePaused)
         }
+    }
+    RowLayout {
+        visible: pane.searchOpen
+        Layout.fillWidth: true
+        TextField {
+            id: queueSearch
+            objectName: 'queueSearchField'
+            Layout.fillWidth: true
+            selectByMouse: true
+            placeholderText: 'Dateiname oder Pfad (* und ?)'
+            Accessible.name: 'Warteschlange nach Dateiname oder Pfad durchsuchen'
+            text: pane.viewState.queueSearch
+            onTextChanged: pane.api.setQueueSearch(text)
+        }
+        QueueButton { text: '×'; Accessible.name: 'Warteschlangensuche zurücksetzen'; onClicked: pane.api.setQueueSearch('') }
     }
     RowLayout {
         Layout.fillWidth: true
@@ -48,7 +75,7 @@ ColumnLayout {
             onClicked: confirmCancelQueue.open()
         }
     }
-    Text { text: "Am Griff ziehen oder Reihenfolge im Menü ändern"; color: "#ababab"; font.pixelSize: 11; wrapMode: Text.WordWrap; Layout.fillWidth: true }
+    Text { text: pane.searching ? 'Suche zurücksetzen, um die Reihenfolge zu ändern.' : "Am Griff ziehen oder Reihenfolge im Menü ändern"; color: "#ababab"; font.pixelSize: 11; wrapMode: Text.WordWrap; Layout.fillWidth: true }
     Text {
         Layout.fillWidth: true
         visible: pane.viewState.queuePaused
@@ -58,7 +85,7 @@ ColumnLayout {
     Text {
         Layout.fillWidth: true
         visible: pane.items.length === 0
-        text: "Keine Aufträge in der Warteschlange."
+        text: pane.searching ? 'Keine passenden Aufträge.' : "Keine Aufträge in der Warteschlange."
         color: "#ababab"; font.pixelSize: 13
     }
     ListView {
@@ -107,7 +134,7 @@ ColumnLayout {
                 id: dragMouse
                 objectName: "queueDragHandle" + row.modelData.id
                 x: 8; y: 9; width: 28; height: 30
-                enabled: !pane.viewState.busy
+                enabled: !pane.viewState.busy && !pane.searching
                 cursorShape: Qt.OpenHandCursor
                 drag.target: token
                 drag.axis: Drag.YAxis
@@ -122,7 +149,7 @@ ColumnLayout {
                 spacing: 5
                 RowLayout {
                     Layout.fillWidth: true; spacing: 4
-                    Text { Layout.fillWidth: true; text: (row.index + 1) + ".  " + row.modelData.name; font.bold: true; font.pixelSize: 13; color: "#ededed"; wrapMode: row.expanded ? Text.WrapAnywhere : Text.NoWrap; maximumLineCount: row.expanded ? 2 : 1; elide: Text.ElideMiddle }
+                    Text { Layout.fillWidth: true; text: row.modelData.position + ".  " + row.modelData.name; font.bold: true; font.pixelSize: 13; color: "#ededed"; wrapMode: row.expanded ? Text.WrapAnywhere : Text.NoWrap; maximumLineCount: row.expanded ? 2 : 1; elide: Text.ElideMiddle }
                     QueueButton {
                         objectName: "expandQueue" + row.modelData.id
                         Layout.preferredWidth: 27
@@ -158,7 +185,7 @@ ColumnLayout {
                 RowLayout {
                     visible: row.expanded && pane.width >= 340
                     Layout.fillWidth: true; spacing: 4
-                    QueueButton { text: "Reihenfolge"; enabled: !pane.viewState.busy; Accessible.name: "Reihenfolge ändern: " + row.modelData.name; onClicked: moveMenu.open() }
+                    QueueButton { text: "Reihenfolge"; enabled: !pane.viewState.busy && !pane.searching; Accessible.name: "Reihenfolge ändern: " + row.modelData.name; onClicked: moveMenu.open() }
                     QueueButton { text: "Details"; enabled: !pane.viewState.busy; onClicked: pane.api.showDetails(row.modelData.id) }
                     Item { Layout.fillWidth: true }
                     QueueButton { objectName: "removeQueue" + row.modelData.id; text: "Entfernen"; enabled: !pane.viewState.busy; Accessible.name: "Aus Warteschlange entfernen: " + row.modelData.name; onClicked: pane.api.cancelJob(row.modelData.id) }
@@ -166,10 +193,10 @@ ColumnLayout {
             }
             Menu {
                 id: moveMenu
-                MenuItem { text: "Als Nächstes"; enabled: row.index > 0; onTriggered: pane.api.moveQueueItem(row.modelData.id, pane.items[0].id) }
-                MenuItem { text: "Einen Platz nach oben"; enabled: row.index > 0; onTriggered: pane.api.moveQueueItem(row.modelData.id, pane.items[row.index - 1].id) }
-                MenuItem { text: "Einen Platz nach unten"; enabled: row.index + 1 < pane.items.length; onTriggered: pane.api.moveQueueItem(row.modelData.id, row.index + 2 < pane.items.length ? pane.items[row.index + 2].id : 0) }
-                MenuItem { text: "Ans Ende"; enabled: row.index + 1 < pane.items.length; onTriggered: pane.api.moveQueueItem(row.modelData.id, 0) }
+                MenuItem { text: "Als Nächstes"; enabled: !pane.searching && row.index > 0; onTriggered: pane.api.moveQueueItem(row.modelData.id, pane.items[0].id) }
+                MenuItem { text: "Einen Platz nach oben"; enabled: !pane.searching && row.index > 0; onTriggered: pane.api.moveQueueItem(row.modelData.id, pane.items[row.index - 1].id) }
+                MenuItem { text: "Einen Platz nach unten"; enabled: !pane.searching && row.index + 1 < pane.items.length; onTriggered: pane.api.moveQueueItem(row.modelData.id, row.index + 2 < pane.items.length ? pane.items[row.index + 2].id : 0) }
+                MenuItem { text: "Ans Ende"; enabled: !pane.searching && row.index + 1 < pane.items.length; onTriggered: pane.api.moveQueueItem(row.modelData.id, 0) }
                 MenuSeparator {}
                 MenuItem { text: "Auftragsdetails öffnen"; onTriggered: pane.api.showDetails(row.modelData.id) }
                 MenuItem { text: "Aus Warteschlange entfernen"; onTriggered: pane.api.cancelJob(row.modelData.id) }

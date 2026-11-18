@@ -26,6 +26,16 @@ def initialise_queue(db):
             job_id INTEGER PRIMARY KEY REFERENCES jobs(id) ON DELETE CASCADE,
             requested REAL NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS preemptions (
+            job_id INTEGER PRIMARY KEY REFERENCES jobs(id) ON DELETE CASCADE,
+            requested REAL NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS drop_batches (
+            token TEXT PRIMARY KEY, created REAL NOT NULL, items TEXT NOT NULL,
+            result TEXT
+        );
+        CREATE INDEX IF NOT EXISTS job_source_version ON jobs(source,size,mtime_ns,id);
+        CREATE INDEX IF NOT EXISTS job_source_version_nocase ON jobs(source COLLATE NOCASE,size,mtime_ns,id);
         CREATE TRIGGER IF NOT EXISTS queue_insert AFTER INSERT ON jobs BEGIN
             INSERT INTO queue_positions VALUES(new.id,
                 COALESCE((SELECT MAX(position) FROM queue_positions),0)+1);
@@ -100,6 +110,7 @@ def _cancel(db, job_id):
 def cancel_job(db, job_id):
     with db:
         db.execute('BEGIN IMMEDIATE')
+        db.execute('DELETE FROM preemptions WHERE job_id=?', (job_id,))
         return _cancel(db,job_id)
 
 
@@ -107,12 +118,48 @@ def cancel_queue(db):
     with db:
         db.execute('BEGIN IMMEDIATE')
         db.execute('UPDATE queue_state SET paused=1 WHERE id=1')
+        db.execute('DELETE FROM preemptions')
         ids={row['id'] for row in queue_jobs(db)}
         ids.update(row[0] for row in db.execute("""SELECT id FROM jobs
             WHERE state IN ('copying','transcribing') AND publication_started=0"""))
         for job_id in ids:
             _cancel(db,job_id)
         return len(ids)
+
+
+def prioritise_jobs(db, identifiers, *, interrupt=False):
+    """Called inside the batch transaction. Keep the batch's original order."""
+    pending = [job['id'] for job in queue_jobs(db)]
+    selected = list(dict.fromkeys(identifier for identifier in identifiers if identifier in pending))
+    remainder = [identifier for identifier in pending if identifier not in selected]
+    interrupted = None
+    current = db.execute("SELECT id,state,publication_started FROM jobs WHERE state IN ('copying','transcribing','exporting') LIMIT 1").fetchone()
+    if interrupt and selected:
+        db.execute('UPDATE queue_state SET paused=0 WHERE id=1')
+        if selected and current and current['id'] not in identifiers and current['state'] != 'exporting' and not current['publication_started']:
+            if not cancellation_requested(db, current['id']) or db.execute('SELECT 1 FROM preemptions WHERE job_id=?', (current['id'],)).fetchone():
+                _cancel(db, current['id'])
+                db.execute('INSERT OR REPLACE INTO preemptions VALUES (?,?)', (current['id'], time.time()))
+                interrupted = current['id']
+                remainder.insert(0, interrupted)
+    order = selected + remainder
+    db.executemany('UPDATE queue_positions SET position=? WHERE job_id=?',
+                   [(position, identifier) for position, identifier in enumerate(order, 1)])
+    return interrupted
+
+
+def restore_preempted(db, job_id):
+    """Restore the interrupted job at its reserved position, including after a crash."""
+    with db:
+        db.execute('BEGIN IMMEDIATE')
+        if not db.execute('SELECT 1 FROM preemptions WHERE job_id=?', (job_id,)).fetchone():
+            return False
+        db.execute("""UPDATE jobs SET state='ready',updated=?,started=NULL,finished=NULL,
+            phase=NULL,progress=NULL,error=NULL WHERE id=?""", (time.time(), job_id))
+        db.execute('DELETE FROM cancel_requests WHERE job_id=?', (job_id,))
+        db.execute('DELETE FROM job_retries WHERE job_id=?', (job_id,))
+        db.execute('DELETE FROM preemptions WHERE job_id=?', (job_id,))
+    return True
 
 
 def cancellation_requested(db, job_id):
