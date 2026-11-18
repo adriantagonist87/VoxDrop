@@ -46,24 +46,13 @@ ColumnLayout {
             }
         }
     }
-    RowLayout {
+    QueueButton {
+        objectName: "pauseQueueButton"
         Layout.fillWidth: true
-        QueueButton {
-            objectName: "startProcessingButton"
-            Layout.fillWidth: true
-            primary: true
-            text: pane.viewState.queuePaused ? (pane.viewState.queueImmediateCount > 0 ? 'Gesamte Queue starten' : 'Fortsetzen') : 'Verarbeitung starten'
-            enabled: Boolean(pane.viewState.canStartProcessing)
-            ToolTip.visible: hovered
-            ToolTip.text: pane.viewState.current.name && !pane.viewState.queuePaused ? 'Verarbeitung läuft bereits automatisch.' : 'Bereits eingereihte Dateien verarbeiten; die Ordnerüberwachung bleibt unverändert.'
-            onClicked: pane.api.startProcessing()
-        }
-        QueueButton {
-            objectName: "pauseQueueButton"
-            text: pane.viewState.queuePaused && pane.viewState.queueImmediateCount > 0 ? 'Auswahl pausieren' : "Pausieren"
-            enabled: !pane.viewState.busy && (!pane.viewState.queuePaused || pane.viewState.queueImmediateCount > 0)
-            onClicked: pane.api.pauseQueue(true)
-        }
+        text: "Nach diesem Auftrag pausieren"
+        visible: Boolean(pane.viewState.current.name) && !pane.viewState.processingStopping && (!pane.viewState.queuePaused || pane.viewState.queueImmediateCount > 0)
+        enabled: visible && !pane.viewState.busy
+        onClicked: pane.api.pauseQueue(true)
     }
     RowLayout {
         visible: pane.searchOpen
@@ -92,7 +81,7 @@ ColumnLayout {
         QueueButton {
             objectName: "cancelQueueButton"
             Layout.fillWidth: true
-            text: "Alle abbrechen …"
+            text: "Warteschlange leeren …"
             enabled: !pane.viewState.busy && (pane.items.length > 0 || Boolean(pane.viewState.current.name))
             onClicked: confirmCancelQueue.open()
         }
@@ -249,14 +238,14 @@ ColumnLayout {
     Dialog {
         id: confirmCancelQueue
         objectName: "confirmCancelQueue"
-        title: "Gesamte Warteschlange abbrechen?"
+        title: "Warteschlange leeren und Aufträge abbrechen?"
         modal: true
         anchors.centerIn: Overlay.overlay
         width: Math.min(490, pane.Window.window.width - 40)
         standardButtons: Dialog.Cancel | Dialog.Ok
         background: Rectangle { color: "#292929"; radius: 8; border.color: "#454545" }
         contentItem: Text {
-            text: "Wartende Aufträge werden entfernt und die aktuelle Transkription wird abgebrochen. Ein bereits begonnener Export wird fertiggestellt. Originale und vorhandene Transkripte bleiben erhalten.\n\nDie Warteschlange bleibt pausiert, bis du Fortsetzen wählst. Abgebrochene Dateiversionen werden nicht automatisch erneut eingereiht."
+            text: "Wartende Aufträge werden entfernt und die aktuelle Transkription wird abgebrochen. Ein bereits begonnener Export wird fertiggestellt. Originale und vorhandene Transkripte bleiben erhalten.\n\nZum bloßen Anhalten nutze stattdessen den großen Stopp-Knopf. Nach dem Leeren werden abgebrochene Dateiversionen nicht automatisch erneut eingereiht."
             wrapMode: Text.WordWrap; color: "#ddd"; font.pixelSize: 13
         }
         onAccepted: pane.api.cancelQueue()

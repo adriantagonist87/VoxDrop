@@ -82,6 +82,9 @@ def start_queue(db):
     """Explicitly process the current queue, also with folder monitoring off."""
     with db:
         db.execute('BEGIN IMMEDIATE')
+        if db.execute("""SELECT 1 FROM cancel_requests c JOIN jobs j ON j.id=c.job_id
+            WHERE j.state IN ('copying','transcribing') LIMIT 1""").fetchone():
+            raise ValueError('Der aktuelle Auftrag wird noch gestoppt. Bitte kurz warten.')
         identifiers=[row['id'] for row in queue_jobs(db)]
         db.execute('UPDATE queue_state SET paused=0 WHERE id=1')
         db.executemany('INSERT OR IGNORE INTO immediate_jobs(job_id) VALUES (?)',
@@ -91,6 +94,27 @@ def start_queue(db):
         db.execute("""UPDATE jobs SET state='ready',updated=? WHERE state='seen'
             AND id IN (SELECT job_id FROM immediate_jobs)""",(time.time(),))
     return len(identifiers)
+
+
+def stop_queue(db):
+    """Stop processing without discarding queue entries or completed inference."""
+    with db:
+        db.execute('BEGIN IMMEDIATE')
+        db.execute('UPDATE queue_state SET paused=1 WHERE id=1')
+        db.execute('DELETE FROM immediate_jobs')
+        current = db.execute("""SELECT id,state,publication_started,text_hash FROM jobs
+            WHERE state IN ('copying','transcribing','exporting') LIMIT 1""").fetchone()
+        finishing = bool(current and (current['state']=='exporting' or
+                                     current['publication_started'] or current['text_hash']))
+        if current and not finishing:
+            # Preserve an explicit Remove/Cancel rather than reviving it.
+            already_cancelled = cancellation_requested(db, current['id'])
+            if not already_cancelled:
+                _cancel(db, current['id'])
+                db.execute('INSERT OR REPLACE INTO preemptions VALUES (?,?)',
+                           (current['id'], time.time()))
+        return dict(current_id=current['id'] if current else None,
+                    export_finishes=finishing, queue_paused=True)
 
 
 def immediate_count(db):

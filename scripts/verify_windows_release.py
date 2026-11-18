@@ -53,7 +53,7 @@ def verify(manifest, archive=None, installation=None):
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--manifest',type=Path,default=ROOT/'releases/v1.3.4/windows-release.json')
+    parser.add_argument('--manifest',type=Path,default=ROOT/'releases/v1.3.5/windows-release.json')
     parser.add_argument('--zip',type=Path)
     parser.add_argument('--app-dir',type=Path)
     parser.add_argument('--download',action='store_true')

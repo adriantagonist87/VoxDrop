@@ -319,6 +319,8 @@ class Controller(QObject):
         COMMANDS.reset()
         self.quitting=False
         self.shutdown_complete=False
+        self.playback_stopping=False
+        self.playback_stop_job=None
         self.preferences = QSettings(
             str(PROFILE / "layout.ini"), QSettings.Format.IniFormat
         )
@@ -394,7 +396,7 @@ class Controller(QObject):
             current = {
                 "id": job['id'],
                 "name": Path(job["source"]).name,
-                "phase": 'Wird abgebrochen …' if job.get('cancel_requested') else job.get("phase") or STATES.get(job["state"], job["state"]),
+                "phase": ('Wird gestoppt …' if self.snapshot.get('queue_paused') else 'Wird abgebrochen …') if job.get('cancel_requested') else job.get("phase") or STATES.get(job["state"], job["state"]),
                 "progress": job.get("progress"),
                 "elapsed": duration(time() - job["started"])
                 if job.get("started")
@@ -406,12 +408,17 @@ class Controller(QObject):
         checked = {path: self.folder_status(path) for path in self.paths}
         paused=self.snapshot.get('queue_paused',False)
         count=len(self.snapshot.get('queue',[]))
-        if job:
+        finishing=bool(job and (job['state']=='exporting' or job.get('publication_started') or job.get('text_hash')))
+        stopping=self.playback_stopping or bool(job and job.get('cancel_requested')) or bool(paused and finishing)
+        active=bool(job or self.snapshot.get('immediate_count',0) or (running and not paused))
+        if stopping:
+            processing_status='Stopp: Das fertige Ergebnis wird noch sicher gespeichert.' if finishing else 'Wird gestoppt. Der Auftrag bleibt in der Warteschlange.'
+        elif job:
             processing_status='Verarbeitung läuft. '+('Danach pausiert die Warteschlange.' if paused else f'{count} Dateien warten.')
         elif paused:
-            processing_status='Verarbeitung pausiert. Zum Starten „Fortsetzen“ wählen.'
+            processing_status='Gestoppt. ▶ Starten setzt die Warteschlange fort.'
         elif not running:
-            processing_status='Verarbeitung ist aus. „Verarbeitung starten“ wählen.'
+            processing_status='Gestoppt. ▶ Starten beginnt die Verarbeitung.'
         elif count:
             processing_status='Automatische Verarbeitung aktiv. Nächster Auftrag wird vorbereitet.'
         else:
@@ -431,8 +438,11 @@ class Controller(QObject):
             "queueCount": len(self.snapshot.get('queue',[])),
             "queuePaused": self.snapshot.get('queue_paused',False),
             "processingStatus": processing_status,
+            "processingActive": active or stopping,
+            "processingStopping": stopping,
+            "canStopProcessing": self.ready and not self.busy and not self.quitting and active and not stopping,
             "canStartProcessing": self.ready and not self.busy and not self.quitting and
-                (paused or not running or (not job and count>0)),
+                not stopping and (paused or not running or (not job and count>0)),
             "queueImmediateCount": self.snapshot.get('immediate_count', 0),
             "queueCompact": self.queue_compact,
             "queueSearch": self.queue_query,
@@ -996,6 +1006,10 @@ class Controller(QObject):
                 self.refresh()
                 return
             self.snapshot = result
+            if self.playback_stopping and result.get('queue_paused') and (
+                    not result.get('current') or result['current']['id'] != self.playback_stop_job):
+                self.playback_stopping=False
+                self.playback_stop_job=None
             if not result.get("running") and time() >= self.next_probe:
                 self.next_probe = time() + self.draft["interval_seconds"]
                 if self.paths:
@@ -1340,12 +1354,35 @@ class Controller(QObject):
 
     @Slot()
     def startProcessing(self):
-        if not self.ready or self.busy or self.quitting:
+        if not self.ready or self.busy or self.quitting or self.state['processingStopping']:
             return
         def begin():
             command('start',CONFIG)
             return command('start-queue')
         self.action(begin,'Verarbeitung gestartet. Eingereihte Dateien werden automatisch nacheinander bearbeitet.')
+
+    @Slot()
+    def stopProcessing(self):
+        if not self.state['canStopProcessing']:
+            return
+        self.playback_stopping=True
+        self.playback_stop_job=(self.snapshot.get('current') or {}).get('id')
+        self.busy=True
+        self.notify('Warteschlange und aktuelle Transkription werden gestoppt …')
+        def finished(result,error):
+            self.busy=False
+            if error:
+                self.playback_stopping=False
+                self.playback_stop_job=None
+                self.notify(error,True)
+            else:
+                self.playback_stop_job=result['current_id']
+                self.playback_stopping=result['current_id'] is not None
+                self.snapshot.update(queue_paused=True,immediate_count=0)
+                self.notify('Stopp angefordert. Das fertige Ergebnis wird noch gespeichert.' if result['export_finishes'] else
+                            'Gestoppt. Die Warteschlange bleibt erhalten; eine unterbrochene Erkennung beginnt beim Starten neu.')
+            self.refresh()
+        self.submit(lambda:json.loads(command('stop-queue')),finished)
 
     @Slot(int)
     def showDetails(self, identifier):

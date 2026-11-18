@@ -1,6 +1,12 @@
 # Übergabeauftrag für Codex auf dem Windows-PC
 
-## Aktuell: Windows v1.3.4 – GPU-Arbeitsbudget
+## Aktuell: Windows v1.3.5 – kompakter Play-/Stopp-Knopf
+
+Normaler quadratischer **44 × 44**-Knopf an fester Stelle oben in der Mitte: grünes Play zum Starten, rotes Stopp zum Anhalten. Er wächst im Vollbild nicht mit. Stopp beendet die aktuelle Erkennung, erhält die Queue samt Reihenfolge und wartet vor erneutem Start auf deren tatsächliches Ende. Fertiger Export wird noch abgeschlossen. „Warteschlange leeren …“ bleibt getrennt. Die zunächst breite Variante wurde auf Nutzerkorrektur ersetzt. [Bedienung und Grenzen](PLAY_STOPP.md).
+
+Geprüfter Code `a7166f0039f9aafb1c710079f167c22b4512595f`, [Windows v1.3.5](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.5), ZIP-SHA-256 `adc19a6ad86e299099050e545357e9435caf22df6c9d57b29efbfa2c52e33ec4`, [93-Dateien-Manifest](../releases/v1.3.5/windows-release.json). 180 Tests in 51,249 s, 173 bestanden/sieben bekannte Plattformskips. Native finale Paketprüfung in 63.608 s: echte QML-Klicks Play → Stopp während CUDA-Qwen → Play, Modellprozesse nach 0.953 s beendet, Queue/Optionen/Originalhashes erhalten, gestoppter Zustand bleibt bestehen, erfolgreiche Wiederaufnahme vor folgendem Cache-Export bei ausgeschalteter Überwachung. SQLite/Fremdschlüssel ok. Größenregression normal/maximiert/Vollbild durchlaufen. Laufzeit, Modelle und GPU-Budget unverändert.
+
+## Vorangegangener Stand: Windows v1.3.4 – GPU-Arbeitsbudget
 
 Regler links unter dem Rechengerät: 10–100 % für Windows-CUDA, unabhängig von anderen Entwurfsänderungen sofort gespeichert und auch für laufende/alte Queueaufträge wirksam. Qwen, Aligner, Whisper und beide Sprechermodelle geben gezielt Rechenzeit frei. Kein exaktes systemweites Prozent-/VRAM-Limit; CPU/Mac-Regler deaktiviert. [Umsetzung, Messungen und Mac-Aufgabe](GPU_ARBEITSBUDGET.md).
 

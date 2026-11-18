@@ -338,12 +338,13 @@ class DesktopWindowTests(unittest.TestCase):
         self.assertFalse(self.controller.drop_plan)
 
     def test_pause_button_can_stop_future_immediate_selection_without_resuming_all(self):
-        self.queue_fixture(3)
-        self.controller.snapshot.update(queue_paused=True, immediate_count=2)
+        jobs=self.queue_fixture(3)
+        self.controller.snapshot.update(queue_paused=True, immediate_count=2,
+            current={**jobs[0],'state':'transcribing','started':100})
         self.controller.changed.emit()
         QTest.qWait(25)
         button = self.visual('pauseQueueButton')
-        self.assertEqual(button.property('text'), 'Auswahl pausieren')
+        self.assertEqual(button.property('text'), 'Nach diesem Auftrag pausieren')
         point = button.mapToScene(QPointF(button.width()/2, button.height()/2)).toPoint()
         with patch.object(self.controller_module, 'command', return_value='') as command, patch.object(self.controller, 'action', side_effect=lambda operation, message: operation()):
             QTest.mouseClick(self.window, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, point)
@@ -355,26 +356,74 @@ class DesktopWindowTests(unittest.TestCase):
         self.controller.ready=True
         self.controller.snapshot.update(queue_paused=True,running=True)
         self.controller.changed.emit();QTest.qWait(30)
-        button=self.visual('startProcessingButton')
+        button=self.visual('queuePlaybackButton')
         self.assertTrue(button.property('visible'));self.assertTrue(button.property('enabled'))
-        self.assertEqual(button.property('text'),'Fortsetzen')
-        self.assertEqual(self.visual('pauseQueueButton').property('text'),'Pausieren')
+        self.assertEqual(button.property('text'),'STARTEN')
+        self.assertEqual((button.width(),button.height()),(44,44))
         self.assertFalse(self.visual('pauseQueueButton').property('enabled'))
-        self.assertIn('pausiert',self.visual('processingStatus').property('text'))
+        self.assertIn('Gestoppt',self.visual('processingStatus').property('text'))
         point=button.mapToScene(QPointF(button.width()/2,button.height()/2)).toPoint()
         with patch.object(self.controller_module,'command',return_value='') as command,patch.object(self.controller,'action',side_effect=lambda operation,message:operation()):
             QTest.mouseClick(self.window,Qt.MouseButton.LeftButton,Qt.KeyboardModifier.NoModifier,point)
         self.assertEqual([call.args[0] for call in command.call_args_list],['start','start-queue'])
 
-    def test_running_job_has_clear_status_and_disabled_start_but_enabled_pause(self):
+    def test_running_job_has_large_red_stop_and_secondary_finish_then_pause(self):
         jobs=self.queue_fixture(2)
         self.controller.ready=True
         current={**jobs[0], 'state':'transcribing','started':100,'phase':'Qwen-Modell laden','progress':None}
         self.controller.snapshot.update(current=current,running=True,queue_paused=False)
         self.controller.changed.emit();QTest.qWait(30)
         self.assertIn('Verarbeitung läuft',self.visual('processingStatus').property('text'))
-        self.assertFalse(self.visual('startProcessingButton').property('enabled'))
+        button=self.visual('queuePlaybackButton')
+        self.assertTrue(button.property('enabled'))
+        self.assertEqual(button.property('text'),'STOPP')
+        self.assertEqual(button.property('background').property('color').name(),'#b5303a')
         self.assertTrue(self.visual('pauseQueueButton').property('enabled'))
+
+    def test_playback_control_keeps_normal_square_size_in_fullscreen(self):
+        self.queue_fixture(2)
+        button=self.visual('queuePlaybackButton')
+        for mode in ('normal','maximized','fullscreen'):
+            if mode=='normal':self.window.showNormal();self.window.resize(1010,630)
+            elif mode=='maximized':self.window.showMaximized()
+            else:self.window.showFullScreen()
+            QTest.qWait(60)
+            self.assertEqual((button.width(),button.height()),(44,44),mode)
+
+    def test_real_stop_click_waits_for_worker_then_switches_to_green_play(self):
+        jobs=self.queue_fixture(2);self.controller.ready=True
+        current={**jobs[0],'state':'transcribing','started':100,'cancel_requested':False}
+        status=dict(current=current,queue=[jobs[1]],jobs=[],running=True,queue_paused=False)
+        self.controller.snapshot=status.copy();self.controller.changed.emit();QTest.qWait(30)
+        def command(*args):
+            if args[0]=='stop-queue':
+                status.update(queue_paused=True,current={**current,'cancel_requested':True})
+                return json.dumps(dict(current_id=current['id'],export_finishes=False))
+            if args[0]=='status':return json.dumps(status)
+            if args[0] in ('start','start-queue'):return '{}'
+            raise AssertionError(args)
+        self.controller.preview=False
+        with patch.object(self.controller_module,'command',side_effect=command) as sent, \
+             patch.object(self.controller,'submit',side_effect=lambda operation,finished:finished(operation(),None)), \
+             patch.object(self.controller_module,'save_settings') as save:
+            button=self.visual('queuePlaybackButton')
+            point=button.mapToScene(QPointF(button.width()/2,button.height()/2)).toPoint()
+            QTest.mouseClick(self.window,Qt.MouseButton.LeftButton,Qt.KeyboardModifier.NoModifier,point)
+            QTest.qWait(30)
+            self.assertTrue(self.controller.state['processingStopping'])
+            self.assertFalse(button.property('enabled'))
+            self.controller.startProcessing()
+            self.assertNotIn('start-queue',[call.args[0] for call in sent.call_args_list])
+            status.update(current=None,queue=jobs)
+            self.controller.refresh();QTest.qWait(30)
+            self.assertEqual(button.property('text'),'STARTEN')
+            self.assertEqual(button.property('background').property('color').name(),'#8ac6a5')
+            self.assertTrue(button.property('enabled'))
+            point=button.mapToScene(QPointF(button.width()/2,button.height()/2)).toPoint()
+            QTest.mouseClick(self.window,Qt.MouseButton.LeftButton,Qt.KeyboardModifier.NoModifier,point)
+            self.assertIn('start-queue',[call.args[0] for call in sent.call_args_list])
+            save.assert_not_called()
+        self.controller.preview=True
 
     def test_filtered_queue_menu_enables_moves_against_global_positions(self):
         self.queue_fixture(4)
