@@ -1,10 +1,38 @@
-<img src="docs/images/voxdrop-icon.png" alt="VoxDrop-App-Icon" width="72" height="72">
+<img src="macos/VoxDropLogo.png" alt="VoxDrop – Audio und Video zu Transkripten" width="144" height="144">
 
 # VoxDrop
 
 VoxDrop ist eine kostenlose App für macOS und Windows auf Basis von aTrain. Sie überwacht lokale Ordner und eingebundene SMB-Freigaben und transkribiert neue Audio- und Videodateien automatisch auf dem eigenen Rechner. Das Transkript wird als TXT neben der Aufnahme oder zusammen mit ihr in einem Unterordner gespeichert.
 
-[Kostenloser Download für Windows und macOS](https://github.com/adriantagonist87/VoxDrop/releases/latest)
+| System | Download | Stand |
+| --- | --- | --- |
+| **Windows 11 x64 / NVIDIA CUDA** | **[Windows-ZIP herunterladen](https://github.com/adriantagonist87/VoxDrop/releases/download/v1.3.2/VoxDrop-1.3.2-Windows-x64.zip)** · [Release und Prüfsumme](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.2) | Geprüfter Windows-Stand vom 18. November 2026; dieselben 91 Programmdateien wie in der abgenommenen Installation. |
+| **macOS / Apple Silicon** | **[Mac-DMG herunterladen](https://github.com/adriantagonist87/VoxDrop/releases/download/v1.3.1/VoxDrop-1.3.1-macOS-arm64.dmg)** · [Mac-Release](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.1) | Bisherige native Mac-Ausgabe. Die unten beschriebenen neuen Windows-Funktionen werden auf dieser gemeinsamen Codebasis für Mac nachgezogen. |
+
+## Windows einrichten
+
+Die ZIP vollständig in einen beschreibbaren lokalen Ordner entpacken und **VoxDrop.exe** starten. Beim ersten Start werden die passende Python-/CUDA-Laufzeit und anschließend die ausgewählten Modelle heruntergeladen. Danach erfolgen Transkription und Suche lokal. Überwachte Ordner und Einstellungen richtet jede Installation selbst ein. [Voraussetzungen und Einrichtung](windows/README.md)
+
+Bei einem Update die Ordner **Laufzeit** und **Modelle** erhalten. Einstellungen und Auftragsdaten liegen unter **%LOCALAPPDATA%\VoxDrop**. Der Download enthält keine persönlichen Medien, Transkripte oder Einstellungen.
+
+## Funktionen der aktuellen Windows-Ausgabe
+
+- **Vollständige Warteschlange:** Alle wartenden Dateien mit Dateiname, Pfad, Position und Status in der mittleren Spalte. Kompakte Ansicht sowie ausklappbare Details für die ganze Liste oder einzelne Aufträge.
+- **Reihenfolge und Abbruch:** Dateien per Drag-and-drop oder Menü vorziehen/verschieben, einzelne Einträge entfernen, die aktuelle Transkription oder die ganze Warteschlange abbrechen und pausieren/fortsetzen. Die Reihenfolge bleibt beim Neustart erhalten; Umordnen funktioniert auch in Suchergebnissen.
+- **Schnelle Suche:** Lupenbuttons öffnen die Suche nach Dateinamen und vollständigen Pfaden, einschließlich Wildcards. Im Verlauf durchsucht **Detailsuche starten** auf ausdrücklichen Wunsch auch Transkriptinhalte; die Suche kann wieder gestoppt werden. Der lokale Suchindex wird anschließend wiederverwendet.
+- **Verarbeitungsverlauf und Bestand:** **Alle**, **Fehler**, **Fertig**, **Abgebrochen** und **Bestand** zeigen Anzahlen in Klammern. Fehler werden bei positiver Anzahl rot hervorgehoben. Nie gestartete, aus der Queue entfernte Dateien zählen nicht als bearbeitet; bereits vorhandene TXT werden separat als Bestand geführt.
+- **Transkripte direkt öffnen:** In den Auftragsdetails das TXT mit der Standardanwendung des Betriebssystems öffnen oder seinen tatsächlichen Speicherort im Explorer anzeigen. Historische Fremdtranskripte erhalten keine erfundenen Modell- oder Laufzeitangaben.
+- **Konflikte bei Datei-/Ordnerdrops:** Ein gemeinsamer Dialog erklärt bereits eingereihte und schon transkribierte Dateien. Je nach Konflikt lassen sich Dateien priorisieren, separat neu transkribieren, sofort bearbeiten oder ignorieren. Mehrfach abgelegte Dateien werden dedupliziert.
+- **Dateischutz:** Vorhandene Ergebnisse werden geschützt. Ausdrückliche Neutranskriptionen erhalten separate Ergebnisdateien. Inhaltsgleiche umbenannte Aufnahmen können bekannte Ergebnisse wiederverwenden; noch geschriebene Aufnahmen, etwa von OBS, werden zurückgestellt.
+- **Verlauf wirklich bereinigen:** Nach Bestätigung werden sämtliche gespeicherten Auftrags-, Queue-, Datei- und Suchdaten einschließlich des lokalen Arbeitscaches entfernt. Originalaufnahmen, TXT und Einstellungen bleiben bestehen. Bei aktiver Überwachung liest das nächste Intervall die Ordner neu ein: vorhandene TXT erscheinen wieder im Bestand, fehlende Ergebnisse werden neu eingereiht.
+- **Tray und Taskleiste:** **X** blendet das Fenster in den Systemtray aus; Überwachung und Verarbeitung laufen weiter. **Minimieren** legt es in die Taskleiste. **VoxDrop beenden** im Tray stoppt die gesamte App samt Arbeitsprozessen und entlädt Modelle aus RAM/VRAM. Eine tatsächlich beendete App überwacht keine Ordner.
+- **Mehrere Ordner und Netzlaufwerke:** Lokale Ordner und eingerichtete SMB-/UNC-Freigaben überwachen, optional rekursiv. Ordnerausfälle werden sichtbar; erreichbare andere Ordner können weiter bearbeitet werden. Einmalige Datei-/Ordnerdrops funktionieren auch bei ausgeschalteter regulärer Überwachung.
+- **Lokale KI:** Qwen3-ASR 1.7B oder Whisper Large v3 Turbo, Zeitmarken, Deutsch/Englisch beziehungsweise automatische Spracherkennung, optional Stilleüberspringen und pyannote-Sprecherzuordnung mit DOVER-Lap. Sprach- und Sprechermodelle werden nacheinander geladen.
+- **Mehr Platz und klare Bedienung:** Dunkle Oberfläche mit verstellbaren Spalten, neues transparentes App-Icon, kein platzverbrauchender Logo-Header im Fenster und konsolenlose Hintergrundprozesse.
+
+Metadaten- und Inhaltssuche wurden mit 20.000 synthetischen Transkripten geprüft. Die Detailsuche indexiert Inhalte ausdrücklich im Hintergrund; beim Tippen in die normale Dateisuche wird kein vollständiger Inhaltslauf gestartet. [Prüfungen und Grenzen](docs/SUCHE_UND_DROP_KONFLIKTE.md)
+
+## Mac einrichten
 
 Voraussetzung für die Mac-Version ist ein Mac mit Apple Silicon und macOS 26.2 oder neuer.
 
@@ -12,13 +40,11 @@ Die DMG öffnen, den gesamten Ordner **VoxDrop** nach **Programme** ziehen und d
 
 Über **Modelle herunterladen** werden die gewünschten Modelle und ihr Download-Cache im Programmordner unter **VoxDrop/Modelle** eingerichtet. Zum Entfernen der App samt Modellen den gesamten Ordner **VoxDrop** löschen. Bei Updates die neue **VoxDrop.app** in den vorhandenen VoxDrop-Ordner kopieren. Einstellungen und Verlauf liegen im Benutzerordner unter **Library/Application Support/VoxDrop**.
 
-Der aktuelle native Windows-Prüfstand ist [Preview 13](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.2-windows-preview.13) mit X zum Systemtray, Minimieren zur Taskleiste und vollständigem App-/Überwachungs-/Modellstopp über „VoxDrop beenden“, transparentem App-Icon, getrenntem Verarbeitungsverlauf/Bestand und vollständiger Auftrags-/Suchdatenbereinigung. [Fensterbedienung und Beenden](docs/FENSTER_TRAY_UND_TASKLEISTE.md). Der gemeinsame macOS-Funktionsstand wartet noch auf die native Gegenprüfung; die stabile Mac-Ausgabe bleibt oben verlinkt.
+Für die Weiterentwicklung am Mac dient der gemeinsame Quellstand auf **main**. Die vorhandene Mac-DMG bleibt unverändert, bis die neuen gemeinsamen Funktionen nativ geprüft und neu paketiert wurden. Der Übergabeauftrag enthält Startbefehle, Funktionsmatrix, Builddateien, exakte Windows-Prüfstände und die Mac-Abnahme. **[Mac auf Windows-Funktionsstand bringen](docs/MAC_PORTIERUNG_WINDOWS_2026-11-18.md)**
 
-Die Windows-Ausgabe richtet sich an Windows 11 x64 mit NVIDIA-RTX-GPU. [VoxDrop für Windows](windows/README.md)
+[Arbeitsregeln](AGENTS.md) · [Projektstatus](docs/PROJEKTSTATUS.md) · [Entwicklung](docs/ENTWICKLUNG.md) · [Windows-Übergabe](docs/UEBERGABE_WINDOWS.md) · [Release-Identität und Branchschutz](docs/GITHUB_ABSCHLUSS_2026-11-18.md)
 
-Für die gemeinsame Weiterentwicklung gelten die Arbeitsregeln sowie Projektstatus und Entwicklungsanleitung. [AGENTS.md](AGENTS.md) · [Projektstatus](docs/PROJEKTSTATUS.md) · [Entwicklung](docs/ENTWICKLUNG.md) · [Windows-Übergabe](docs/UEBERGABE_WINDOWS.md)
-
-## Modelle und Funktionen
+## Gemeinsame Grundlagen
 
 - **Qwen3-ASR 1.7B** ist das Standardmodell. **Whisper Large v3 Turbo** ist als Alternative auswählbar.
 - Transkripte mit Zeitstempeln und optionaler Sprecherzuordnung über pyannote. DOVER-Lap kann drei Durchgänge der Sprecherzuordnung zusammenführen.

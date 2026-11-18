@@ -1,5 +1,16 @@
 # Entwicklung auf macOS und Windows
 
+## Aktuell: Windows v1.3.2 und gemeinsame Mac-Entwicklungsbasis
+
+Der Nutzer beauftragt den GitHub-Abschluss und die anschließende Mac-Portierung auf denselben Funktionsstand. [Windows v1.3.2](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.2) liefert exakt die 91 Programmdateien der abgenommenen PC-Installation: App-Code `a5efd22a241368e5e0d8e5b9c933e39cf965b20b`, ZIP-SHA-256 `be621da30940ab64ff3dfe14ac2d29a9c18b5a05ee6b76edc8deb0cfa8cc9775`. [Dateimanifest](../releases/v1.3.2/windows-release.json) und `scripts/verify_windows_release.py` machen ZIP und Installation prüfbar. Keine Änderung an der produktiven App, ihren Modellen oder Einstellungen durch diesen GitHub-Abschluss.
+
+Der gemeinsame Entwicklungsstand wird über PR #1 auf `main` zusammengeführt. Die bisherige Mac-DMG bleibt auf v1.3.1; native Mac-Funktionsfreigabe steht aus. **[Konkreter Auftrag für den Mac-Codex](MAC_PORTIERUNG_WINDOWS_2026-11-18.md)** mit Start-/Buildbefehlen, vollständiger Funktionsmatrix und Pflichtprüfungen für Cmd-Q, Unix-Prozesse, offene Aufnahmen, SQLite/FTS und Icons. Frühere Draft-/Integrationshinweise unten sind historische Übergabestände, keine aktuelle Arbeitssperre.
+
+`main` ist tatsächlich geschützt: kein Force-Push/Löschen, Pull Requests und erfolgreicher aktueller Check „Windows regression“ von GitHub Actions, auch für Administratoren. README mit transparentem kanonischem Logo, getrennten Downloads und allen heutigen Windows-Funktionen aktualisiert. [Abschluss-/Releasebericht](GITHUB_ABSCHLUSS_2026-11-18.md).
+
+Neue frische lokale CI-Umgebung: 159 Fälle in 47,992 s, 152 bestanden/sieben bekannte Skips. [GitHub-Windows-Prüfung auf `efd209bca441828143273227ddd6ea0c406b3c03`](https://github.com/adriantagonist87/VoxDrop/actions/runs/44357386673) erfolgreich: 159 Fälle in 70,690 s, 154 bestanden/fünf reine Mac-Skips; Symlink-Fälle auf dem Runner ebenfalls bestanden. Die erste GitHub-Python-Cache-Fehlkonfiguration wurde auf den App-eigenen uv/Python-Weg korrigiert. Diese synthetischen CI-Prüfungen ergänzen die früheren nativen GPU-/GUI-Abnahmen, ersetzen keine Mac-Abnahme.
+
+
 [Windows Preview 13](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.2-windows-preview.13), App-Code `a5efd22a241368e5e0d8e5b9c933e39cf965b20b`, ZIP-SHA-256 `be621da30940ab64ff3dfe14ac2d29a9c18b5a05ee6b76edc8deb0cfa8cc9775`. Neue ausdrückliche Nutzerpräzisierung: **Fenster-X blendet in den Systemtray aus**, **Minimieren minimiert in die Taskleiste**. App, Überwachung und Verarbeitung laufen in beiden Fällen weiter. **„VoxDrop beenden“ im Tray** beendet weiterhin alles und entlädt Modelle aus RAM/VRAM. Ohne verfügbaren Tray minimiert X in die Taskleiste. [Bedienung, native Tests und Mac-Übergabe](FENSTER_TRAY_UND_TASKLEISTE.md).
 
 22 vollständige Qt-Fälle in 7,231 s bestanden. Finales natives Paket in 30.927 s: echtes unsichtbares Fenster nach X, neue synthetische Datei weiter überwacht, Wiederöffnung über reale Tray-QAction mit gleicher Eigentümer-PID; native Windows-Minimierung mit IsIconic und taskleistenfähigem Fenster bestätigt. Ausdrückliches Tray-Beenden stoppt alle erfassten Prozesse und verhindert weitere Scans (6.375 s). Alle 34 Engine-Dateien bytegleich zu Preview 12; dessen native CUDA-/Abbruchabnahme bleibt exakt auf Code `53e69cee39ac5a0721f02eb79034db33e792c6a7`.
@@ -14,6 +25,30 @@ Frischer GitHub-Download, SHA und 91 installierte Dateien bestätigt. Profil mit
 
 GitHub-ZIP/SHA und alle 91 installierten Dateien bestätigt, vollständiges Profil/Code hashgesichert. Beim Update aktueller Nutzerzustand: 0 bisherige Aufträge, Warteschlange pausiert, Überwachung laut gesicherter Konfiguration unverändert. Frühere Auftragszahlen/Ordner wurden nicht zurückgespielt. Modelle/Laufzeit erhalten. Dokumentation und verbindliche neue Lebensdauerregel auf main, gemeinsamer Funktionscode bis nativer Mac-Gegenprüfung im Draft-PR.
 
+
+Vorangegangener installierter Stand: [Windows Preview 11](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.2-windows-preview.11), App-Code `2a1ae7feb5c9c2125b20e630875bed13b316250e`, ZIP-SHA-256 `83822f1f5d39d48cf8328c67013699d6001cfdb675deeaa40cf6940ba91b3a86`. [Verlauf/Bestand/Reset und Mac-Aufgaben](VERLAUF_BESTAND_BEREINIGUNG.md). Neues Engine-Modul `history_store.py` in allen Buildern, `status --filter all|errors|done|cancelled|existing`, globale Zähler und `stored_jobs/has_stored_data`. Neue operative Speicherrevision `storage_state`; Clear entfernt alle Fach-/Suchdaten, beendet vorher eigene Suche, verwirft alte Scans/Tokens und stößt beim nächsten regulären Intervall die vollständige Neuerfassung an. Bestehende Pause/Überwachung erhalten. `transcript_search.py` nutzt dieselbe Prozesssperre. RGBA-Master/ICO/README transparent, [Bildprompt](ICON_FREISTELLUNG.md). 144 Fälle und reale EXE-/QML-/SQLite-/Wiederimportprüfung bestanden; Mac nativ prüfen.
+
+Vorangegangener installierter Stand: [Windows Preview 10](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.2-windows-preview.10), App-Code `4e565d426167b55a900a2c35d449ae0f29a98493`, ZIP-SHA-256 `4bcdc831057c93227530f73a08b553c4a725a78962945097dc3dd91cb0bd6e0d`. [Icon-/Layoutübergabe](APP_ICON_UND_LAYOUT.md). Kanonischer PNG-Master `macos/VoxDropLogo.png`, Windows-ICO `assets/VoxDrop.ico` und README-Vorschau `docs/images/voxdrop-icon.png`. Beide Windows-Builder verwenden das aktuelle ICO aus dem Checkout; der native Builder übernimmt kein altes Referenz-Icon mehr. Mac-Icongenerator zeichnet die bereits gestaltete Vorlage ohne zusätzliche Kachel. QML-Header vollständig entfernt; Statuswellen im Controller unverändert. 15 Qt-Fälle und native finale Paket-/Icon-/SQLite-Prüfung bestanden. Mac-Swift/ICNS/Dock nativ nachprüfen.
+
+Vorangegangener installierter Stand: [Windows Preview 9](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.2-windows-preview.9), App-Code `c434d5c4921873d387cefc8cdc55f23f201e61de`, ZIP-SHA-256 `7dd6e52dadff40a73f8ce9b79c09609f2d2cd21ed3a6917d338af10937422da4`. Queue-Reihenfolge auch bei Suchfilter bedienbar. `move-queue-relative JOB_ID first|up|down|last` bestimmt die vollständige aktuelle Reihenfolge innerhalb einer SQLite-Schreibtransaktion. `move-queue JOB_ID ANCHOR_ID --after` fügt unmittelbar hinter dem Zieleintrag ein; ohne Flag weiterhin davor, Anker 0 bedeutet Ende. QML verwendet globale Positionen für Grenzen und konkrete Zielanker für gefiltertes Drag-and-drop. Keine Migration, neue Abhängigkeit oder ASR-/Exportänderung. 135 Windows-Fälle (128 bestanden, sieben Skips); native Paket-/QML-/SQLite-Prüfung in 8,584 s bestanden. [Details und Mac-Gegenprüfung](SUCHE_UND_DROP_KONFLIKTE.md).
+
+Vorangegangener installierter Stand: [Windows Preview 8](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.2-windows-preview.8), App-Code `d40b00526494155979d19d6b0b67fcf1853d618f`. [Suche, Drop-Konflikte und Explorer-Auswahl](SUCHE_UND_DROP_KONFLIKTE.md). Neue Desktopmodule `file_actions.py`, `transcript_search.py` und QML-Komponenten `SearchToggle.qml`, `DropConflictDialog.qml` werden durch die rekursive Desktop-Paketaufnahme mitgeliefert. `status --search` und optionale tokengebundene `--content-results/--content-token`; `prepare-drop CONFIG`, `resolve-drop TOKEN queue|front|retranscribe|immediate|ignore`. Additive Tabellen `drop_batches`, `preemptions`, `immediate_jobs` und Dateiversionsindizes; lokale Datenbank/Originale erhalten. Volltextcache erst auf ausdrücklichen Start, eigener abbrechbarer Prozess im vorhandenen OS-Prozessadapter. Bestehende Queuepause wird durch Sofort-Auswahl nicht global aufgehoben. Modelle, Lockfiles und ASR-Pipeline unverändert. Native Mac-Gegenprüfung erforderlich.
+
+Vorangegangener installierter Stand: [Windows Preview 7](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.2-windows-preview.7), App-Code `f4f5287679652579a74ec244255f5b7872fbe265`. `status --filter all|errors|done` filtert den Verlauf vor `--limit` und liefert globale `history_counts`; laufende/wartefähige normale Aufträge gehören weiter in die Queue. Controller-Refresh berücksichtigt Filterwechsel während einer laufenden Abfrage. `layout.ini` speichert `queueCompact` (Standard true); QML bietet zusätzlich einzelne Zeilen zum Aufklappen und ein Aktionsmenü. Keine Datenbankmigration oder neue Abhängigkeit. ASR-/Exportcode unverändert. [Prüf-/Updatebericht](WARTESCHLANGE_UND_DATEISCHUTZ.md). Mac-Gegenprüfung für neue QML-Layouts, Zähler/Filter und Ansichtsspeicherung erforderlich.
+
+Vorangegangener Windows-Funktionsstand: [Preview 6](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.2-windows-preview.6), App-Code `97cbfb81ed3b91b927f51db9d412adb6536387c9`; native vollständige Engine-Abnahme auf bytegleichem Preview-5-Stand `94e333153db90dc57c917575a8ba39040716a170`. [Warteschlange, Transkriptöffnung und Dateierkennung](WARTESCHLANGE_UND_DATEISCHUTZ.md). Neue Module `queue_control.py` und `media_history.py` gehören in alle Engine-Paketlisten. SQLite wird additiv um Queuezustand, Reihenfolge, Abbruchanforderungen und Ergebnisbeziehungen erweitert; lokale Datenbank/Arbeitskopien und vorhandene Historie erhalten.
+
+Zusätzliche Dienst-CLI-Aktionen: `move-queue JOB_ID BEFORE_ID` (0 bedeutet Ende), `queue-pause on|off`, `cancel-job JOB_ID`, `cancel-queue`. `status` liefert `queue` vollständig und unabhängig vom begrenzten terminalen Verlauf sowie `queue_paused` und `cancel_requested` am aktuellen Auftrag. Testoberfläche niemals mit produktiven Abbruchaktionen prüfen. Produktivupdates nach Null-Aktiv-Guard und vollständiger verifizierter Profil-/Codesicherung durchführen; Modelle/Laufzeit unverändert lassen. Echte QML-Interaktion und native Paketprüfung stehen im Funktionsbericht. Gemeinsame Änderungen unter macOS ungeprüft.
+
+### Vorherige Neuinstallationsabnahme
+
+Die Windows-Neuinstallationsabnahme vom 18.11.2026 verwendet aktuell den [Preview-4-Download](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.2-windows-preview.4). Interne Paketversion 1.3.1, App-Code `f35bff9f8f1222d176b987382d3214dfbd9148c1`; ZIP-SHA-256 `1be623b71f02177e46f402b43a53cf4232bc5e8bae513b7263c1c12553ba241a`. Vollständige leere Einrichtung von Preview 2 und anschließende reguläre GitHub-Updates auf Preview 3/4 mit Profilsicherung und erhaltenen Modellen unterscheiden. [Laufender Bericht und genaue Prüfstände](WINDOWS_ABNAHME_2026-11-18.md). Keine gemeinsame Integration vor Mac-Gegenprüfung.
+
+`scripts/check-windows-login.py PRIVATE_CONFIG.json` ist ein einmaliger Beobachter für die echte Windows-Anmeldung. Er startet die App nicht selbst, verlangt einen neuen Boot gegenüber `prepared_boot_time`, prüft genau einen Hintergrund-GUI-/Supervisor-/Dienstprozess des erwarteten Pakets und legt erst danach eine synthetische Aufnahme im isolierten Prüfordner ab. Die private Konfiguration enthält `app`, `profile`, `incoming`, `fixture`, `report`, `prepared_boot_time`, `code_commit` und den exakten `observer_run_value`. Ein eigener HKCU-Run-Wert `VoxDropAcceptanceObserver` startet den Beobachter; nach neuem Boot entfernt er nur diesen Wert und nur bei übereinstimmendem Befehl. Der produktive VoxDrop-Anmeldestart bleibt erhalten. Das Skript und seine Registrierung allein belegen noch keinen bestandenen Neustart.
+
+Für den temporären Run-Wert einen kurzen lokalen Bootstrap verwenden: Windows dokumentiert höchstens 260 Zeichen pro [Run-Befehlszeile](https://learn.microsoft.com/en-us/windows/win32/setupapi/run-and-runonce-registry-keys). Der ursprünglich vorbereitete lange Arbeitsordneraufruf hatte 298 Zeichen und wurde vor dem echten Neustart durch einen 151-Zeichen-Aufruf ersetzt. Der Beobachter verweigert inzwischen längere Befehle. Ein nativer Aufruf des tatsächlichen kurzen Bootstrap im selben Boot bestätigt: keine App gestartet, keine Produktivänderung, keine falsche Anmeldung bestanden und Registrierung erhalten. Private Pfade/Konfiguration/Bootstrap und Ergebnisse nicht veröffentlichen.
+
+Für den Bootnachweis zusätzlich `prepared_windows_boot` aus `Win32_OperatingSystem.LastBootUpTime` speichern; der Beobachter liest denselben nativen Wert verborgen über PowerShell/CIM und vergleicht die UTC-Zeitpunkte. `psutil.boot_time()` bleibt Diagnosewert: dessen berechneter Fließkommawert variierte beim Vorcheck um weniger als eine Mikrosekunde und ist für exakte Gleichheit ungeeignet. Der korrigierte native Negativtest und die anschließende Sicherungsvorprüfung bestanden. Sicherheits- und Windows-Anmeldedialoge werden nicht automatisiert.
 
 Vor jeder Aufgabe gelten die verbindlichen Arbeitsregeln. Der Projektstatus enthält die nachgewiesenen Prüfstände und offenen Fehler. [Arbeitsregeln](../AGENTS.md) · [Projektstatus](PROJEKTSTATUS.md)
 
@@ -85,7 +120,7 @@ Aktuelle Nutzerregel ab Windows Preview 13: Fenster-X blendet in den Systemtray 
 | Whisper | CTranslate2 4.9.0 aus `metal/`, Gerät `mps`, FP16 | CTranslate2 4.8.0, CUDA FP16, Torch-DLL-Pfad. **UNGEPRÜFT unter Windows**. |
 | Modelle | `qwen-models.json` | `qwen-windows-models.json`, eigener Format-/Dateibestand |
 | DOVER-Lap | Separate `.runtime/dover-packages`, NumPy-2-Anpassung im Bootstrap | Cross-Build übernimmt diese Packages und lädt den unbenutzten nativen DER-Import erst bei Bedarf. **UNGEPRÜFT unter Windows**. |
-| Anmeldestart | `login_agent.py`, `~/Library/LaunchAgents/local.voxdrop.worker.plist`, App-Launcher mit `--background` für Menüleiste und Dienst | HKCU `Software\Microsoft\Windows\CurrentVersion\Run`, Wert `VoxDrop`, EXE mit `--background`. **UNGEPRÜFT unter Windows**. |
+| Anmeldestart | `login_agent.py`, `~/Library/LaunchAgents/local.voxdrop.worker.plist`, App-Launcher mit `--background` für Menüleiste und Dienst | HKCU `Software\Microsoft\Windows\CurrentVersion\Run`, Wert `VoxDrop`, EXE mit `--background`. Registry-Adapter isoliert geprüft; echter Windows-Neustart weiterhin **UNGEPRÜFT**. |
 | SMB | Bereits eingehängte Freigabe, Auflösung über `/sbin/mount -t smbfs` | Netzlaufwerk, UNC oder SMB-URL mit Windows-Zugangsdaten. **UNGEPRÜFT unter Windows**. |
 | Dateischutz | `fcntl`, `O_NOFOLLOW`, exklusives `renamex_np` | `msvcrt`, Reparse-Point-Prüfung, Windows-Prozessflags und Umbenennung. **UNGEPRÜFT unter Windows**. |
 | RAM-Messung | Physischer Footprint über `proc_pid_rusage` | Prozess-RSS über psutil, **UNGEPRÜFT unter Windows**. Die Kennzahl ist plattformabhängig. |
@@ -194,9 +229,85 @@ Für ein beauftragtes Update aus der Entwicklungsumgebung dient `sh scripts/inst
 
 Für einen isolierten Installationstest sind `--applications <Testverzeichnis>` und `--profile <Testprofil>` verfügbar. Zum Entfernen aller Modelle wird der gesamte installierte VoxDrop-Ordner gelöscht. Einstellungen, Verlauf und eine eingerichtete Anmelderegistrierung werden gesondert im Benutzerkonto verwaltet.
 
+Windows-Inferenzprozesse erhalten TMPDIR/TEMP/TMP im lokalen `transcription-*`-Verzeichnis ihres Auftrags. Damit erfasst die Auftragsbereinigung auch Qwen-Numpy-Audiodaten und Bibliotheks-Temporärdateien nach Prozessabbrüchen. Der Test `test_transcription_temp.py` verwendet einen echten kleinen abstürzenden Kindprozess und bestätigt, dass keine dekodierte Audiodatei im sonstigen System-Temp liegen bleibt. Mac-Umgebung unverändert.
+
+## Modellphasen und GPU-Speicher
+
+Die großen Pipelinephasen werden nacheinander ausgeführt: Qwen-ASR → ASR-Gewichte freigeben → Forced Aligner → Qwen-Prozess beenden → Sprecherpipeline; alternativ Whisper → `close()` und Referenzfreigabe/Garbage Collection → Sprecherpipeline. Die drei DOVER-Lap-Durchgänge verwenden dieselbe Sprecherpipeline nacheinander. Der Auftragsprozess endet nach dem Export des Ergebnisses; der Dienst wartet darauf, bevor der nächste Auftrag beginnt. Dadurch bleiben keine Modelle zwischen Aufträgen absichtlich im GPU-Speicher.
+
+`tests/test_model_lifetime.py` prüft Whisper-Entladung vor Eintritt in die Sprecherphase sowie ASR- und Sprecherfehler. Hardwaremessungen müssen an den Phasengrenzen erfolgen und die übrige Desktop-GPU-Belegung berücksichtigen. Cachefreigabe allein ersetzt keine Freigabe der Modellreferenzen. Die echte Neuinstallationsabnahme umfasst beide ASR-Modelle, den Aligner, Sprecherzuordnung/DOVER und VRAM-Rückgang nach Abschluss/Abbruch.
+
+Reproduzierbare VRAM-Phasenmessung mit vorhandenen lokalen Modellen und synthetischer Aufnahme:
+
+```powershell
+& $py -BEs -Xutf8 scripts/check-windows-model-memory.py '<App>' '<kuenstliche.wav>' '<neuer Messordner>' --model large-v3-turbo
+& $py -BEs -Xutf8 scripts/check-windows-model-memory.py '<App>' '<kuenstliche.wav>' '<anderer neuer Messordner>' --model qwen3-asr-1.7b
+```
+
+Der Prüfer misst synchron vor/nach Whisper-Entladung und vor Sprecherladen bzw. nach Qwen-Prozessende, verwendet tatsächliche CUDA-/DOVER-Verarbeitung und prüft die Phasenreihenfolge. Er zeichnet GPU-Gesamtwerte inklusive Desktop auf, keinen isolierten Modellverbrauch und keinen lückenlosen Inferenzspitzenwert. Native Prüfungen auf `dbfcf833ef80617929101e321decac3219e76291` bestanden; Neuinstallation bleibt separat offen.
+
+## Geplante Windows-Endabnahme nach Bereinigung
+
+Für die nächste gemeinsame Sitzung ist die [Neuinstallations- und Produktivabnahme](WINDOWS_NEUINSTALLATION_ABNAHME.md) verbindlich beauftragt: zugeordnete App-/Testbestände samt Modellen, Laufzeiten, Profilen und eigenen Autostarteinträgen bereinigen; Speicherfreigabe belegen; ein passendes SHA-verifiziertes Paket direkt von GitHub vollständig frisch über EXE einrichten; alle Funktionen im tatsächlichen Produktivablauf einschließlich echtem Windows-Neustart prüfen. Keine übernommenen Modelle/Laufzeiten oder lokalen Quellüberlagerungen als saubere Neuinstallation zählen. Aktuell **GEPLANT, NICHT DURCHGEFÜHRT**.
+
 ## Windows einrichten und starten
 
-Alle folgenden Windows-Läufe sind **UNGEPRÜFT unter Windows**. Zuerst ist das ausgelieferte Paket nach dem Windows-Übergabeauftrag zu reproduzieren.
+### Windows-Arbeitsbranch: portable Daten und nativer Build
+
+Für den unbeaufsichtigten Windows-Betrieb startet `start` jetzt einen lokalen Supervisor, der `run` nach unerwartetem Ende mit 2 Sekunden bis maximal 5 Minuten Abstand neu startet. `supervisor.lock` verhindert doppelte Supervisoren, `service.lock` weiterhin parallele Verarbeitung. Aktive unterbrochene Windows-Aufträge werden erneut eingereiht; bestehende Resultate und verifizierte Export-Arbeitsstände bleiben geschützt. Temporäre I/O-Fehler verwenden zusätzlich die persistente Tabelle `job_retries` mit 10 Sekunden bis 15 Minuten Backoff. Dauerhafte Modellfehler und Ergebniskollisionen bleiben sichtbar und erfordern eine bewusste Entscheidung.
+
+`service.log` rotiert im laufenden Windows-Supervisor bei rund 4 MiB mit zwei Sicherungen. `bootstrap.log` enthält frühe Startfehler. `runtime_logs.py` ist Bestandteil beider Paketbuilder. Das bisherige Mac-Startverfahren bleibt erhalten. Tests für Windows-Job-Objects verwenden echte eigene Kind-/Enkelprozesse und benötigen keine neuen Systemfreigaben. Ein Ausfalltest ist keine Abnahme eines tatsächlichen Windows-Neustarts.
+
+Reproduzierbare native Ausfallprüfung mit vorhandenen Modellen und einer künstlichen WAV-Datei:
+
+```powershell
+& $py -BEs -Xutf8 scripts/check-windows-recovery.py '<App>' '<neues lokales Testverzeichnis>' '<kuenstliche.wav>'
+# Qwen einschließlich tatsächlicher dekodierter Audiodatei und Abbruchbereinigung:
+& $py -BEs -Xutf8 scripts/check-windows-recovery.py '<App>' '<anderes neues lokales Testverzeichnis>' '<kuenstliche.wav>' qwen3-asr-1.7b
+```
+
+Der Prüfer verwendet ein neues isoliertes Profil, beendet ausschließlich dessen Testprozesse und prüft Dienst-Wiederanlauf, Inferenzbereinigung und Auftragswiederaufnahme. Er startet den PC nicht neu und verändert keinen produktiven Anmeldestart. Windows-CRT-Dateisperren können als errno 13 ohne WinError erscheinen; auch dieser I/O-Fehler erhält einen begrenzten Retry, ohne Rechte zu ändern.
+
+Für den längeren Pakettest steht `scripts/check-windows-soak.py` zur Verfügung:
+
+```powershell
+& $py -BEs -Xutf8 scripts/check-windows-soak.py '<App>' '<neues lokales Testverzeichnis>' '<kuenstliche-15s.wav>' 1800
+```
+
+Der Prüfer startet die echte EXE mit neuem Profil, überwacht zwei eigene Ordner und injiziert Dateisperre, ungültiges Medium, GUI-/Dienst-/Supervisorende, Ordnerausfälle, Pause/Fortsetzen, langsames Kopieren, doppelte Startaufrufe, kurze ungültige Konfiguration und abschließenden Qwen-Modellwechsel. Er verwendet vorhandene Modelle, keine neue Einrichtung. JSON-Berichte bleiben privat, weil sie lokale Pfade enthalten. Parameter unter 1800 Sekunden sind unzulässig, damit alle geplanten Fälle stattfinden. Ein erneuter Start nach beendetem Test-Supervisor prüft den gleichen `--background`-Einstieg wie die Anmeldung, ersetzt keinen Betriebssystem-Neustart.
+
+Nachholen der **UNGEPRÜFTEN echten Windows-Neustartabnahme**, sobald eine passende Nutzersitzung möglich ist:
+
+1. Test-App in ihrem endgültigen beschreibbaren lokalen Ordner belassen; vorhandene Laufzeit/Modelle und eine isolierte synthetische Überwachungsablage verwenden.
+2. Anmeldestart bewusst aktivieren und in Windows prüfen, dass VoxDrop als Autostart-App zugelassen ist. Pfad und gespeicherte Überwachungseinstellungen festhalten.
+3. Windows tatsächlich neu starten und normal anmelden. VoxDrop dabei nicht manuell öffnen. Sichtbarkeit im Infobereich, genau einen Supervisor/Dienst und die letzte Ordnerprüfung belegen.
+4. Erst nach diesem Nachweis eine neue künstliche Aufnahme ablegen; automatische Verarbeitung, TXT neben Original und unveränderten SHA-256 prüfen. Testregistrierung danach gezielt zurücknehmen und vorherige produktive Einstellungen erhalten.
+
+Der bisherige Registry-Test verwendet stattdessen nur einen temporären HKCU-Testschlüssel und verändert keinen produktiven Run-Wert. Die vorbereitete Prüfanleitung richtet auch keinen zukünftigen Startauftrag ein. Finales Paket `bfd4e8ade80c2973cb77541571fa99a374977589`: 88 Regressionen mit sieben expliziten Skips bestanden. Der 1803,7-s-Überwachungstest auf `2889268f52c9a69a42a3c4df38a0f029323ac9e8` bestand mit 22 erfolgreichen CUDA-Aufträgen; der finale Qwen-Abbruchtest bestätigte Prozess- und temporäre Audiobereinigung sowie automatische Fertigstellung.
+
+Im Branch `fix/windows-native-validation` liegen heruntergeladene Modelle und Hugging-Face-Cache bei einer Windows-Paketinstallation unter `VoxDrop/Modelle`. `VoxDrop/Laufzeit` enthält Python, die virtuelle CUDA-Umgebung und den uv-Cache. Der gesamte entpackte Programmordner muss beschreibbar sein. Entfernen dieses Ordners entfernt diese großen Bestände; Konfiguration/Verlauf unter `%LOCALAPPDATA%/VoxDrop` bleiben erhalten. Ein Update ersetzt App-Dateien unter Erhalt von `Modelle` und `Laufzeit`. Ältere Pakete verwendeten externe Verzeichnisse; diese werden nicht stillschweigend gelöscht oder als migriert behauptet.
+
+`VOXDROP_PROFILE` isoliert Konfiguration/Verlauf. Beim neuen Windows-Paket bleiben Modelle trotzdem neben der EXE. `VOXDROP_MODEL_DATA` ist die ausdrückliche Überschreibung für Entwicklerprüfungen. Quellstarts ohne Paketmarker behalten ihren bisherigen Profilspeicher. Der Mac-Speicherpfad bleibt unverändert; Gegenprüfung **UNGEPRÜFT unter macOS**.
+
+Ein nativer Entwicklungsbuild benötigt Python 3.12 und Zig 0.15.2 sowie den unveränderten, geprüften Referenz-Download v1.3.1. Zig stammt aus dem [offiziellen Downloadindex](https://ziglang.org/download/index.json); Windows-x64-ZIP-SHA-256 `3a0ed1e8799a2f8ce2a6e6290a9ff22e6906f8227865911fb7ddedc3cc14cb0c`. Aus dem sauberen, committeten Repository:
+
+```powershell
+& $py -BEs -Xutf8 scripts/build-windows.py --zig C:/Tools/zig/zig.exe `
+  --base-zip C:/Downloads/VoxDrop-1.3.1-Windows-x64.zip `
+  --base-sha256 b6ab4c819d9fe48db52633ab80eccf4829750e1384ae215582e2503c1ba2b897
+```
+
+Der Builder benötigt keine Mac-Werkzeuge. Er erhält Vendor-Lizenzen und Quellarchive, normalisiert Textzeilenenden für einen identischen Lockfile-Hash und schreibt `build-info.json` mit vollständigem Code-SHA, aTrain-Pin und Referenzprüfsumme. Ausgabe: `.runtime/package/VoxDrop-<Version>-Windows-x64-<SHA>.zip` samt SHA-256. Keine Veröffentlichung oder Ersetzung stabiler Assets. Native Prüfung und endgültige Ergebnisse stehen im Projektstatus.
+
+Bei einer Windows-Netzwerkfreigabe entscheidet der Nutzer im Systemdialog selbst. Der Launcher wartet nach einem fehlgeschlagenen Setup mit „Wiederholen/Abbrechen“ und protokolliert uv unter `Laufzeit/setup.log`. Nach der Freigabe „Wiederholen“ wählen. Für Modellfehler WinError 10013 wartet die QML-Oberfläche und wiederholt den tatsächlichen Download alle fünf Sekunden, bis er gelingt oder „Warten abbrechen“ gewählt wird. Dieser reale Download ist gleichzeitig die Verbindungsprüfung für den betroffenen Python-Prozess und seine Modellziele; ein curl-Test in einem anderen Prozess wäre dafür kein Ersatz. Bei anderen Fehlern Details im privaten Desktop-/Setup-Log prüfen.
+
+Die Meldung setzt keine offene Firewall-Anfrage voraus: „Einrichtung unterbrochen“ nennt zuerst das Setup-Protokoll; bei Fehler 10013 verweist die Oberfläche ohne sichtbare Freigabeanfrage ebenfalls auf das Protokoll. Bereits erteilte Freigaben müssen nicht pauschal erneut gesetzt werden. Ein Test mit künstlich verweigertem Download ist von einer tatsächlichen Systemanfrage zu unterscheiden.
+
+Die Testsuite kann mit dem Release-Interpreter laufen. Beim Quellcheckout die im Referenzpaket enthaltenen `Engine`- und `DoverPackages`-Verzeichnisse an `sys.path` anhängen, damit die unveränderten Vendor-Abhängigkeiten gefunden werden. `QT_QPA_PLATFORM=offscreen` prüft Qt-Logik; native Fenster zusätzlich ohne diese Variable prüfen. Mac-Migrationstests sind unter Windows explizit übersprungen; Symlinktests melden WinError 1314 als fehlendes Recht, während rekursive und normale Dateiabläufe weiter geprüft werden. Keine Aktivierung von Entwicklermodus oder Änderung von Sicherheitsrichtlinien erforderlich.
+
+`tests/test_desktop_window.py` lädt zusätzlich das vollständige QML-Fenster mit isolierten Einstellungen. Die Vollbild-Minimierungsregression wartet auf native Fensterereignisse; der frühere unmittelbar abgefragte Qt-Zustand allein verfehlte den Windows-Zwischenzustand. Für native Abnahme `QT_QPA_PLATFORM` entfernen; für kontrollierte Skalierung `QT_SCALE_FACTOR=1`, `1.25` oder `1.5` vor dem jeweiligen Prozessstart setzen. Windows behandelt den kurzzeitigen `Windowed`-Zustand beim Minimieren erst nach Abschluss des Ereigniswechsels als bewusste Normalmoduswahl. Den Mac-Ablauf separat gegenprüfen.
+
+Die folgenden ursprünglichen Release-/Quellstartbefehle beschreiben v1.3.1. Die tatsächlich ausgeführten Windows-Prüfungen und die neue portable Ablage stehen oben und im Projektstatus; nicht aufgeführte Varianten bleiben **UNGEPRÜFT unter Windows**.
 
 Die ZIP vollständig entpacken und `VoxDrop.exe` öffnen. Der Launcher führt im Ordner `windows/` folgenden Einrichtungsschritt mit dem mitgelieferten `tools/uv.exe` aus.
 
@@ -260,6 +371,15 @@ Das Script prüft die uv-Prüfsumme, erstellt Icon-Ressourcen und ein `x86_64-wi
 
 Ein nativer Windows-Buildweg ist als BUILD-01 offen. Änderungen am Windows-Code können zunächst über den beschriebenen Quellstart getestet und über den bestehenden Mac-Build paketiert werden. Die Tests auf dem Windows-PC bestimmen die Plattformfreigabe.
 
+BUILD-01 ist auf dem Windows-Arbeitsbranch durch `scripts/build-windows.py` umgesetzt und nativ geprüft. Der vorstehende Mac-Cross-Build bleibt erhalten. Abschluss-Code `8b80572b1fc8196f310a89b82b526fa2112098a3`: 76 Tests, sieben explizite Skips; abschließender Lauf mit `QT_QPA_PLATFORM=offscreen` in 13,143 s. Native Tests wurden zuvor ohne diese Variable ausgeführt. Beispiel für den Quellcheckout mit paketierten Vendor-Abhängigkeiten:
+
+```powershell
+$env:MPLCONFIGDIR = Join-Path (Get-Location).Path '.runtime/test-mpl'
+& $py -BEs -Xutf8 -c "import sys,unittest; sys.path.append(r'<App>/Engine'); sys.path.append(r'<App>/DoverPackages'); r=unittest.TextTestRunner(verbosity=2).run(unittest.defaultTestLoader.discover('tests')); raise SystemExit(not r.wasSuccessful())"
+```
+
+Zusätzlich wurden echte Dienstaufträge über `enqueue-folders`, `next_job`, `retranscribe`, `retry` und `probe_pending_folders` mit neuen lokalen Testverzeichnissen sowie einer ausdrücklich freigegebenen UNC-Testablage ausgeführt. Modelle sind dabei lokal unter `<App>/Modelle`, Auftragsdatenbanken/Arbeitskopien außerhalb des öffentlichen Repositorys. Die genauen geprüften Fälle und Messwerte stehen im Projektstatus; persönliche Testpfade und Inhalte gehören nicht in öffentliche Befehlsbeispiele.
+
 ## Dokumentation und Veröffentlichung
 
 Nach relevanten Änderungen Projektstatus und betroffene Anleitung aktualisieren. Für Plattformtests jeweils den vollständigen getesteten Code-SHA erfassen. Die Lizenzhinweise und erforderlichen Quellcode-Assets bleiben Teil des Releaseumfangs. [Qt-Lizenzhinweise](../desktop/Qt-Lizenzen.md)
@@ -268,8 +388,16 @@ Quellcode, gemeinsame Dokumentation und der geprüfte Mac-Build werden auf `main
 
 ### Windows-Übergabe am 18.11.2026
 
-Der [Windows-Übergabestatus](WINDOWS_STATUS_2026-11-17.md) verweist auf PR #1 und den installierten Preview-13-Code `a5efd22a241368e5e0d8e5b9c933e39cf965b20b`. Auch im Suchfilter bedienbare Queue-Menü-/Drag-Reihenfolge, schnelle Metadaten-/optionale FTS-Inhaltssuche, Batch-Konfliktentscheidungen und native Explorer-Auswahl ergänzen die bisherigen Queue-/Dateischutz-/Windows-Korrekturen. Modelle/Lockfiles unverändert, neue additive Tabellen für Droppläne, Unterbrechung und begrenzte Sofort-Auswahl. Implementierung, exakte native Prüfstände und Mac-Checkliste stehen im Aufgabenbranch. Transparenter Icon-Master/ICO/README-Vorschau und Dokumentation auf Main aktualisiert. Zusätzlich `history_store.py`, fünf Verlaufskategorien, vollständigen Reset und nächsten Intervall-/Suchwiederimport nativ prüfen. Funktionaler App-Code noch nicht integriert; vorher auch Swift-ICNS/Dock und headerloses Fenster sowie Cocoa-/Paket-/SQLite-/Suchprozess-/Queuepause-Gegenprüfung ausführen und bisherigen Mac-Prüfstand bewahren.
+Der [Windows-Übergabestatus](WINDOWS_STATUS_2026-11-17.md) verweist auf PR #1 und den installierten Preview-13-Code `a5efd22a241368e5e0d8e5b9c933e39cf965b20b`. Auch im Suchfilter bedienbare Queue-Menü-/Drag-Reihenfolge, schnelle Metadaten-/optionale FTS-Inhaltssuche, Batch-Konfliktentscheidungen und native Explorer-Auswahl ergänzen die bisherigen Queue-/Dateischutz-/Windows-Korrekturen. Modelle/Lockfiles unverändert, neue additive Tabellen für Droppläne, Unterbrechung und begrenzte Sofort-Auswahl. Implementierung, exakte native Prüfstände und Mac-Checkliste stehen im Aufgabenbranch. Transparenter Icon-Master/ICO/README-Vorschau und Dokumentation auf Main aktualisiert. Zusätzlich `history_store.py`, fünf Verlaufskategorien, vollständigen Reset und nächsten Intervall-/Suchwiederimport nativ prüfen. Der neue GitHub-Abschluss integriert den gemeinsamen Entwicklungsstand; vor neuem Mac-Binaryrelease bleiben Swift-ICNS/Dock, Cocoa, Paket, SQLite, Suchprozesse und Queuepause nativ zu prüfen. Bisherige Mac-DMG bis dahin erhalten.
 
-Zusätzlich `app_lifecycle.py` in alle Engine-Pakete und `desktop/command_process.py` aufnehmen; Tray/X/Cmd-Q, native Launcher-Eigentümeridentität, Unix-Nachfahren, Download-/Suchabbruch, Metal-Wiederaufnahme und LaunchAgent ohne Wiederstart nach absichtlichem Beenden nativ prüfen. Ältere Prüfer mit Weiterlaufen nach GUI-Ende folgen einer inzwischen aufgehobenen Vorgabe.
+Aktuelle Architekturergänzung: `app_lifecycle.py` in allen Engine-Paketlisten und `desktop/command_process.py`; native App-Lebensdauer-/Cmd-Q-/Eigentümerverlustprüfung vor Mac-Integration. Vorherige Abnahmen mit unabhängigem Hintergrundbetrieb sind historische Belege, keine aktuelle Sollvorgabe.
 
 Fensterbedienung ab Preview 13: X → Tray, Minimieren → Taskleiste, ausdrücklich Beenden → vollständiger Stopp. Diese Präzisierung auch bei allen nativen Mac-Abnahmeskripten berücksichtigen.
+
+## GitHub-CI, Releaseprüfung und Mac-Portierung
+
+`scripts/ci-tests.py prepare` erzeugt Testconstraints aus `windows/uv.lock` und lädt nur SHA-geprüfte aTrain-/DOVER-Quellen. `scripts/ci-tests.py run` führt die vollständige synthetische Suite aus. Die eigene Windows-CI-Venv nutzt Python 3.12.13 über uv; CPU-Torch derselben Basisversion unterstützt synthetische Sprecherprüfungen. Keine CUDA-/Modellabnahme daraus ableiten. Die CI-Umgebung wird separat vom produktiven Lockfile eingerichtet.
+
+`scripts/verify_windows_release.py --download` prüft den finalen Download gegen `releases/v1.3.2/windows-release.json`; `--app-dir` prüft zusätzlich die 91 App-Dateien einer Installation. Persönliche Daten und Zusatzverzeichnisse werden nicht geändert. Der Release-Tag enthält Dokumentation/CI, das eingefrorene Paket behält den tatsächlichen Build-SHA a5efd22 und die unveränderten Laufzeit-/Modellpins. Unter Windows liegen aktuelle Modelle/Cache unter `<App>/Modelle`, Python/Laufzeit/uv-Cache unter `<App>/Laufzeit`; ältere Profilablagen sind historische Kompatibilitätspfade.
+
+`main` verlangt Pull Requests, aktuelle erfolgreiche Windows-CI und gelöste Diskussionen. Keine Force-Pushes, keine Branchlöschung, Regeln auch für Administratoren. Für den Mac auf einem neuen Branch von origin/main beginnen, [Portierungsauftrag](MAC_PORTIERUNG_WINDOWS_2026-11-18.md) ausführen und erst nach nativer Abnahme die Mac-DMG/README aktualisieren.

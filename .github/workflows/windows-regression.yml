@@ -1,0 +1,38 @@
+name: Windows regression
+
+on:
+  push:
+    branches: [main, fix/windows-native-validation]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-regression-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows-regression:
+    name: Windows regression
+    runs-on: windows-2025
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@d0d8abe699bfb85fec6de9f7adb5ae17292296ff # v6
+        with:
+          version: '0.13.7'
+      - name: Install the same managed Python version as VoxDrop
+        run: |
+          uv python install 3.12.13
+          uv venv --python 3.12.13 .runtime/ci-venv
+      - name: Verify vendor sources and export dependency constraints
+        run: .runtime/ci-venv/Scripts/python.exe -BEs -Xutf8 scripts/ci-tests.py prepare
+      - name: Install model-free test dependencies from Windows pins
+        run: uv pip install --python .runtime/ci-venv/Scripts/python.exe --constraint .runtime/ci/constraints.txt --requirement .runtime/ci/requirements.txt
+      - name: Test SQLite, queue, search, Qt and Windows process lifecycle
+        run: .runtime/ci-venv/Scripts/python.exe -BEs -Xutf8 scripts/ci-tests.py run

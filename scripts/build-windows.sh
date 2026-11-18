@@ -28,7 +28,8 @@ cp "$project/windows/README.md" "$app/Installation.md"
 cp "$project/LICENSE" "$app/LICENSE"
 rsync -a --exclude='__pycache__/' --exclude='*.pyc' "$project/desktop/" "$app/Desktop/"
 cp "$project/macos/VoxDropLogo.png" "$app/assets/"
-for source in watch_service.py voxdrop.py transcription_worker.py silence.py smb_paths.py platform_io.py login_agent.py \
+cp "$project/assets/VoxDrop.ico" "$app/assets/"
+for source in watch_service.py voxdrop.py transcription_worker.py silence.py smb_paths.py platform_io.py queue_control.py media_history.py history_store.py app_lifecycle.py runtime_logs.py login_agent.py \
     qwen_backend.py qwen_cuda.py qwen-models.json qwen-windows-models.json speaker_diarization.py; do
     cp "$project/$source" "$app/Engine/"
 done
@@ -39,16 +40,12 @@ rsync -a --exclude='__pycache__/' --exclude='*.pyc' \
 git -C "$runtime/aTrain" archive --format=tar.gz --prefix="aTrain-$reference/" \
     -o "$app/Quellcode/aTrain-$reference.tar.gz" "$reference"
 
-"$python" - "$project/docs/images/voxdrop-icon.png" "$stage" "$app/DoverPackages" <<'PY'
+"$python" - "$app/assets/VoxDrop.ico" "$stage" "$app/DoverPackages" <<'PY'
 from pathlib import Path
-from PIL import Image
 import struct
 import sys
 
-logo, stage, dover = (Path(arg) for arg in sys.argv[1:])
-icon = stage / "VoxDrop.ico"
-Image.open(logo).convert("RGBA").save(icon,
-    sizes=[(size, size) for size in (16, 32, 48, 64, 128, 256)])
+icon, stage, dover = (Path(arg) for arg in sys.argv[1:])
 
 def resource(kind, name, data, language=0x0407):
     header = struct.pack("<IIHHHHIHHII", len(data), 32, 0xFFFF, kind,
@@ -79,7 +76,6 @@ text = text.replace("        metrics = DER(ref, sys)",
                     "        from spyder import DER\n\n        metrics = DER(ref, sys)", 1)
 hungarian.write_text(text)
 PY
-cp "$stage/VoxDrop.ico" "$app/assets/"
 export ZIG_GLOBAL_CACHE_DIR="${ZIG_GLOBAL_CACHE_DIR:-$runtime/zig-global}"
 export ZIG_LOCAL_CACHE_DIR="${ZIG_LOCAL_CACHE_DIR:-$runtime/zig-local}"
 hash=$(shasum -a 256 "$project/windows/uv.lock" | cut -c 1-12)

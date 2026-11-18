@@ -23,6 +23,19 @@ from watch_service import (
 
 
 class MultiFolderTests(unittest.TestCase):
+    def test_opus_folder_drop_is_processed_beside_unchanged_original(self):
+        source = self.first / "Besprechung.OPUS"
+        source.write_bytes(b"media-discovery-fixture")
+        (self.first / "Notiz.json").write_text("{}")
+        settings = self.settings(subfolder=True)
+        queued = enqueue_folders(self.db, settings, [str(self.first)])
+        self.assertEqual(queued["queued"], 1)
+        with patch("watch_service.inspect_folders_with_deadline", side_effect=inspect_folders):
+            self.assertTrue(next_job(self.db, self.state, self.engine))
+        self.assertEqual(source.read_bytes(), b"media-discovery-fixture")
+        self.assertEqual(source.with_suffix(".txt").read_text(), "Testtranskript\n")
+        self.assertFalse((self.first / "_FERTIGGESTELLT").exists())
+
     def setUp(self):
         directory = tempfile.TemporaryDirectory()
         self.addCleanup(directory.cleanup)
@@ -283,8 +296,6 @@ class MultiFolderTests(unittest.TestCase):
         outside = self.root / "Extern"
         outside.mkdir()
         (outside / "Extern.wav").write_bytes(b"outside")
-        (lesson / "Verweis").symlink_to(outside, target_is_directory=True)
-        (lesson / "Link.wav").symlink_to(outside / "Extern.wav")
         sources = {
             self.first / "Video.wav": b"root",
             lesson / "Video.wav": b"lesson",
@@ -322,6 +333,22 @@ class MultiFolderTests(unittest.TestCase):
         self.assertFalse((lesson / "Link.txt").exists())
         self.assertEqual(self.engine.call_count, len(sources))
 
+    def test_recursive_scan_ignores_symlinked_files_and_directories(self):
+        outside = self.root / "Extern"
+        outside.mkdir()
+        (outside / "Extern.wav").write_bytes(b"outside")
+        try:
+            (self.first / "Verweis").symlink_to(outside, target_is_directory=True)
+            (self.first / "Link.wav").symlink_to(outside / "Extern.wav")
+        except OSError as error:
+            if getattr(error, "winerror", None) == 1314:
+                self.skipTest("Windows symlink privilege is unavailable (WinError 1314)")
+            raise
+        settings = self.settings(recursive=True)
+        self.scan(settings, 100)
+        self.scan(settings, 130)
+        self.assertEqual(self.db.execute("SELECT COUNT(*) FROM jobs").fetchone()[0], 0)
+
     def test_unreadable_subfolder_leaves_readable_siblings_eligible(self):
         inaccessible = self.first / "Gesperrt"
         readable = self.first / "Erreichbar"
@@ -332,7 +359,7 @@ class MultiFolderTests(unittest.TestCase):
 
         def check_access(path):
             if path == inaccessible:
-                raise PermissionError(errno.EACCES, "Zugriff verweigert", path)
+                raise PermissionError(errno.EACCES, "Zugriff verweigert", str(path))
             return scandir(path)
 
         settings = self.settings(recursive=True)
@@ -343,7 +370,7 @@ class MultiFolderTests(unittest.TestCase):
             "SELECT available,error FROM folder_status WHERE path=?", (str(self.first),)
         ).fetchone()
         self.assertEqual(row["available"], 1)
-        self.assertIn(str(inaccessible), row["error"])
+        self.assertIn(repr(str(inaccessible)), row["error"])
         with patch(
             "watch_service.inspect_folders_with_deadline", side_effect=inspect_folders
         ):
@@ -356,7 +383,9 @@ class MultiFolderTests(unittest.TestCase):
     def test_enabling_recursive_mode_retargets_active_and_queued_archive_jobs(self):
         sources = [self.first / "Teil 1.wav", self.first / "Teil 2.wav"]
         for source in sources:
-            source.write_bytes(b"media")
+            # Distinct recordings exercise two ASR transitions; byte-identical
+            # recordings now reuse the verified previous transcript.
+            source.write_bytes(source.name.encode('utf-8'))
         settings = self.settings(subfolder=True)
         self.scan(settings, 100)
         self.scan(settings, 130)
@@ -380,7 +409,7 @@ class MultiFolderTests(unittest.TestCase):
                 )
             )
         for source in sources:
-            self.assertEqual(source.read_bytes(), b"media")
+            self.assertEqual(source.read_bytes(), source.name.encode('utf-8'))
             self.assertEqual(source.with_suffix(".txt").read_text(), "Testtranskript\n")
         self.assertFalse((self.first / "_FERTIGGESTELLT").exists())
         self.assertEqual(self.engine.call_count, 2)

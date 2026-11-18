@@ -9,6 +9,7 @@ ApplicationWindow {
     property var viewState: api.state
     property var settings: api.settings
     property var selected: api.detail
+    property bool historySearchOpen: false
     readonly property var initialColumns: api.columnWidths()
     readonly property color canvas: "#1e1e1e"
     readonly property color sidebar: "#242424"
@@ -65,12 +66,15 @@ ApplicationWindow {
     palette.placeholderText: muted
 
     onClosing: function(event) {
-        if (api.hasTray()) {
-            event.accepted = false
-            window.hide()
-        } else {
-            Qt.quit()
+        if (api.state.shutdownComplete) {
+            event.accepted = true
+            return
         }
+        event.accepted = false
+        if (api.hasTray())
+            window.hide()
+        else
+            window.showMinimized()
     }
 
     component Copy: Label {
@@ -89,9 +93,10 @@ ApplicationWindow {
         font.weight: Font.DemiBold
     }
 
-    component Action: Button {
+    component AppActionButton: Button {
         id: action
         property bool primary: false
+        property bool errorAlert: false
         font.pixelSize: 12
         horizontalPadding: 10
         verticalPadding: 6
@@ -101,6 +106,7 @@ ApplicationWindow {
             textFormat: Text.PlainText
             font: action.font
             color: !action.enabled ? "#a0a0a4" :
+                action.errorAlert ? "#ffffff" :
                 (action.primary || action.checked ? "#14231c" : window.textColor)
             horizontalAlignment: Text.AlignHCenter
             verticalAlignment: Text.AlignVCenter
@@ -108,11 +114,14 @@ ApplicationWindow {
         }
         background: Rectangle {
             radius: 6
-            color: action.primary || action.checked ?
+            color: action.errorAlert && action.enabled ?
+                (action.down ? "#92252e" : action.hovered ? "#c5424b" : "#b5303a") :
+                action.primary || action.checked ?
                 (action.enabled ? (action.down ? "#76ac8e" : window.accent) : "#343d37") :
                 (action.down ? "#414141" : action.hovered ? "#353535" : window.surface)
-            border.color: action.activeFocus ? window.accent : window.line
-            border.width: action.activeFocus ? 2 : 1
+            border.color: action.activeFocus ? window.accent :
+                action.errorAlert ? (action.checked ? window.warningColor : "#d85f68") : window.line
+            border.width: action.activeFocus || (action.errorAlert && action.checked) ? 2 : 1
         }
     }
 
@@ -208,42 +217,6 @@ ApplicationWindow {
             color: toggle.enabled ? window.textColor : "#a0a0a4"
             leftPadding: toggle.indicator.width + toggle.spacing
             verticalAlignment: Text.AlignVCenter
-        }
-    }
-
-    header: Rectangle {
-        implicitHeight: 74
-        color: sidebar
-        Rectangle {
-            anchors.bottom: parent.bottom
-            width: parent.width
-            height: 1
-            color: line
-        }
-        Row {
-            anchors.left: parent.left
-            anchors.verticalCenter: parent.verticalCenter
-            anchors.leftMargin: 20
-            spacing: 13
-            Rectangle {
-                width: 46
-                height: 46
-                color: "#f6f6f4"
-                radius: 11
-                Image {
-                    anchors.fill: parent
-                    anchors.margins: 4
-                    source: api.logo
-                    fillMode: Image.PreserveAspectFit
-                    mipmap: true
-                }
-            }
-            Column {
-                anchors.verticalCenter: parent.verticalCenter
-                spacing: 2
-                Copy { text: "VoxDrop"; font.pixelSize: 23; font.weight: Font.DemiBold }
-                Muted { text: "Automatic Media Transcription" }
-            }
         }
     }
 
@@ -369,22 +342,22 @@ ApplicationWindow {
                                     ToolTip.visible: hovered && !activeFocus && contentWidth > availableWidth
                                     ToolTip.text: text
                                     ToolTip.delay: 500
-                                    onTextEdited: api.editFolder(folder.index, text)
+                                    onTextChanged: api.editFolder(folder.index, text)
                                 }
-                                Action {
+                                AppActionButton {
                                     text: "↻"
                                     Layout.preferredWidth: 30
                                     Accessible.name: "Ordner jetzt prüfen"
                                     enabled: pathField.text.trim().length > 0
                                     onClicked: api.checkFolders(pathField.text.trim())
                                 }
-                                Action {
+                                AppActionButton {
                                     text: "…"
                                     Layout.preferredWidth: 30
                                     Accessible.name: "Ordner auswählen"
                                     onClicked: api.pickFolder(folder.index)
                                 }
-                                Action {
+                                AppActionButton {
                                     text: "−"
                                     Layout.preferredWidth: 30
                                     Accessible.name: "Pfad entfernen"
@@ -411,8 +384,8 @@ ApplicationWindow {
                     }
                     RowLayout {
                         Layout.fillWidth: true
-                        Action { text: "+ Pfad hinzufügen"; Layout.fillWidth: true; enabled: viewState.ready; onClicked: api.addFolder() }
-                        Action { text: "Alle prüfen"; Accessible.name: "Alle Ordner prüfen"; enabled: viewState.ready; onClicked: api.checkFolders("") }
+                        AppActionButton { text: "+ Pfad hinzufügen"; Layout.fillWidth: true; enabled: viewState.ready; onClicked: api.addFolder() }
+                        AppActionButton { text: "Alle prüfen"; Accessible.name: "Alle Ordner prüfen"; enabled: viewState.ready; onClicked: api.checkFolders("") }
                     }
                     Toggle {
                         objectName: "includeSubfolders"
@@ -464,7 +437,7 @@ ApplicationWindow {
                         Layout.fillWidth: true
                         text: viewState.modelsReady ? "Modelle installiert" : "Modell-Setup erforderlich"
                     }
-                    Action {
+                    AppActionButton {
                         Layout.fillWidth: true
                         text: "Modelle herunterladen"
                         visible: !viewState.modelsReady
@@ -479,6 +452,19 @@ ApplicationWindow {
                         Layout.fillWidth: true
                         visible: viewState.downloading
                         indeterminate: true
+                    }
+                    Muted {
+                        Layout.fillWidth: true
+                        visible: viewState.waitingForNetwork
+                        color: warningColor
+                        text: "Netzwerkzugriff verweigert (10013). Bestätige eine eventuell angezeigte Freigabeanfrage selbst. Ohne sichtbare Anfrage: Protokoll öffnen. Der Download wird automatisch erneut geprüft."
+                    }
+                    AppActionButton {
+                        Layout.fillWidth: true
+                        visible: viewState.waitingForNetwork
+                        objectName: "cancelNetworkWait"
+                        text: "Warten abbrechen"
+                        onClicked: api.cancelNetworkWait()
                     }
                     RowLayout {
                         Layout.fillWidth: true
@@ -536,7 +522,7 @@ ApplicationWindow {
                     Rectangle { Layout.fillWidth: true; height: 1; color: line }
                     RowLayout {
                         Layout.fillWidth: true
-                        Action {
+                        AppActionButton {
                             objectName: "saveButton"
                             text: "Speichern"
                             primary: true
@@ -544,7 +530,7 @@ ApplicationWindow {
                             enabled: viewState.ready && !viewState.busy
                             onClicked: api.save(false)
                         }
-                        Action {
+                        AppActionButton {
                             text: "Dienst starten"
                             Layout.fillWidth: true
                             enabled: viewState.ready && !viewState.busy
@@ -559,8 +545,8 @@ ApplicationWindow {
                         text: viewState.message || ""
                         color: viewState.messageError ? warningColor : muted
                     }
-                    Action { text: "Protokoll öffnen"; visible: viewState.logAvailable; onClicked: api.openLog() }
-                    Action {
+                    AppActionButton { text: "Protokoll öffnen"; visible: viewState.logAvailable; onClicked: api.openLog() }
+                    AppActionButton {
                         text: "Erneut prüfen"
                         visible: !viewState.ready && !viewState.busy && viewState.messageError
                         onClicked: api.retryPreparation()
@@ -575,19 +561,10 @@ ApplicationWindow {
             color: canvas
             SplitView.minimumWidth: 265
             SplitView.fillWidth: true
-            ScrollView {
-                id: workScroll
-                anchors.fill: parent
-                clip: true
-                contentWidth: availableWidth
-                contentHeight: work.implicitHeight + 42
-                ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
-
                 ColumnLayout {
                     id: work
-                    x: 21
-                    y: 20
-                    width: Math.max(1, workScroll.availableWidth - 42)
+                    anchors.fill: parent
+                    anchors.margins: 20
                     spacing: 12
                     Rectangle {
                         Layout.fillWidth: true
@@ -636,16 +613,21 @@ ApplicationWindow {
                         Muted { text: viewState.current.elapsed ? "Laufzeit  " + viewState.current.elapsed : ""; Layout.fillWidth: true }
                         Copy { text: "Modell  " + (viewState.current.model || ""); Layout.fillWidth: true }
                         Copy { text: "Rechengerät  " + (viewState.current.hardware || ""); Layout.fillWidth: true }
+                        AppActionButton {
+                            objectName: "cancelCurrentButton"
+                            text: "Aktuelle Transkription abbrechen"
+                            enabled: !viewState.busy && Boolean(viewState.current.canCancel)
+                            onClicked: api.cancelJob(viewState.current.id)
+                        }
                     }
                     Rectangle { Layout.fillWidth: true; height: 1; color: line }
-                    Copy { text: "Warteschlange  " + (viewState.waiting || 0); Layout.fillWidth: true }
+                    QueuePane { api: window.api; viewState: window.viewState; Layout.fillWidth: true; Layout.fillHeight: true }
                     Muted {
-                        text: viewState.dropMessage || "Ordner für eine einmalige Transkription hier ablegen."
+                        text: viewState.dropMessage || "Dateien oder Ordner für eine einmalige Transkription hier ablegen."
                         color: viewState.dropError ? warningColor : muted
                         Layout.fillWidth: true
                     }
                 }
-            }
         }
 
         Rectangle {
@@ -662,22 +644,82 @@ ApplicationWindow {
                 RowLayout {
                     Layout.fillWidth: true
                     Heading { text: "Verlauf"; Layout.fillWidth: true }
-                    Action { text: "Verlauf leeren …"; enabled: viewState.canClear; onClicked: confirmClear.open() }
+                    SearchToggle {
+                        objectName: 'historySearchToggle'
+                        checked: window.historySearchOpen
+                        Accessible.name: window.historySearchOpen ? 'Verlaufssuche schließen und zurücksetzen' : 'Verlauf durchsuchen'
+                        onClicked: {
+                            window.historySearchOpen = !window.historySearchOpen
+                            if (window.historySearchOpen) historySearch.forceActiveFocus()
+                            else { api.setHistorySearch(''); api.stopContentSearch() }
+                        }
+                    }
+                    AppActionButton { objectName: 'clearHistoryButton'; text: "Verlauf leeren …"; enabled: viewState.canClear; onClicked: confirmClear.open() }
+                }
+                ColumnLayout {
+                    visible: window.historySearchOpen
+                    Layout.fillWidth: true
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Field {
+                            id: historySearch
+                            objectName: 'historySearchField'
+                            Layout.fillWidth: true
+                            placeholderText: 'Dateiname/Pfad (* und ?) oder Suchtext'
+                            Accessible.name: 'Verlauf durchsuchen'
+                            text: viewState.historySearch
+                            onTextChanged: api.setHistorySearch(text)
+                        }
+                        AppActionButton { text: '×'; Accessible.name: 'Verlaufssuche zurücksetzen'; onClicked: api.setHistorySearch('') }
+                    }
+                    AppActionButton {
+                        objectName: 'contentSearchButton'
+                        text: viewState.contentSearchRunning ? 'Detailsuche stoppen' : viewState.contentSearchActive ? 'Detailsuche beenden' : 'Detailsuche starten'
+                        enabled: !viewState.busy && !viewState.contentSearchStopping && (viewState.contentSearchRunning || viewState.contentSearchActive || viewState.historySearch.trim().length > 0)
+                        onClicked: {
+                            if (viewState.contentSearchRunning || viewState.contentSearchActive) api.stopContentSearch()
+                            else api.startContentSearch()
+                        }
+                    }
+                    Muted { Layout.fillWidth: true; text: viewState.contentSearchStatus; visible: text.length > 0 }
                 }
                 RowLayout {
                     Layout.fillWidth: true
                     spacing: 4
                     Repeater {
                         model: [{label: "Alle", value: "all"}, {label: "Fehler", value: "errors"}, {label: "Fertig", value: "done"}]
-                        delegate: Action {
+                        delegate: AppActionButton {
                             required property var modelData
+                            readonly property int itemCount: viewState.historyCounts[modelData.value] || 0
+                            objectName: "historyFilter_" + modelData.value
                             Layout.fillWidth: true
-                            text: modelData.label
+                            text: modelData.label + " (" + itemCount + ")"
+                            errorAlert: modelData.value === "errors" && itemCount > 0
                             checkable: true
                             checked: viewState.filter === modelData.value
                             onClicked: api.setFilter(modelData.value)
                         }
                     }
+                }
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 4
+                    Repeater {
+                        model: [{label: 'Abgebrochen', value: 'cancelled'}, {label: 'Bestand', value: 'existing'}]
+                        delegate: AppActionButton {
+                            required property var modelData
+                            objectName: 'historyFilter_' + modelData.value
+                            Layout.fillWidth: true
+                            text: modelData.label + ' (' + (viewState.historyCounts[modelData.value] || 0) + ')'
+                            checkable: true
+                            checked: viewState.filter === modelData.value
+                            onClicked: api.setFilter(modelData.value)
+                        }
+                    }
+                }
+                Muted {
+                    Layout.fillWidth: true
+                    text: viewState.filter === 'existing' ? 'Vorhandene oder übernommene Transkripte; keine neue Verarbeitung.' : 'Verlauf: gestartete Verarbeitungen. Vor dem Start entfernte Aufträge werden nicht gezählt.'
                 }
                 RowLayout {
                     Layout.fillWidth: true
@@ -740,7 +782,11 @@ ApplicationWindow {
     Connections {
         target: api
         function onDetailsOpened() { detail.open() }
+        function onDropConflictOpened() { dropConflicts.open() }
+        function onDropResolved() { dropConflicts.close() }
     }
+
+    DropConflictDialog { id: dropConflicts; api: window.api }
 
     Dialog {
         id: detail
@@ -781,11 +827,12 @@ ApplicationWindow {
         }
         footer: RowLayout {
             spacing: 6
-            Action { text: "Erneut versuchen"; visible: selected.retry || false; enabled: !viewState.busy; onClicked: { api.retryJob(false); detail.close() } }
-            Action { text: "Neu transkribieren"; visible: selected.repeat || false; enabled: !viewState.busy; onClicked: { api.retryJob(true); detail.close() } }
-            Action { text: Qt.platform.os === "osx" ? "Im Finder zeigen" : "Im Explorer zeigen"; visible: selected.reveal || false; onClicked: api.revealOutput() }
+            AppActionButton { text: "Erneut versuchen"; visible: selected.retry || false; enabled: !viewState.busy; onClicked: { api.retryJob(false); detail.close() } }
+            AppActionButton { text: "Neu transkribieren"; visible: selected.repeat || false; enabled: !viewState.busy; onClicked: { api.retryJob(true); detail.close() } }
+            AppActionButton { objectName: "openTranscriptButton"; text: "Transkript öffnen"; visible: selected.openTranscript || false; enabled: !viewState.busy; onClicked: api.openTranscript() }
+            AppActionButton { text: Qt.platform.os === "osx" ? "Im Finder zeigen" : "Im Explorer zeigen"; visible: selected.reveal || false; onClicked: api.revealOutput() }
             Item { Layout.fillWidth: true }
-            Action { text: "Schließen"; onClicked: detail.close() }
+            AppActionButton { text: "Schließen"; onClicked: detail.close() }
         }
     }
 
@@ -793,14 +840,14 @@ ApplicationWindow {
         id: confirmClear
         objectName: "confirmClear"
         modal: true
-        title: "Verlauf und bekannte Dateien leeren?"
+        title: "Alle Auftrags- und Suchdaten leeren?"
         anchors.centerIn: Overlay.overlay
         width: Math.min(480, window.width - 48)
         standardButtons: Dialog.Cancel | Dialog.Ok
         background: Rectangle { color: surface; radius: 9; border.color: line }
         onAccepted: api.clearHistory()
         contentItem: Copy {
-            text: "Die Auftragsdaten werden zurückgesetzt. Aufnahmen und exportierte Transkripte bleiben erhalten."
+            text: "Alle Aufträge, die Warteschlange, der Dateibestand, gespeicherte Abbrüche und der Suchindex werden aus der lokalen Datenbank entfernt – unabhängig vom aktuellen Filter.\n\nAufnahmen und TXT-Dateien bleiben auf ihren Laufwerken erhalten. Bei aktiver Ordnerüberwachung werden die Ordner beim nächsten Intervall vollständig neu eingelesen. Vorhandene Transkripte erscheinen wieder im Bestand; Dateien ohne TXT werden neu eingereiht. Ordner- und Pauseneinstellungen bleiben erhalten."
         }
     }
 }

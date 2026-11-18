@@ -1,4 +1,4 @@
-/* Windows GUI launcher. Installs the locked runtime for the current user. */
+/* Windows GUI launcher. Keeps the locked runtime inside the portable app. */
 #ifndef UNICODE
 #define UNICODE
 #endif
@@ -15,6 +15,61 @@
 #endif
 
 #define PATH_LENGTH 32768
+
+static int install_runtime(const wchar_t *uv, wchar_t *command,
+                           const wchar_t *directory, const wchar_t *log_path) {
+    SECURITY_ATTRIBUTES security = { sizeof(security), NULL, TRUE };
+    HANDLE reader = NULL, writer = NULL;
+    HANDLE log = CreateFileW(log_path, GENERIC_WRITE, FILE_SHARE_READ, NULL,
+                             CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (log == INVALID_HANDLE_VALUE || !CreatePipe(&reader, &writer, &security, 0)) {
+        if (log != INVALID_HANDLE_VALUE) CloseHandle(log);
+        return 1;
+    }
+    SetHandleInformation(reader, HANDLE_FLAG_INHERIT, 0);
+    HANDLE input = CreateFileW(L"NUL", GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE,
+                               &security, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    BOOL console = AllocConsole();
+    if (console) {
+        SetConsoleOutputCP(CP_UTF8);
+        SetConsoleTitleW(L"VoxDrop – Einrichtung");
+        const wchar_t *notice = L"VoxDrop wird eingerichtet. Windows kann eine Netzwerkfreigabe anzeigen.\n"
+                                L"Bitte diese Freigabe selbst bestätigen und die Einrichtung abwarten.\n\n";
+        DWORD written;
+        WriteConsoleW(GetStdHandle(STD_OUTPUT_HANDLE), notice, (DWORD)wcslen(notice), &written, NULL);
+    }
+    STARTUPINFOW startup = { .cb = sizeof(startup), .dwFlags = STARTF_USESTDHANDLES,
+                             .hStdInput = input, .hStdOutput = writer, .hStdError = writer };
+    PROCESS_INFORMATION process = {0};
+    BOOL created = input != INVALID_HANDLE_VALUE &&
+        CreateProcessW(uv, command, NULL, NULL, TRUE, CREATE_NO_WINDOW, NULL,
+                        directory, &startup, &process);
+    DWORD process_error = created ? 0 : GetLastError();
+    CloseHandle(writer);
+    if (input != INVALID_HANDLE_VALUE) CloseHandle(input);
+    DWORD status = 1;
+    if (created) {
+        char buffer[8192];
+        DWORD count, written;
+        while (ReadFile(reader, buffer, sizeof(buffer), &count, NULL) && count) {
+            WriteFile(log, buffer, count, &written, NULL);
+            if (console) WriteFile(GetStdHandle(STD_OUTPUT_HANDLE), buffer, count, &written, NULL);
+        }
+        WaitForSingleObject(process.hProcess, INFINITE);
+        if (!GetExitCodeProcess(process.hProcess, &status)) status = 1;
+        CloseHandle(process.hThread);
+        CloseHandle(process.hProcess);
+    } else {
+        char details[80];
+        DWORD written;
+        int length = snprintf(details, sizeof(details), "CreateProcessW error: %lu\n", process_error);
+        WriteFile(log, details, (DWORD)length, &written, NULL);
+    }
+    CloseHandle(reader);
+    CloseHandle(log);
+    if (console) FreeConsole();
+    return (int)status;
+}
 
 static int launch(const wchar_t *application, wchar_t *command,
                   const wchar_t *directory, DWORD flags, BOOL wait) {
@@ -52,6 +107,8 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE previous, PWSTR parameters, in
     wchar_t profile[PATH_LENGTH];
     wchar_t runtime[PATH_LENGTH];
     wchar_t managed_python[PATH_LENGTH];
+    wchar_t cache[PATH_LENGTH];
+    wchar_t setup_log[PATH_LENGTH];
     wchar_t project[PATH_LENGTH];
     wchar_t python[PATH_LENGTH];
     wchar_t uv[PATH_LENGTH];
@@ -73,9 +130,11 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE previous, PWSTR parameters, in
 
     wcscpy(root, executable);
     *wcsrchr(root, L'\\') = L'\0';
-    swprintf(profile, PATH_LENGTH, L"%ls\\VoxDrop", local);
+    swprintf(profile, PATH_LENGTH, L"%ls\\Laufzeit", root);
     swprintf(runtime, PATH_LENGTH, L"%ls\\%ls", profile, VOXDROP_RUNTIME);
     swprintf(managed_python, PATH_LENGTH, L"%ls\\python", profile);
+    swprintf(cache, PATH_LENGTH, L"%ls\\cache", profile);
+    swprintf(setup_log, PATH_LENGTH, L"%ls\\setup.log", profile);
     swprintf(project, PATH_LENGTH, L"%ls\\windows", root);
     swprintf(uv, PATH_LENGTH, L"%ls\\tools\\uv.exe", root);
     swprintf(ready, PATH_LENGTH, L"%ls\\ready", runtime);
@@ -84,10 +143,15 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE previous, PWSTR parameters, in
 
     if (!SetEnvironmentVariableW(L"UV_PROJECT_ENVIRONMENT", runtime) ||
         !SetEnvironmentVariableW(L"UV_PYTHON_INSTALL_DIR", managed_python) ||
+        !SetEnvironmentVariableW(L"UV_CACHE_DIR", cache) ||
         !SetEnvironmentVariableW(L"VOXDROP_LAUNCHER", executable)) {
         return error_dialog(L"Die Laufzeitpfade konnten nicht gesetzt werden.");
     }
-    CreateDirectoryW(profile, NULL);
+    if (!CreateDirectoryW(profile, NULL) && GetLastError() != ERROR_ALREADY_EXISTS) {
+        return error_dialog(L"Der VoxDrop-Programmordner ist nicht beschreibbar. "
+                            L"Entpacke die gesamte App in einen beschreibbaren lokalen Ordner. "
+                            L"Laufzeit und Modelle werden dort gespeichert.");
+    }
     HANDLE mutex = CreateMutexW(NULL, FALSE, L"Local\\VoxDrop.Runtime.Install");
     if (!mutex) {
         return error_dialog(L"Die Installation konnte nicht gesperrt werden.");
@@ -100,12 +164,29 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE previous, PWSTR parameters, in
     BOOL installed = GetFileAttributesW(python) != INVALID_FILE_ATTRIBUTES &&
                      GetFileAttributesW(ready) != INVALID_FILE_ATTRIBUTES;
     int status = 0;
+    BOOL cancelled = FALSE;
     if (!installed && !background) {
         if (swprintf(command, PATH_LENGTH,
                      L"\"%ls\" sync --locked --no-dev --managed-python --python 3.12.13", uv) < 0) {
             status = 1;
         } else {
-            status = launch(uv, command, project, CREATE_NEW_CONSOLE, TRUE);
+            do {
+                swprintf(command, PATH_LENGTH,
+                         L"\"%ls\" sync --locked --no-dev --managed-python --python 3.12.13", uv);
+                status = install_runtime(uv, command, project, setup_log);
+                if (!status) break;
+                int retry = MessageBoxW(NULL,
+                    L"Die Einrichtung wurde nicht abgeschlossen. "
+                    L"Die konkrete Ursache steht im Programmordner unter Laufzeit\\setup.log.\n\n"
+                    L"Falls eine Firewall- oder Netzwerkfreigabeanfrage erscheint, bestätige sie dort selbst. "
+                    L"Ohne sichtbare Anfrage prüfe das Protokoll, Internet und freien Speicherplatz.\n\n"
+                    L"Wähle danach Wiederholen. Die bisherigen Downloads bleiben erhalten.",
+                    L"VoxDrop – Einrichtung unterbrochen", MB_RETRYCANCEL | MB_ICONINFORMATION);
+                if (retry != IDRETRY) {
+                    cancelled = TRUE;
+                    break;
+                }
+            } while (TRUE);
         }
         if (!status) {
             HANDLE marker = CreateFileW(ready, GENERIC_WRITE, 0, NULL,
@@ -118,6 +199,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE previous, PWSTR parameters, in
     }
     ReleaseMutex(mutex);
     CloseHandle(mutex);
+    if (cancelled) return 1;
     if (!installed || status) {
         if (background) {
             return 1;

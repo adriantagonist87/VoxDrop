@@ -4,6 +4,7 @@ import os
 import subprocess
 import tempfile
 import unittest
+from platform_io import WINDOWS
 from contextlib import closing
 from pathlib import Path
 from unittest.mock import Mock, patch
@@ -333,6 +334,73 @@ class WatchServiceTests(unittest.TestCase):
         self.assertEqual(self.job()["state"], "done")
         self.assertFalse(next_job(self.db, self.state, self.engine))
 
+    @unittest.skipUnless(WINDOWS, "Windows automatic recovery")
+    def test_recovery_automatically_resumes_interrupted_transcription(self):
+        self.queue()
+        with self.db:
+            self.db.execute("UPDATE jobs SET state='transcribing',attempt=1")
+        recover(self.db, self.state)
+        self.assertEqual(self.job()["state"], "ready")
+        self.assertIsNone(self.job()["finished"])
+        self.assertTrue(next_job(self.db, self.state, self.engine))
+        self.assertEqual(self.job()["state"], "done")
+        self.assertEqual(self.media.read_bytes(), b"synthetic media bytes")
+        self.engine.assert_called_once()
+
+    @unittest.skipUnless(WINDOWS, "Windows automatic recovery")
+    def test_recovery_resumes_cached_export_without_recognizing_again(self):
+        self.queue()
+        with patch("watch_service.publish_job", side_effect=OSError("interrupted export")):
+            next_job(self.db, self.state, self.engine)
+        with self.db:
+            self.db.execute("UPDATE jobs SET state='exporting'")
+        recover(self.db, self.state)
+        self.assertEqual(self.job()["state"], "ready")
+        next_job(self.db, self.state, self.engine)
+        self.assertEqual(self.job()["state"], "done")
+        self.engine.assert_called_once()
+
+    def test_transient_io_failure_retries_automatically_after_backoff(self):
+        self.queue()
+        self.engine.side_effect = [OSError(errno.EBUSY, "file temporarily locked"), TRANSCRIPT]
+        next_job(self.db, self.state, self.engine)
+        self.assertEqual(self.job()["state"], "failed")
+        self.assertFalse(next_job(self.db, self.state, self.engine))
+        with self.db:
+            self.db.execute("UPDATE job_retries SET retry_at=0")
+        self.assertTrue(next_job(self.db, self.state, self.engine))
+        self.assertEqual(self.job()["state"], "done")
+        self.assertFalse(self.db.execute("SELECT 1 FROM job_retries").fetchone())
+        self.assertEqual(self.engine.call_count, 2)
+
+    def test_transient_export_retry_keeps_cached_text(self):
+        self.queue()
+        with patch("watch_service.publish_job", side_effect=OSError(errno.ETIMEDOUT, "SMB timeout")):
+            next_job(self.db, self.state, self.engine)
+        with self.db:
+            self.db.execute("UPDATE job_retries SET retry_at=0")
+        next_job(self.db, self.state, self.engine)
+        self.assertEqual(self.job()["state"], "done")
+        self.engine.assert_called_once()
+
+    def test_permanent_asr_error_does_not_enter_automatic_retry_loop(self):
+        self.queue()
+        self.engine.side_effect = RuntimeError("invalid recording")
+        next_job(self.db, self.state, self.engine)
+        self.assertEqual(self.job()["state"], "failed")
+        self.assertFalse(self.db.execute("SELECT 1 FROM job_retries").fetchone())
+
+    @unittest.skipUnless(WINDOWS, "Windows CRT sharing lock")
+    def test_windows_crt_lock_without_winerror_is_retried(self):
+        self.queue()
+        self.engine.side_effect = [PermissionError(errno.EACCES, "sharing lock"), TRANSCRIPT]
+        next_job(self.db, self.state, self.engine)
+        self.assertTrue(self.db.execute("SELECT 1 FROM job_retries").fetchone())
+        with self.db:
+            self.db.execute("UPDATE job_retries SET retry_at=0")
+        next_job(self.db, self.state, self.engine)
+        self.assertEqual(self.job()["state"], "done")
+
     def test_unavailable_folder_is_a_service_status_then_recovers(self):
         moved = self.root / "offline"
         self.completed.rename(moved)
@@ -405,7 +473,6 @@ class WatchServiceTests(unittest.TestCase):
         self.assertEqual(startup_checks(10), [0, 10, 40, 70, 100, 130])
 
     def test_scan_ignores_symlinks_hidden_partials_and_txt(self):
-        os.symlink(self.source, self.incoming / "link.mp4")
         (self.incoming / ".temp.wav").write_bytes(b"partial")
         (self.incoming / "recording.wav.partial").write_bytes(b"partial")
         (self.incoming / "recording.txt").write_text("transcript")
@@ -414,6 +481,16 @@ class WatchServiceTests(unittest.TestCase):
             self.db.execute("SELECT source FROM jobs").fetchall()[0][0],
             str(self.source),
         )
+        self.assertEqual(self.db.execute("SELECT COUNT(*) FROM jobs").fetchone()[0], 1)
+
+    def test_scan_ignores_symlinks(self):
+        try:
+            os.symlink(self.source, self.incoming / "link.mp4")
+        except OSError as error:
+            if getattr(error, "winerror", None) == 1314:
+                self.skipTest("Windows symlink privilege is unavailable (WinError 1314)")
+            raise
+        self.queue()
         self.assertEqual(self.db.execute("SELECT COUNT(*) FROM jobs").fetchone()[0], 1)
 
     def test_unsupported_exclusive_rename_copies_and_verifies_before_removing_input(
@@ -492,6 +569,7 @@ class WatchServiceTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Arbeitsbereichs"):
             active_folders({**self.settings, "scope_dir": str(self.completed)})
 
+    @patch("smb_paths.WINDOWS", False)
     def test_smb_uri_resolves_mount_without_accepting_credentials_or_traversal(self):
         mounts = [("nas.example", "share", self.root)]
         self.assertEqual(
