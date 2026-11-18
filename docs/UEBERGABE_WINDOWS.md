@@ -2,7 +2,11 @@
 
 ## Aktuelle Sitzung vom 18.11.2026
 
-Die beauftragte Neuinstallationsabnahme ist **IN ARBEIT**. Aktueller [GitHub-Vorabdownload](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.2-windows-preview.1) mit Code `dbfcf833ef80617929101e321decac3219e76291`; Ergebnisse und nächste Schritte im [laufenden Bericht](WINDOWS_ABNAHME_2026-11-18.md). Deutsch und Englisch jeweils getrennt prüfen; Mischsprachigkeit ist laut Nutzer kein Abnahmekriterium. Noch keine vollständige Abnahme behaupten. Gemeinsamen Code erst nach Mac-Gegenprüfung integrieren.
+Die beauftragte Neuinstallationsabnahme ist **IN ARBEIT**. Aktueller [GitHub-Vorabdownload Preview 4](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.2-windows-preview.4), App-Code `f35bff9f8f1222d176b987382d3214dfbd9148c1`, SHA-256 `1be623b71f02177e46f402b43a53cf4232bc5e8bae513b7263c1c12553ba241a`. Vollständige Bereinigung und leere Preview-2-Einrichtung beider Modelle bestanden, anschließend geprüfte GitHub-Updates. Acht getrennte Sprachfälle, lokale/UNC-Dateiabläufe und 48,9-minütige normale OPUS-Überwachung mit drei DOVER-Durchgängen bestanden. Suite: 94 Fälle, 87 bestanden, sieben Skips. Ergebnisse und noch offene Schritte stehen im [laufenden Bericht](WINDOWS_ABNAHME_2026-11-18.md); nachfolgende Nachtberichte sind historische Prüfstände.
+
+Neustart/Anmeldung und Sleep/Resume sind noch nicht abgenommen. Ein einmaliger Beobachter `scripts/check-windows-login.py` ist vorbereitet, startet die App niemals selbst und protokolliert nur tatsächlichen neuen Boot/Autostart und einen neuen synthetischen Auftrag. Physischer Explorer-Drop scheitert vor Ausführung an der fensterübergreifenden Drag-Grenze der Bedienhilfe; interner rekursiver Drop-Pfad ist separat bestanden. Physische Taskleisten-/Infobereichsklicks bleiben ungeprüft. Produktive Endeinstellung und Bereinigung der Prüfdaten folgen erst nach den verbleibenden Tests.
+
+Deutsch und Englisch jeweils getrennt prüfen; Mischsprachigkeit ist laut Nutzer kein Abnahmekriterium. WIN-05 technisch offen lassen. Gemeinsamen Code erst nach Mac-Gegenprüfung integrieren; insbesondere Whisper/Metal-Entladung, Netzwerk-Warteanzeige, OPUS-Erkennung und Mac-Fensterverhalten prüfen. Bisherigen Mac-Prüfstand `df207f79aa812f70d090e4306443436d51d48952` bewahren. Keine vollständige Abnahme behaupten.
 
 ## Nachtrag: Modellphasen zur VRAM-Begrenzung
 

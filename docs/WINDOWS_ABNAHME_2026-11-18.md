@@ -8,10 +8,10 @@ Vollständige Bereinigung, neue Installation direkt von GitHub, Funktionsprüfun
 
 ## Installationskandidat
 
-- Maßgeblich: [GitHub-Prerelease v1.3.2-windows-preview.2](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.2-windows-preview.2).
-- Asset `VoxDrop-1.3.1-Windows-x64-c86746f8cc98.zip`: 45.704.551 Byte, plus `.sha256`.
-- App-Code `c86746f8cc98c2dce75fb95bd489563591640f9a`.
-- SHA-256 `3841a6ebcb882fb7e0642c1a390ea7475a98fe15e84e6b4ec67c068166ada426`.
+- Maßgeblich: [GitHub-Prerelease v1.3.2-windows-preview.4](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.2-windows-preview.4).
+- Asset `VoxDrop-1.3.1-Windows-x64-f35bff9f8f12.zip`: 45.704.618 Byte, plus `.sha256`.
+- App-Code `f35bff9f8f1222d176b987382d3214dfbd9148c1`.
+- SHA-256 `1be623b71f02177e46f402b43a53cf4232bc5e8bae513b7263c1c12553ba241a`.
 - Interne Version weiterhin 1.3.1; der Preview-Tag bezeichnet den neueren Windows-Fixstand. Keine stabilen Assets ersetzt, Preview nicht als neuestes stabiles Release markiert.
 - Preview 1: ZIP-Integrität, `build-info.json` und alle 29 enthaltenen eigenen Desktop-/Engine-/Windows-Dateien gegen den damaligen Code-Commit geprüft. Keine Abweichung nach Zeilenendennormalisierung des Builders. Preview 2 nativ aus sauberem committetem Checkout mit demselben verifizierten Vendorbestand gebaut; Korrektur WIN-08 enthalten.
 - GitHub bestätigt Assetgröße und denselben Digest. Preview 2 erneut direkt heruntergeladen und mit öffentlicher Prüfsumme verglichen. Vollständige zweite Neueinrichtung ohne übernommene Modelle/Laufzeit durchgeführt.
@@ -20,7 +20,7 @@ Ein erster privater Archivprüfer behandelte Verzeichniseinträge als Dateien. E
 
 ## Bestand und Schutz
 
-Private Liste erfasst aufgelöste Installationspfade, Größen, Prozesse, Profile, Autostart und freien Speicher. Eindeutige VoxDrop-App-/Laufzeitbestände belegen vor Bereinigung rund 46 GiB. Ein separates älteres Skriptwerkzeug bleibt bis zur Nutzerentscheidung geschützt. Gemeinsame Caches, Git-Anmeldung, Entwicklungsquellen, Originalmedien und produktive Transkripte werden nicht pauschal gelöscht. Persönliche Pfade, Einstellungen, Datenbanken und Logs bleiben außerhalb GitHub.
+Private Liste erfasst aufgelöste Installationspfade, Größen, Prozesse, Profile, Autostart und freien Speicher. Eindeutige VoxDrop-App-/Laufzeitbestände belegten vor Bereinigung rund 46 GiB. Das separate ältere Skriptwerkzeug wurde nach ausdrücklicher Nutzerentscheidung ebenfalls entfernt; Einzelheiten und Sicherungsgrößen stehen unten. Gemeinsame Caches, Git-Anmeldung, Entwicklungsquellen, Originalmedien und produktive Transkripte wurden nicht pauschal gelöscht. Persönliche Pfade, Einstellungen, Datenbanken und Logs bleiben außerhalb GitHub.
 
 ## Abnahmefälle
 
@@ -48,10 +48,10 @@ Preview 2 erneut direkt von GitHub heruntergeladen, SHA-256 und Code-Identität 
 | GitHub-Neudownload, Prüfsumme, normale EXE-Ersteinrichtung | BESTANDEN, Preview 2 mit Code und SHA oben |
 | Neue Modelle und Laufzeit vollständig im App-Ordner | BESTANDEN, beide Modelle über sichtbare Oberfläche eingerichtet |
 | Deutsch/Englisch getrennt, Qwen/Whisper, lange Pausen | BESTANDEN, acht echte CUDA-Fälle mit Textankern und Zeitmarken |
-| Sprecher/DOVER, sequenzielle Modellbelegung und VRAM-Freigabe | OFFEN |
-| Lokale/SMB-Überwachung, Pause, Rekursion und Ausfälle | OFFEN |
-| Sichtbare Bedienung, Explorer-Drop, Fenster/Infobereich, Verlauf | OFFEN |
-| Dateischutz, Kollisionen, Neutranskription und Wiederaufnahme | Datei-/Exportfälle BESTANDEN; Prozessabbruchprüfung läuft |
+| Sprecher/DOVER, sequenzielle Modellbelegung und VRAM-Freigabe | BESTANDEN auf Preview 2; Preview 4 zusätzlich langer Qwen-/DOVER-Lauf |
+| Lokale/SMB-Überwachung, Pause, Rekursion und Ausfälle | Lokale/UNC-Dateipfade BESTANDEN; aktuelles Pause/Fortsetzen IN ARBEIT; tatsächlicher SMB-Serverausfall ungeprüft |
+| Sichtbare Bedienung, Explorer-Drop, Fenster/Infobereich, Verlauf | Modelle/Optionen/Speichern/Verlauf/Minimierung/Maximierung bedient; physischer Explorer-Drop und Taskleisten-/Infobereichsklicks ungeprüft |
+| Dateischutz, Kollisionen, Neutranskription und Wiederaufnahme | BESTANDEN; Qwen-Prozessabbruch auch auf finalem Preview-4-Paket wiederholt |
 | Tatsächlicher Windows-Neustart/Anmeldestart | OFFEN |
 | Tatsächlicher Sleep/Resume | OFFEN |
 | Produktive Ordner und Endeinstellungen | OFFEN |
@@ -59,6 +59,22 @@ Preview 2 erneut direkt von GitHub heruntergeladen, SHA-256 und Code-Identität 
 Wochenlanger Betrieb braucht einen entsprechenden Beobachtungszeitraum. Gemeinsame Änderungen bleiben **UNGEPRÜFT unter macOS** und im Draft-PR #1. Mac-Prüfstand `df207f79aa812f70d090e4306443436d51d48952` bewahren.
 
 ## Bestätigte Funktionsläufe auf Preview 2
+
+### Aktueller Paketstand und Fortsetzung
+
+Preview 4 nach erneutem Download unmittelbar aus dem GitHub-Asset installiert; SHA-256 gegen veröffentlichte Prüfsummendatei verglichen. Vor Update vollständige private Profil-/Codesicherung, Datenbankintegrität und null aktive Aufträge geprüft. Runtime-/Modellmanifeste bytegleich, sämtliche Modelldateigrößen und Änderungszeiten unverändert; alle aktualisierten App-Dateien bytegleich zum heruntergeladenen Paket. Dies ist ein geprüftes GitHub-Update nach der vollständigen leeren Preview-2-Installation, keine behauptete dritte/vierte Modelleinrichtung.
+
+Die lange OPUS-Testkopie wurde durch die normale gespeicherte Überwachung vollständig verarbeitet: 2935,345 s Audio, insgesamt 490,062 s ab Beobachterstart einschließlich Scannervorlauf; laut gespeicherter Start-/Endzeit 456,038 s eigentliche Verarbeitung. ASR/Aligner 309,031 s, Sprecherphase 136,797 s. DOVER-Lap meldet drei erfolgreiche Durchgänge ohne Fallback. TXT neben Aufnahme; Originalaufnahme und Testkopie per SHA-256 unverändert. GPU bis 100 %, höchste Gesamtstichprobe 7465 MiB; gemeldete Worker-Spitzenbelegung 3.649.585.152 Byte. Keine CUDA-Speicherfehler. Fenster zeigt denselben erfolgreichen Auftrag mit Dauer/Status im Verlauf. Keine persönlichen Inhalte oder Dateinamen veröffentlicht.
+
+Die Computerbedienung wurde zwischenzeitlich durch physisches Escape beendet; nach ausdrücklichem Nutzerauftrag wieder aufgenommen. Kein Test wurde allein aufgrund des gestarteten Prozesses als bestanden markiert. Der physische Explorer-Drop ist durch die verfügbare Bedien-API begrenzt: fensterübergreifender Drag wird vor Ausführung mit `point ... is outside window bounds` abgewiesen. Die interne einmalige rekursive Ordnerablage und deren Original-/Ergebnisschutz sind separat bestanden; ein physischer Explorer-Drop wird deshalb weiter nicht als bestanden ausgewiesen. Fenster-Minimierung und anschließende Wiederanzeige sowie native Maximierung über das Systemmenü wurden tatsächlich bedient; nach Maximierung vollständiges Layout und Verlauf lesbar.
+
+Für die echte Neustartabnahme ist `scripts/check-windows-login.py` vorbereitet: privates Konfigurations-/Ergebnis-JSON, einmaliger eigener HKCU-Run-Beobachter. Er startet VoxDrop niemals selbst. Erst nach neuem Boot und beobachtetem automatischem Hintergrund-GUI-/Supervisor-/Dienststart legt er eine künstliche Aufnahme im Prüfordner ab; er prüft Fertigstellung/TXT/Originalhash und entfernt anschließend ausschließlich seinen eigenen Test-Run-Wert. Der produktive VoxDrop-Run-Wert bleibt erhalten. Tatsächlicher Neustartlauf weiterhin offen.
+
+Finale Wiederholung des isolierten Qwen-Abbruchtests auf Preview 4 bestanden: normaler EXE-Hintergrundstart und automatischer Ersatz des beendeten Dienstes; Abbruch nach Anlage von 2.583.624 Byte dekodiertem Audio im Auftragsordner. Null verwaiste Inferenzprozesse, automatische Fertigstellung bis `done`, TXT veröffentlicht, Originalhash unverändert und unterbrochenes Audio entfernt. Produktives Profil nicht angehalten oder verändert.
+
+Automatische englische Erkennung im normalen Überwachungsprofil auf Preview 4 bestanden: Qwen/CUDA, Sprache `auto`, Stilleüberspringen, Sprecher und DOVER aktiv; 37,026 s synthetisches Audio in 32,532 s. Alle Textanker vor/nach 20 s Pause vorhanden, Freitag-Zeitmarke bei 28 s, Originalhash unverändert. Separat gespeicherte Pause vor neuer deutscher Testdatei bestätigt: über vier Minuten keine Einreihung und kein TXT. Fortsetzen wird erst nach tatsächlicher Bedienung und erfolgreichem Folgeauftrag als bestanden markiert. Währenddessen verweigerte die Bedienhilfe den Cursorzugriff und lieferte schwarze Aufnahmen; Nutzer wurde gemäß Computer-Use-Regel zum Entsperren aufgefordert. Kein Appfehler daraus abgeleitet.
+
+Fortsetzen anschließend über den ausgelieferten `controller.save_settings`-Pfad mit Validierung und atomarer Veröffentlichung durchgeführt, da die Bedienhilfe trotz bestätigter Entsperrung, frischer Fensterzuordnung und Kernel-Neuverbindung schwarze Aufnahmen lieferte. Kein zusätzlicher sichtbarer Speichern-Klick behauptet. Danach deutsche Testdatei automatisch `done`: 30,523 s, Sprache `auto`, Qwen/CUDA/Sprecher/DOVER/Stilleüberspringen, alle Textanker vorhanden, Zeitmarke nach Pause 29 s, Originalhash erhalten. Damit Pause/Fortsetzen funktional bestanden; zusätzliche sichtbare Bedienabnahme bleibt getrennt begrenzt.
 
 ### Nachprüfung des Konsolenfixes in Preview 3
 

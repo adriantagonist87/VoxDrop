@@ -1,6 +1,6 @@
 # Verbindliche Windows-Abnahme nach vollständiger Neuinstallation
 
-Nutzerauftrag vom 18.11.2026: Nach Rückkehr des Nutzers die Windows-App vollständig deinstallieren und bereinigen, direkt von GitHub neu installieren und sämtliche Funktionen 1:1 im produktiven Arbeitsablauf prüfen. **GEPLANT, noch nicht durchgeführt.** Die bisherigen Paket-, Modell- und Ausfalltests bleiben Vorprüfungen; sie ersetzen diese Abnahme nicht.
+Nutzerauftrag vom 18.11.2026: Die Windows-App vollständig deinstallieren und bereinigen, direkt von GitHub neu installieren und sämtliche Funktionen 1:1 im produktiven Arbeitsablauf prüfen. **IN ARBEIT.** Bereinigung, leere GitHub-/EXE-/Modelleinrichtung und zahlreiche echte Funktionsläufe sind inzwischen durchgeführt. Die nachfolgende Liste bleibt der verbindliche Prüfauftrag; ausschließlich der [laufende Abnahmebericht](WINDOWS_ABNAHME_2026-11-18.md) nennt bestandene und noch offene Fälle mit exaktem Code-SHA. Die ursprünglichen Nachtprüfungen ersetzen die Endabnahme nicht.
 
 Der Beginn erfolgt in der nächsten gemeinsamen Sitzung nach Rückmeldung des Nutzers. Der Auftrag zur Bereinigung und Neuinstallation ist bereits erteilt. Zuerst konkrete Bestände und Ziele zuordnen; Sicherheits-, Netzwerk- und Anmeldedialoge bedient der Nutzer selbst. Kein unbeaufsichtigter Rechnerneustart vor dieser Sitzung.
 
