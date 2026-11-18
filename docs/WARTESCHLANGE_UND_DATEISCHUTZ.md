@@ -2,6 +2,10 @@
 
 Nutzerauftrag vom 18.11.2026: Die mittlere Spalte muss sämtliche wartenden Aufträge sichtbar und bedienbar machen. Zusätzlich TXT direkt mit der OS-Standardanwendung öffnen, frühere Ergebnisse erkennen und laufende Aufnahmen vor verfrühter Verarbeitung schützen.
 
+## Neuer Verlauf und vollständige Bereinigung ab Preview 11
+
+[Preview 11](VERLAUF_BESTAND_BEREINIGUNG.md) zeigt ungestartete Abbrüche nicht mehr im Verlauf; vorhandene Ergebnisse stehen im Bestand. „Verlauf leeren“ entfernt nun ausdrücklich auch interne Unterdrückungen, Queue, Pläne und Suchcache. Die nächste aktive Überwachungsrunde erfasst die Dateien neu. Die nachfolgenden ursprünglichen Prüfstände sind historisch.
+
 ## Queue-Funktionsstand und nachfolgendes Iconupdate
 
 Der aktuelle Icon-/Layoutstand ist [Preview 10](APP_ICON_UND_LAYOUT.md). Die folgende Queue-Abnahme auf Preview 9 bleibt mit ihrem tatsächlichen Code-SHA erhalten; Engine und Controller sind im Iconupdate unverändert.

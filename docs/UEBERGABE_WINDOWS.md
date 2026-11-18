@@ -1,6 +1,14 @@
 # Übergabeauftrag für Codex auf dem Windows-PC
 
-## Aktuell: Preview 10
+## Aktuell: Preview 11
+
+[Windows Preview 11](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.2-windows-preview.11), App-Code `2a1ae7feb5c9c2125b20e630875bed13b316250e`, ZIP-SHA-256 `83822f1f5d39d48cf8328c67013699d6001cfdb675deeaa40cf6940ba91b3a86`. „Alle“ enthält nur tatsächliche Verarbeitung; ungestartete Abbrüche bleiben intern. Separate Filter „Abgebrochen“ und „Bestand“, vorhandene/übernommene Ergebnisse zählen nicht als neue Erfolge. „Verlauf leeren“ entfernt nach Bestätigung alle Auftrags-/Queue-/Drop-/Suchdaten und lokalen Arbeitskopien; Originale und Einstellungen bleiben erhalten. Aktive Überwachung liest im nächsten Intervall neu ein. Icon außen transparent, Statuswellen unverändert. [Details und Mac-Aufgaben](VERLAUF_BESTAND_BEREINIGUNG.md).
+
+144 Windows-Fälle: 137 bestanden, sieben bekannte Skips, 54,338 s. Finales EXE-/QML-/SQL-/Wiederimport-/Suchpaket in 13,893 s bestanden. Acht-Tausend-Abbruchtest, alte Scan-/Token-/Statusantworten und wiederholbare Cachebereinigung geprüft; 18 Qt-Fälle. Installierter 20.000-Einträge-Pfadfilter plus Zähler ca. 214 ms. Nächste neue native CUDA-Abnahme nicht behauptet, Inferenz/Jobbeanspruchung unverändert.
+
+GitHub-ZIP/SHA/89 Dateien bestätigt, vollständiges Profil und Code gesichert. Leerlaufupdate mit regulärem Dienst-/GUI-Neustart; 9.143 vorhandene Aufträge, aktuelle Ordner/Pause und Modelle/Laufzeit erhalten. 8.869 wartend, weiter pausiert; sichtbare Zähler 1/0/1/0/273 für Alle/Fehler/Fertig/Abgebrochen/Bestand. Keine produktive Bereinigung als Test. Transparente Icon-Dateien und Übergabe auf main; funktionaler Code bis Mac-Gegenprüfung im Draft-PR.
+
+## Vorangegangener Stand: Preview 10
 
 Installiert und veröffentlicht: [Windows Preview 10](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.2-windows-preview.10), App-Code `4e565d426167b55a900a2c35d449ae0f29a98493`, ZIP-SHA-256 `4bcdc831057c93227530f73a08b553c4a725a78962945097dc3dd91cb0bd6e0d`. Nutzervorlage als neues App-/EXE-/Taskleistenicon, vollständige Logo-Kopfzeile entfernt. Statussymbole unverändert. [Quellen, native Ressourcenprüfung und Mac-Arbeit](APP_ICON_UND_LAYOUT.md). 15 Qt-Fälle in 5,972 s, finales EXE-/Icon-/Queuepaket in 8,712 s bestanden; alle 32 Engine-Dateien bytegleich zu Preview 9. GitHub-ZIP/SHA/88 Dateien bestätigt, Einstellungen/SQLite/Code gesichert, Dienst weitergelaufen. Bereits vor Update leeres Auftragsprofil/Pause aus erhalten; keine alte Historie zurückspielen. Auf main Icon-Dateien/README und Dokumentation; Mac-Code/-Fenster bis Cocoa-/Dock-Gegenprüfung weiter im PR.
 

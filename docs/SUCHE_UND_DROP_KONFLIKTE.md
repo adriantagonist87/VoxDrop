@@ -2,6 +2,10 @@
 
 Nutzeraufträge vom 18.11.2026: Suchfelder hinter Lupenbuttons in Warteschlange und Verlauf, schnelle Wildcardsuche, ausdrücklich gestartete/gestoppte Inhaltssuche auch bei 20.000 Transkripten, verständliche Konfliktentscheidungen bei gemischten Datei-/Ordnerdrops und Korrektur der Explorer-Auswahl.
 
+## Neuer Verlauf und Reset ab Preview 11
+
+[Preview 11](VERLAUF_BESTAND_BEREINIGUNG.md) trennt Bestand/Verarbeitungen und bereinigt beim ausdrücklichen Leeren sämtliche Auftrags-/Suchdaten. Suchprozesssperre und Speicherrevision sichern Reset/Neuerfassung ab. Das Icon ist nun außen transparent. Die folgenden älteren Prüfberichte behalten ihre exakten Code-SHAs.
+
 ## Nachfolgendes Icon-/Layoutupdate
 
 [Preview 10](APP_ICON_UND_LAYOUT.md) übernimmt die neue Icon-Vorlage und entfernt die Logo-Kopfzeile. Die folgenden Such-/Drop-/Queue-Funktionsprüfungen behalten ihre exakten Code-SHAs und gelten für die unveränderte Engine weiter.
