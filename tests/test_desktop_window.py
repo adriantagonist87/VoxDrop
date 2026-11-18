@@ -282,3 +282,16 @@ class DesktopWindowTests(unittest.TestCase):
             self.assertEqual(sent.call_args_list[0].args, ('resolve-drop', 'synthetic-batch', 'front'))
             self.assertFalse(dialog.property('visible'))
         self.assertFalse(self.controller.drop_plan)
+
+    def test_pause_button_can_stop_future_immediate_selection_without_resuming_all(self):
+        self.queue_fixture(3)
+        self.controller.snapshot.update(queue_paused=True, immediate_count=2)
+        self.controller.changed.emit()
+        QTest.qWait(25)
+        button = self.visual('pauseQueueButton')
+        self.assertEqual(button.property('text'), 'Auswahl pausieren')
+        point = button.mapToScene(QPointF(button.width()/2, button.height()/2)).toPoint()
+        with patch.object(self.controller_module, 'command', return_value='') as command, patch.object(self.controller, 'action', side_effect=lambda operation, message: operation()):
+            QTest.mouseClick(self.window, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, point)
+            QTest.qWait(20)
+        command.assert_called_once_with('queue-pause', 'on')

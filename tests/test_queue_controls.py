@@ -162,6 +162,42 @@ class QueueTests(unittest.TestCase):
         self.assertTrue(queue_paused(self.db))
         self.assertEqual(len(queue_jobs(self.db)), 0)
 
+    def test_immediate_selection_does_not_resume_the_rest_of_a_paused_queue(self):
+        _, one = self.add(); selected, two = self.add('Selected.wav', b'other')
+        set_queue_paused(self.db, True)
+        plan = self.plan_drop([selected])
+        result = service.resolve_drop(self.db, plan['token'], 'immediate')
+        self.assertTrue(result['queue_remains_paused'])
+        self.assertTrue(queue_paused(self.db))
+        self.assertEqual(service.immediate_count(self.db), 1)
+        self.assertTrue(service.next_job(self.db, self.state, self.engine))
+        self.assertEqual(self.row(two)['state'], 'done')
+        self.assertFalse(service.next_job(self.db, self.state, self.engine))
+        self.assertEqual(self.row(one)['state'], 'ready')
+        self.assertTrue(queue_paused(self.db))
+
+    def test_manual_pause_stops_future_immediate_work_and_preempted_current_can_finish(self):
+        _, one = self.add(); selected, two = self.add('Selected.wav', b'other')
+        _, three = self.add('Rest.wav', b'rest')
+        def engine(*args, **options):
+            with closing(service.database(self.state)) as other:
+                set_queue_paused(other, True)
+                plan = service.prepare_drop(other, self.settings, [str(selected)])
+                service.resolve_drop(other, plan['token'], 'immediate')
+            return 'Do not publish this interrupted attempt'
+        self.assertTrue(service.next_job(self.db, self.state, engine))
+        self.assertTrue(queue_paused(self.db))
+        self.assertTrue(service.next_job(self.db, self.state, self.engine))
+        self.assertTrue(service.next_job(self.db, self.state, self.engine))
+        self.assertEqual(self.row(two)['state'], 'done')
+        self.assertEqual(self.row(one)['state'], 'done')
+        self.assertFalse(service.next_job(self.db, self.state, self.engine))
+        self.assertEqual(self.row(three)['state'], 'ready')
+        plan = self.plan_drop([self.incoming / 'Rest.wav'])
+        service.resolve_drop(self.db, plan['token'], 'immediate')
+        set_queue_paused(self.db, True)
+        self.assertFalse(service.next_job(self.db, self.state, self.engine))
+
     def test_immediate_drop_waits_for_export_and_does_not_cancel_selected_active_job(self):
         current, one = self.add(); priority, two = self.add('Priority.wav', b'other')
         with self.db:

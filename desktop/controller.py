@@ -400,6 +400,7 @@ class Controller(QObject):
             "waiting": self.snapshot.get("waiting", 0),
             "queueCount": len(self.snapshot.get('queue',[])),
             "queuePaused": self.snapshot.get('queue_paused',False),
+            "queueImmediateCount": self.snapshot.get('immediate_count', 0),
             "queueCompact": self.queue_compact,
             "queueSearch": self.queue_query,
             "historySearch": self.history_query,
@@ -710,6 +711,8 @@ class Controller(QObject):
             self.drop_message += ' Der unterbrochene Auftrag wird anschließend erneut verarbeitet.'
         if result.get('export_finishes'):
             self.drop_message += ' Der begonnene Export wird zuerst sicher abgeschlossen.'
+        if result.get('queue_remains_paused'):
+            self.drop_message += ' Die übrige Warteschlange bleibt pausiert.'
         self.drop_error = bool(result['warnings'])
         if result['warnings']:
             self.drop_plan = dict(resolved=True, items=[], counts={}, warnings=result['warnings'], message=self.drop_message)

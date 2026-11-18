@@ -38,9 +38,9 @@ ColumnLayout {
         }
         QueueButton {
             objectName: "pauseQueueButton"
-            text: pane.viewState.queuePaused ? "Fortsetzen" : "Pausieren"
+            text: pane.viewState.queuePaused ? (pane.viewState.queueImmediateCount > 0 ? 'Auswahl pausieren' : "Fortsetzen") : "Pausieren"
             enabled: !pane.viewState.busy
-            onClicked: pane.api.pauseQueue(!pane.viewState.queuePaused)
+            onClicked: pane.api.pauseQueue(pane.viewState.queuePaused && pane.viewState.queueImmediateCount > 0 ? true : !pane.viewState.queuePaused)
         }
     }
     RowLayout {
@@ -79,7 +79,7 @@ ColumnLayout {
     Text {
         Layout.fillWidth: true
         visible: pane.viewState.queuePaused
-        text: "Pausiert. Der aktuelle Auftrag darf fertiglaufen. Neue Dateien werden weiter erfasst."
+        text: pane.viewState.queueImmediateCount > 0 ? 'Nur die Sofort-Auswahl wird verarbeitet. Die übrige Warteschlange bleibt pausiert.' : "Pausiert. Der aktuelle Auftrag darf fertiglaufen. Neue Dateien werden weiter erfasst."
         wrapMode: Text.WordWrap; color: "#d9bd83"; font.pixelSize: 12
     }
     Text {

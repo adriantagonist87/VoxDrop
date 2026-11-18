@@ -76,7 +76,7 @@ Dialog {
             font.pixelSize: 11
             color: '#c4c4c8'
             wrapMode: Text.WordWrap
-            text: 'An 1. Stelle: Wartende/neue Aufträge vorziehen, fertige ignorieren. Neu transkribieren: separate TXT erzeugen. Sofort: neue Auswahl vorziehen und laufende Berechnung kontrolliert unterbrechen; der unterbrochene Schritt beginnt anschließend erneut. Ein begonnener Export wird fertiggestellt. Ignorieren: nur neue Aufnahmen einreihen.'
+            text: 'An 1. Stelle: Wartende/neue Aufträge vorziehen, fertige ignorieren. Neu transkribieren: separate TXT erzeugen. Sofort: Auswahl vorziehen und laufende Berechnung kontrolliert unterbrechen; der unterbrochene Auftrag beginnt anschließend neu. Ein begonnener Export wird fertiggestellt. Bei pausierter Queue bleibt der Rest pausiert. Ignorieren: nur neue Aufnahmen einreihen.'
         }
         GridLayout {
             Layout.fillWidth: true

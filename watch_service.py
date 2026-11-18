@@ -44,6 +44,7 @@ from queue_control import (
     JobCancelled, initialise_queue, queue_jobs, queue_paused, set_queue_paused,
     move_queue_item, cancel_job, cancel_queue, cancellation_requested, poll_cancellation,
     prioritise_jobs, restore_preempted,
+    immediate_count, prune_immediate,
 )
 from media_history import MediaBusy, initialise_media_history, remember_result, previously_transcribed
 from voxdrop import (
@@ -736,6 +737,7 @@ def resolve_drop(db, token, action):
         interrupted = prioritise_jobs(db, identifiers, interrupt=action == 'immediate') if action in ('front','immediate') else None
         result = dict(queued=queued, selected=len(set(identifiers)), ignored=ignored, active=active,
                       interrupted=interrupted, pending=bool(identifiers), warnings=warnings,
+                      queue_remains_paused=queue_paused(db),
                       export_finishes=action == 'immediate' and bool(db.execute("SELECT 1 FROM jobs WHERE state='exporting' OR (state IN ('copying','transcribing') AND publication_started=1)").fetchone()))
         db.execute('UPDATE drop_batches SET result=? WHERE token=?', (json.dumps(result, ensure_ascii=False), token))
     return result
@@ -1193,7 +1195,8 @@ def next_job(
     allow_automatic=True,
     config=None,
 ):
-    if queue_paused(db):
+    prune_immediate(db)
+    if queue_paused(db) and not immediate_count(db):
         return False
     with db:
         db.execute(
@@ -1205,12 +1208,13 @@ def next_job(
     selection = (
         """AND (origin_job_id IS NOT NULL OR json_extract(settings,'$.folder_drop')=1 OR
         COALESCE(json_extract(settings,'$.watch_path'),json_extract(settings,'$.input_dir'))
-        IN (SELECT path FROM folder_status WHERE available=1))"""
+        IN (SELECT path FROM folder_status WHERE available=1) OR id IN (SELECT job_id FROM immediate_jobs))"""
         if available_only
         else ""
     )
     if not allow_automatic:
-        selection = "AND (origin_job_id IS NOT NULL OR json_extract(settings,'$.folder_drop')=1)"
+        selection = "AND (origin_job_id IS NOT NULL OR json_extract(settings,'$.folder_drop')=1 OR id IN (SELECT job_id FROM immediate_jobs))"
+    selection += " AND (NOT EXISTS(SELECT 1 FROM queue_state WHERE paused=1) OR id IN (SELECT job_id FROM immediate_jobs))"
     job = db.execute(
         f"""SELECT jobs.* FROM jobs JOIN queue_positions q ON q.job_id=jobs.id
         WHERE state='ready' {selection} ORDER BY q.position,jobs.id LIMIT 1"""
@@ -1267,7 +1271,7 @@ def next_job(
         claimed = db.execute(
             f"""UPDATE jobs SET state=?, attempt=attempt+1, started=?, updated=?, finished=NULL,
             error=NULL, settings=? WHERE id=? AND state='ready' AND settings=?
-            AND NOT EXISTS(SELECT 1 FROM queue_state WHERE paused=1)
+            AND (NOT EXISTS(SELECT 1 FROM queue_state WHERE paused=1) OR id IN (SELECT job_id FROM immediate_jobs))
             AND id=(SELECT j.id FROM jobs j JOIN queue_positions q ON q.job_id=j.id
                 WHERE j.state='ready' {selection} ORDER BY q.position,j.id LIMIT 1)""",
             (phase, now, now, json.dumps(settings, ensure_ascii=False), job_id, job["settings"]),
@@ -2281,6 +2285,7 @@ def main(argv=None):
                             "autostart": login_agent.agent_path().is_file(),
                             "waiting": waiting,
                             "queue_paused": queue_paused(db),
+                            "immediate_count": immediate_count(db),
                             "queue": [dict(row) for row in queue_jobs(db)],
                             "current": dict(current) if current else None,
                             "jobs": [dict(job) for job in jobs],

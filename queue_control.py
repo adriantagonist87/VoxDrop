@@ -30,6 +30,9 @@ def initialise_queue(db):
             job_id INTEGER PRIMARY KEY REFERENCES jobs(id) ON DELETE CASCADE,
             requested REAL NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS immediate_jobs (
+            job_id INTEGER PRIMARY KEY REFERENCES jobs(id) ON DELETE CASCADE
+        );
         CREATE TABLE IF NOT EXISTS drop_batches (
             token TEXT PRIMARY KEY, created REAL NOT NULL, items TEXT NOT NULL,
             result TEXT
@@ -72,6 +75,22 @@ def queue_paused(db):
 def set_queue_paused(db, paused):
     with db:
         db.execute('UPDATE queue_state SET paused=? WHERE id=1',(int(paused),))
+        db.execute('DELETE FROM immediate_jobs')
+
+
+def immediate_count(db):
+    return db.execute("""SELECT COUNT(*) FROM immediate_jobs i JOIN jobs j ON j.id=i.job_id
+        LEFT JOIN job_retries r ON r.job_id=j.id WHERE j.state IN
+        ('seen','ready','copying','transcribing','exporting') OR (j.state='failed' AND r.job_id IS NOT NULL)""").fetchone()[0]
+
+
+def prune_immediate(db):
+    if db.execute('SELECT 1 FROM immediate_jobs LIMIT 1').fetchone():
+        with db:
+            db.execute("""DELETE FROM immediate_jobs WHERE job_id IN
+                (SELECT j.id FROM jobs j LEFT JOIN job_retries r ON r.job_id=j.id
+                 WHERE j.state NOT IN ('seen','ready','copying','transcribing','exporting')
+                 AND NOT (j.state='failed' AND r.job_id IS NOT NULL))""")
 
 
 def move_queue_item(db, job_id, before_id=0):
@@ -111,6 +130,7 @@ def cancel_job(db, job_id):
     with db:
         db.execute('BEGIN IMMEDIATE')
         db.execute('DELETE FROM preemptions WHERE job_id=?', (job_id,))
+        db.execute('DELETE FROM immediate_jobs WHERE job_id=?', (job_id,))
         return _cancel(db,job_id)
 
 
@@ -119,6 +139,7 @@ def cancel_queue(db):
         db.execute('BEGIN IMMEDIATE')
         db.execute('UPDATE queue_state SET paused=1 WHERE id=1')
         db.execute('DELETE FROM preemptions')
+        db.execute('DELETE FROM immediate_jobs')
         ids={row['id'] for row in queue_jobs(db)}
         ids.update(row[0] for row in db.execute("""SELECT id FROM jobs
             WHERE state IN ('copying','transcribing') AND publication_started=0"""))
@@ -135,12 +156,13 @@ def prioritise_jobs(db, identifiers, *, interrupt=False):
     interrupted = None
     current = db.execute("SELECT id,state,publication_started FROM jobs WHERE state IN ('copying','transcribing','exporting') LIMIT 1").fetchone()
     if interrupt and selected:
-        db.execute('UPDATE queue_state SET paused=0 WHERE id=1')
+        db.executemany('INSERT OR IGNORE INTO immediate_jobs VALUES (?)', ((identifier,) for identifier in selected))
         if selected and current and current['id'] not in identifiers and current['state'] != 'exporting' and not current['publication_started']:
             if not cancellation_requested(db, current['id']) or db.execute('SELECT 1 FROM preemptions WHERE job_id=?', (current['id'],)).fetchone():
                 _cancel(db, current['id'])
                 db.execute('INSERT OR REPLACE INTO preemptions VALUES (?,?)', (current['id'], time.time()))
                 interrupted = current['id']
+                db.execute('INSERT OR IGNORE INTO immediate_jobs VALUES (?)', (interrupted,))
                 remainder.insert(0, interrupted)
     order = selected + remainder
     db.executemany('UPDATE queue_positions SET position=? WHERE job_id=?',
