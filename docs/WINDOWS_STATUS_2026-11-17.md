@@ -1,6 +1,14 @@
 # Windows-Übergabe vom 17. November, fortgeführt am 18. November 2026
 
-## Aktuell installiert: Windows Preview 9
+## Aktuell installiert: Windows Preview 10
+
+[Windows Preview 10](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.2-windows-preview.10), App-Code `4e565d426167b55a900a2c35d449ae0f29a98493`, ZIP-SHA-256 `4bcdc831057c93227530f73a08b553c4a725a78962945097dc3dd91cb0bd6e0d`. Nutzervorlage für Windows-App/EXE/Taskleiste und vorbereiteten Mac-Dock-Generator; Logo-/Namens-/Untertitelzeile entfernt, 74 Pixel mehr Inhaltshöhe. Windows-Infobereich/Mac-Menüleistenstatus bleiben unverändert. [Genaue Icon-/Layoutübergabe](APP_ICON_UND_LAYOUT.md).
+
+15 Qt-Bedienfälle in 5,972 s und finales EXE-Paket mit nativer bytegenauer Ressourcenprüfung aller sieben Icons sowie gefiltertem QML-/SQLite-Menüklick in 8,712 s bestanden. Breite/minimale Ansichten visuell geprüft; alle 32 Engine-Dateien und Controller/Einstieg bytegleich zu Preview 9. GitHub-ZIP/SHA und 88 installierte Dateien bestätigt. Aktuelle Einstellungen/SQLite und Code gesichert, nur GUI neu gestartet; Dienst und Modelle/Laufzeit erhalten. Zum Updatezeitpunkt bereits null Aufträge/Pause aus vorgefunden und erhalten; frühere Historien nicht wiederherstellen.
+
+Main enthält zusätzlich zur Dokumentation die Icon-Dateien und den aktualisierten README-Link auf die Windows-Vorabversion. Funktionaler App-Code einschließlich QML-Headerentfernung und geändertem Swift-Icongenerator weiter im Draft-PR; am Mac neu bauen, Cocoa/Dock/Finder/Statussymbol und vorherige gemeinsame Funktionen prüfen. Bisherigen installierten Mac-Prüfstand bewahren. Die folgenden Angaben sind historische Prüfstände.
+
+## Vorangegangener installierter Stand: Windows Preview 9
 
 [Windows Preview 9](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.2-windows-preview.9), App-Code `c434d5c4921873d387cefc8cdc55f23f201e61de`, SHA-256 `7dd6e52dadff40a73f8ce9b79c09609f2d2cd21ed3a6917d338af10937422da4`. Die oberen vier Queue-Menüaktionen waren bei aktiver Suche pauschal gesperrt. Jetzt funktionieren sie gegen die gesamte aktuelle Warteschlange; ein konkreter Vor-/Nach-Anker korrigiert auch Drag-and-drop mit ausgeblendeten Nachbarn. Tatsächlich unmögliche Grenzaktionen erscheinen grau. Alle Preview-8-Funktionen bleiben enthalten. [Umsetzung, Prüfbericht und Mac-Checkliste](https://github.com/adriantagonist87/VoxDrop/blob/fix/windows-native-validation/docs/SUCHE_UND_DROP_KONFLIKTE.md).
 
