@@ -217,42 +217,6 @@ ApplicationWindow {
         }
     }
 
-    header: Rectangle {
-        implicitHeight: 74
-        color: sidebar
-        Rectangle {
-            anchors.bottom: parent.bottom
-            width: parent.width
-            height: 1
-            color: line
-        }
-        Row {
-            anchors.left: parent.left
-            anchors.verticalCenter: parent.verticalCenter
-            anchors.leftMargin: 20
-            spacing: 13
-            Rectangle {
-                width: 46
-                height: 46
-                color: "#f6f6f4"
-                radius: 11
-                Image {
-                    anchors.fill: parent
-                    anchors.margins: 4
-                    source: api.logo
-                    fillMode: Image.PreserveAspectFit
-                    mipmap: true
-                }
-            }
-            Column {
-                anchors.verticalCenter: parent.verticalCenter
-                spacing: 2
-                Copy { text: "VoxDrop"; font.pixelSize: 23; font.weight: Font.DemiBold }
-                Muted { text: "Automatic Media Transcription" }
-            }
-        }
-    }
-
     DropArea {
         id: folderDrop
         objectName: "folderDrop"

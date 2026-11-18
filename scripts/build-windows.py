@@ -1,6 +1,6 @@
 """Build a Windows test ZIP natively using verified release dependencies and Zig.
 
-The reference ZIP supplies uv, the icon, pinned aTrain and patched DOVER-Lap.
+The reference ZIP supplies uv, pinned aTrain and patched DOVER-Lap.
 All first-party application sources come from the clean current checkout.
 """
 
@@ -80,8 +80,7 @@ def build(args):
         app = stage / "VoxDrop"
         # Extract only vendor dependencies and licensed sources, never old app code.
         prefixes = ("VoxDrop/tools/", "VoxDrop/DoverPackages/", "VoxDrop/Quellcode/",
-                    "VoxDrop/Engine/aTrain_core/", "VoxDrop/Engine/aTrain-LICENSE.txt",
-                    "VoxDrop/assets/VoxDrop.ico")
+                    "VoxDrop/Engine/aTrain_core/", "VoxDrop/Engine/aTrain-LICENSE.txt")
         with ZipFile(args.base_zip) as archive:
             for item in archive.infolist():
                 path = PurePosixPath(item.filename)
@@ -118,6 +117,7 @@ def build(args):
         copy_source(ROOT / "windows/README.md", app / "Installation.md")
         copy_source(ROOT / "LICENSE", app / "LICENSE")
         copy_source(ROOT / "macos/VoxDropLogo.png", app / "assets/VoxDropLogo.png")
+        copy_source(ROOT / "assets/VoxDrop.ico", app / "assets/VoxDrop.ico")
         resources = stage / "voxdrop.res"
         resources.write_bytes(icon_resources(app / "assets/VoxDrop.ico"))
         runtime_hash = digest(app / "windows/uv.lock")[:12]
