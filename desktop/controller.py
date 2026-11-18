@@ -13,7 +13,7 @@ from time import time
 
 from model_storage import data_directory
 from file_actions import reveal_in_explorer
-from transcript_search import path_matches, run_content_search, transcript_path
+from transcript_search import path_matches, run_content_search, transcript_path, history_category
 from network_wait import NetworkPermissionError, retry_network_permission
 from PySide6.QtCore import (
     Property,
@@ -324,6 +324,10 @@ class Controller(QObject):
         self.content_running = False
         self.content_status = ''
         self.content_cancel = Event()
+        self.content_done = Event()
+        self.content_done.set()
+        self.clearing = False
+        self.reset_generation = 0
         self.content_generation = 0
         self.contentSearchProgress.connect(self.content_search_progress)
         QApplication.instance().aboutToQuit.connect(self.content_cancel.set)
@@ -426,7 +430,8 @@ class Controller(QObject):
             "filter": self.filter,
             "historyCounts": self.history_counts(),
             "order": self.order,
-            "canClear": self.history_counts()["all"] > 0 and not job and not self.busy and not self.history_query,
+            "canClear": bool(self.snapshot.get('has_stored_data',self.snapshot.get('stored_jobs',0)
+                or self.snapshot.get('jobs') or self.snapshot.get('queue') or self.history_counts()['all'])) and not job and not self.busy,
         }
 
     @Property("QVariantMap", notify=changed)
@@ -917,15 +922,19 @@ class Controller(QObject):
         )
 
     def refresh(self):
-        if self.preview or self.refreshing or not self.ready:
+        if self.preview or self.refreshing or not self.ready or self.clearing:
             return
         self.refreshing = True
         order = self.order
         history_filter = self.filter
         query, token = self.history_query, self.content_token
+        reset_generation=self.reset_generation
 
         def finished(result, error):
             self.refreshing = False
+            if self.clearing or reset_generation!=self.reset_generation:
+                self.refresh()
+                return
             if error:
                 self.notify(error, True)
                 return
@@ -1041,17 +1050,18 @@ class Controller(QObject):
         if counts is not None:
             return counts
         jobs = self.snapshot.get("jobs", [])
-        return {
-            "all": sum(job["state"] not in {'seen', 'ready', 'copying', 'transcribing', 'exporting'} for job in jobs),
-            "errors": sum(job["state"] in {'blocked', 'failed'} for job in jobs),
-            "done": sum(job["state"] in {'done', 'existing', 'duplicate'} for job in jobs),
-        }
+        counts={key:0 for key in ('all','errors','done','cancelled','existing')}
+        for job in jobs:
+            category=history_category(job)
+            if category:
+                counts[category]+=1
+                counts['all']+=category!='existing'
+        return counts
 
     def update_history(self):
         jobs = self.snapshot.get("jobs", [])
-        if self.filter != "all":
-            states = {"done","existing","duplicate"} if self.filter == "done" else {"blocked", "failed"}
-            jobs = [job for job in jobs if job["state"] in states]
+        jobs=[job for job in jobs if history_category(job) in (
+            {'done','errors','cancelled'} if self.filter=='all' else {self.filter})]
         jobs = sorted(
             jobs,
             key=lambda job: (job["updated"], job["id"]),
@@ -1135,11 +1145,12 @@ class Controller(QObject):
 
     @Slot()
     def startContentSearch(self):
-        if self.content_running or not self.history_query.strip():
+        if self.content_running or self.busy or not self.history_query.strip():
             return
         self.content_generation += 1
         generation, query = self.content_generation, self.history_query
         self.content_cancel.clear()
+        self.content_done.clear()
         self.content_token = ''
         self.content_running = True
         self.content_status = 'Detailsuche wird vorbereitet …'
@@ -1149,10 +1160,13 @@ class Controller(QObject):
             if str(ENGINE) not in sys.path:
                 sys.path.append(str(ENGINE))
             from platform_io import child_process
-            return run_content_search(PROFILE / 'service/jobs.sqlite3', PROFILE / 'service/transcript-search.sqlite3',
-                PROFILE / 'service/content-search-result.json', query, self.content_cancel,
-                lambda text: self.contentSearchProgress.emit(generation, text),
-                lambda arguments, **options: child_process(arguments, cancellable=True, **options))
+            try:
+                return run_content_search(PROFILE / 'service/jobs.sqlite3', PROFILE / 'service/transcript-search.sqlite3',
+                    PROFILE / 'service/content-search-result.json', query, self.content_cancel,
+                    lambda text: self.contentSearchProgress.emit(generation, text),
+                    lambda arguments, **options: child_process(arguments, cancellable=True, **options))
+            finally:
+                self.content_done.set()
 
         def finished(result, error):
             if generation != self.content_generation:
@@ -1281,7 +1295,39 @@ class Controller(QObject):
 
     @Slot()
     def clearHistory(self):
-        self.action(lambda: command("clear-history"), "Verlauf geleert.")
+        if self.busy or not self.ready or self.snapshot.get('current'):
+            return
+        self.busy=True
+        self.clearing=True
+        self.reset_generation+=1
+        self.history_search_timer.stop()
+        self.content_cancel.set()
+        self.content_token=''
+        self.history_query=''
+        self.notify('Auftragsdaten und Suchindex werden bereinigt …')
+
+        def clear():
+            if not self.content_done.wait(10):
+                raise RuntimeError('Die Detailsuche konnte noch nicht beendet werden. Bitte erneut versuchen.')
+            return command('clear-history')
+
+        def cleared(result,error):
+            self.clearing=False
+            self.busy=False
+            if not error:
+                self.filter='all'
+                self.selected=None
+                self.drop_plan={}
+                self.drop_backlog=[]
+                self.dropResolved.emit()
+                self.content_status=''
+                self.snapshot.update(jobs=[],queue=[],stored_jobs=0,has_stored_data=False,
+                    history_counts={key:0 for key in ('all','errors','done','cancelled','existing')})
+                self.update_history()
+                self.update_queue()
+            self.notify(error or 'Auftragsdaten und Suchindex geleert. Aktive Ordnerüberwachung liest beim nächsten Intervall neu ein.',bool(error))
+            self.refresh()
+        self.submit(clear,cleared)
 
     @Slot(result="QVariantMap")
     def columnWidths(self):

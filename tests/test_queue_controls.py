@@ -77,13 +77,13 @@ class QueueTests(unittest.TestCase):
                                  for index, state in enumerate(states)])
         self.assertNotIn(identifiers[0], [job['id'] for job in service.history_jobs(
             self.db, 'desc', 250, terminal_only=True)])
-        for selected, expected_size in [('all', 250), ('errors', 2), ('done', 250)]:
+        for selected, expected_size in [('all',250),('errors',2),('done',249),('existing',2),('cancelled',0)]:
             with redirect_stdout(io.StringIO()) as output:
                 result = service.main(['--state-dir', str(self.state), '--model-data', str(self.root / 'models'),
                                        'status', '--limit', '250', '--filter', selected])
             self.assertEqual(result, 0)
             snapshot = json.loads(output.getvalue())
-            self.assertEqual(snapshot['history_counts'], dict(all=255, errors=2, done=251))
+            self.assertEqual(snapshot['history_counts'],dict(all=251,errors=2,done=249,cancelled=0,existing=2))
             self.assertEqual(len(snapshot['jobs']), expected_size)
             if selected == 'errors':
                 self.assertEqual({job['id'] for job in snapshot['jobs']}, set(identifiers[:2]))

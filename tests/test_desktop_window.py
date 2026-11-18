@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from PySide6.QtCore import QCoreApplication, QEvent, QObject, Qt, QUrl, QPoint, QPointF
+from PySide6.QtCore import QCoreApplication, QEvent, QObject, Qt, QUrl, QPoint, QPointF, QMetaObject
 from PySide6.QtQml import QQmlApplicationEngine
 from PySide6.QtQuickControls2 import QQuickStyle
 from PySide6.QtTest import QTest
@@ -336,3 +336,49 @@ class DesktopWindowTests(unittest.TestCase):
             QTest.mouseRelease(self.window,Qt.MouseButton.LeftButton,Qt.KeyboardModifier.NoModifier,end)
             QTest.qWait(40)
         command.assert_called_once_with('move-queue',1,3,'--after')
+
+    def test_history_separates_unstarted_cancel_started_cancel_and_transcript_inventory(self):
+        jobs=self.queue_fixture(3)
+        jobs[0].update(state='cancelled',attempt=0)
+        jobs[1].update(state='cancelled',attempt=1,started=100)
+        jobs[2].update(state='existing',result_kind='existing')
+        self.controller.snapshot.update(jobs=jobs,queue=[],stored_jobs=3,has_stored_data=True)
+        self.controller.update_history();self.controller.update_queue();self.controller.changed.emit();QTest.qWait(40)
+        self.assertEqual([job['id'] for job in self.controller.history],[2])
+        self.assertEqual(self.controller.history_counts(),dict(all=1,errors=0,done=0,cancelled=1,existing=1))
+        button=self.visual('historyFilter_existing')
+        point=button.mapToScene(QPointF(button.width()/2,button.height()/2)).toPoint()
+        QTest.mouseClick(self.window,Qt.MouseButton.LeftButton,Qt.KeyboardModifier.NoModifier,point);QTest.qWait(30)
+        self.assertEqual([job['id'] for job in self.controller.history],[3])
+        self.assertEqual(button.property('text'),'Bestand (1)')
+
+    def test_clear_is_available_for_hidden_records_and_search_and_requires_dialog_acceptance(self):
+        self.controller.snapshot.update(jobs=[],queue=[],stored_jobs=8000,has_stored_data=True)
+        self.controller.setHistorySearch('Kein Treffer')
+        self.presenter.show();self.controller.changed.emit();QTest.qWait(50)
+        button=self.visual('clearHistoryButton')
+        self.assertTrue(button.property('enabled'))
+        point=button.mapToScene(QPointF(button.width()/2,button.height()/2)).toPoint()
+        with patch.object(self.controller_module,'command',return_value='') as command,patch.object(self.controller,'submit',side_effect=lambda operation,finished:finished(operation(),None)):
+            QTest.mouseClick(self.window,Qt.MouseButton.LeftButton,Qt.KeyboardModifier.NoModifier,point);QTest.qWait(30)
+            dialog=self.window.findChild(QObject,'confirmClear')
+            self.assertTrue(dialog.property('visible'));command.assert_not_called()
+            QMetaObject.invokeMethod(dialog,'accept');QTest.qWait(30)
+            command.assert_called_once_with('clear-history')
+        self.assertFalse(self.controller.history_query)
+        self.assertFalse(self.controller.state['canClear'])
+        self.assertFalse(self.controller.history)
+
+    def test_metadata_reply_from_before_clear_cannot_restore_old_history(self):
+        jobs=self.queue_fixture(1);jobs[0]['state']='done'
+        callbacks=[]
+        def capture(operation,finished):callbacks.append(finished)
+        with patch.object(self.controller,'submit',side_effect=capture):
+            self.controller.preview=False;self.controller.ready=True;self.controller.refresh()
+            self.controller.preview=True
+            self.controller.clearHistory()
+            self.assertEqual(len(callbacks),2)
+            callbacks[1](None,None)
+            callbacks[0](dict(jobs=jobs,queue=[],history_counts=dict(all=1,done=1,errors=0)),None)
+        self.assertFalse(self.controller.history)
+        self.assertFalse(self.controller.queue)

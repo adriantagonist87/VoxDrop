@@ -16,6 +16,10 @@ from threading import Event, Thread
 import time
 import uuid
 
+_engine=Path(__file__).resolve().parents[1]/'Engine'
+sys.path.append(str(_engine if _engine.is_dir() else _engine.parent))
+from history_store import TRANSCRIPT_SCOPE, history_category, search_storage_lock, storage_generation
+
 MAX_FILE_BYTES = 32 * 1024 * 1024
 
 
@@ -50,6 +54,12 @@ def content_expression(query):
 
 def search_transcripts(job_database, index_database, result_file, query, path_for_job,
                        cancelled, progress=lambda text: None):
+    with search_storage_lock(Path(job_database).parent):
+        return _search_transcripts(job_database,index_database,result_file,query,path_for_job,cancelled,progress)
+
+
+def _search_transcripts(job_database, index_database, result_file, query, path_for_job,
+                        cancelled, progress):
     expression = content_expression(query)
     started = time.monotonic()
 
@@ -61,10 +71,11 @@ def search_transcripts(job_database, index_database, result_file, query, path_fo
     candidates = {}
     with closing(sqlite3.connect(Path(job_database).as_uri() + '?mode=ro', uri=True)) as jobs:
         jobs.row_factory = sqlite3.Row
+        generation=storage_generation(jobs)
         rows = jobs.execute("""SELECT j.*, k.kind AS result_kind,
             k.transcript_path AS known_transcript_path FROM jobs j
             LEFT JOIN known_results k ON k.job_id=j.id
-            WHERE j.state NOT IN ('seen','ready','copying','transcribing','exporting')""")
+            WHERE """+TRANSCRIPT_SCOPE)
         for row in rows:
             check()
             path = Path(path_for_job(dict(row))).absolute()
@@ -158,7 +169,7 @@ def search_transcripts(job_database, index_database, result_file, query, path_fo
             raise
         check()
     token = uuid.uuid4().hex
-    result = dict(token=token, query=query, job_ids=matches)
+    result = dict(token=token, query=query, job_ids=matches,generation=generation)
     result_file = Path(result_file)
     fd, name = tempfile.mkstemp(prefix='.search-', dir=result_file.parent)
     try:

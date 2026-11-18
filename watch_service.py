@@ -48,6 +48,7 @@ from queue_control import (
     move_queue_relative,
 )
 from media_history import MediaBusy, initialise_media_history, remember_result, previously_transcribed
+from history_store import HISTORY_FILTERS, search_storage_lock, storage_generation
 from voxdrop import (
     DEFAULT_DATA,
     DEFAULT_HARDWARE,
@@ -168,6 +169,10 @@ CREATE TABLE IF NOT EXISTS job_retries (
     retry_at REAL NOT NULL,
     delay REAL NOT NULL
 );
+CREATE TABLE IF NOT EXISTS storage_state (
+    id INTEGER PRIMARY KEY CHECK(id=1), generation INTEGER NOT NULL DEFAULT 0
+);
+INSERT OR IGNORE INTO storage_state VALUES (1,0);
 """
 )
 
@@ -527,7 +532,8 @@ def inspect_folders_with_deadline(settings):
     return json.loads(result.stdout)
 
 
-def scan(db, settings, now=None, *, inspect=inspect_folders):
+def scan(db, settings, now=None, *, inspect=inspect_folders, generation=None):
+    generation=storage_generation(db) if generation is None else generation
     _, completed, versions, warning = inspect(settings)
     if not settings["monitoring"]:
         service_state(db, "paused")
@@ -539,6 +545,9 @@ def scan(db, settings, now=None, *, inspect=inspect_folders):
         sort_keys=True,
     )
     with db:
+        db.execute('BEGIN IMMEDIATE')
+        if generation!=storage_generation(db):
+            return
         for candidate in versions:
             destination = (
                 str(Path(candidate[0]).parent)
@@ -591,7 +600,7 @@ def recognise_existing_results(db):
         with db:
             db.execute('BEGIN IMMEDIATE')
             current=db.execute('SELECT state FROM jobs WHERE id=?',(job['id'],)).fetchone()
-            if current['state'] not in ('seen','ready'):
+            if current is None or current['state'] not in ('seen','ready'):
                 continue
             remember_result(db,job['id'],'existing',text,text_hash)
             error_state(db,job['id'],'existing',None)
@@ -1629,50 +1638,66 @@ def retranscribe(db, job_id, settings):
 
 
 def clear_history(db, state):
-    work = state / "jobs"
-    removed = state / f".history-clear-{uuid.uuid4().hex}"
-    db.execute("BEGIN IMMEDIATE")
-    try:
-        if db.execute(
-            "SELECT 1 FROM jobs WHERE state IN ('copying','transcribing','exporting')"
-        ).fetchone():
-            raise ValueError(
-                "Der Verlauf kann nach Abschluss des aktiven Auftrags geleert werden."
-            )
-        for table in (
-            "job_retries",
-            "events",
-            "transcription_measurements",
-            "speaker_diarization",
-            "audio_durations",
-            "copy_claims",
-            "copy_exports",
-            "jobs",
-        ):
-            db.execute(f"DELETE FROM {table}")
-        if work.is_dir() and not work.is_symlink():
-            work.rename(removed)
-        db.commit()
-    except BaseException:
+    state=state.resolve()
+    removed=state/f'.history-clear-{uuid.uuid4().hex}'
+    assert removed.parent==state and not removed.exists()
+    with search_storage_lock(state):
+        moved=[]
+        db.execute('PRAGMA secure_delete=ON')
+        db.execute('BEGIN IMMEDIATE')
         try:
-            if removed.exists():
-                removed.rename(work)
-        finally:
-            db.rollback()
-        raise
-    if removed.exists():
-        with suppress(OSError):
-            shutil.rmtree(removed)
+            if db.execute("SELECT 1 FROM jobs WHERE state IN ('copying','transcribing','exporting')").fetchone():
+                raise ValueError('Der Verlauf kann nach Abschluss des aktiven Auftrags geleert werden.')
+            names=['jobs','transcript-search.sqlite3','transcript-search.sqlite3-wal',
+                   'transcript-search.sqlite3-shm','content-search-result.json']
+            artifacts=[state/name for name in names]+list(state.glob('.search-*'))
+            for artifact in artifacts:
+                if artifact.exists() or artifact.is_symlink():
+                    if is_reparse_point(artifact.lstat()) or artifact.is_symlink():
+                        raise ValueError('Die lokalen Cachepfade dürfen keine Verknüpfungen sein.')
+                    removed.mkdir(exist_ok=True,mode=0o700)
+                    artifact.rename(removed/artifact.name)
+                    moved.append(artifact)
+            for table in ('job_retries','events','transcription_measurements','speaker_diarization',
+                          'audio_durations','copy_claims','copy_exports','known_results','queue_positions',
+                          'cancel_requests','preemptions','immediate_jobs','drop_batches','folder_status',
+                          'folder_refresh','connection','service','jobs'):
+                db.execute(f'DELETE FROM {table}')
+            # Retain monotonic job IDs and the user's pause, never old file/search records.
+            db.execute('UPDATE storage_state SET generation=generation+1 WHERE id=1')
+            db.commit()
+        except BaseException:
+            try:
+                for artifact in reversed(moved):
+                    (removed/artifact.name).rename(artifact)
+                if removed.exists():
+                    removed.rmdir()
+            finally:
+                db.rollback()
+            raise
+        for cached in state.glob('.history-clear-*'):
+            if is_reparse_point(cached.lstat()) or cached.is_symlink():
+                raise ValueError('Ein lokaler Bereinigungsrest ist eine Verknüpfung und wurde nicht gelöscht.')
+            assert cached.resolve().is_relative_to(state) and cached.name.startswith('.history-clear-')
+            try:
+                shutil.rmtree(cached)
+            except OSError as error:
+                raise RuntimeError('Auftragsdaten zurückgesetzt; ein lokaler Cache konnte noch nicht entfernt werden. Bitte Bereinigung erneut ausführen.') from error
+        db.execute('VACUUM')
+        db.execute('PRAGMA wal_checkpoint(TRUNCATE)')
 
 
 def scan_once(db, settings):
+    generation=storage_generation(db)
     try:
-        scan(db, settings, inspect=inspect_folders_with_deadline)
+        scan(db, settings, inspect=inspect_folders_with_deadline,generation=generation)
     except (OSError, ValueError) as error:
         service_state(
             db, "unavailable" if settings["monitoring"] else "paused", str(error)
         )
         connection_state(db, False, str(error))
+        return False
+    if generation!=storage_generation(db):
         return False
     connection_state(db, True)
     return True
@@ -1708,6 +1733,7 @@ def probe_folder(settings, path):
 
 
 def probe_pending_folders(db, settings, deadlines, retries):
+    generation=storage_generation(db)
     paths = settings["folders"]
     requested = set()
     if db.execute("SELECT 1 FROM folder_refresh LIMIT 1").fetchone():
@@ -1732,16 +1758,23 @@ def probe_pending_folders(db, settings, deadlines, retries):
                         db,
                         folder_profile(settings, path),
                         inspect=lambda _, result=task: result.result(),
+                        generation=generation,
                     )
                 except (OSError, ValueError) as error:
+                    if generation!=storage_generation(db):
+                        continue
                     record_folder(db, path, str(error))
                     delay = next(
                         retries.setdefault(path, iter(STARTUP_RETRY_DELAYS)), delay
                     )
                 else:
+                    if generation!=storage_generation(db):
+                        continue
                     record_folder(db, path, warning, partial=warning is not None)
                     retries[path] = iter(())
                 deadlines[path] = time.monotonic() + delay
+    if generation!=storage_generation(db):
+        return False
     active = set(paths)
     available = sum(
         row[0] in active
@@ -1763,6 +1796,7 @@ def probe_pending_folders(db, settings, deadlines, retries):
 
 
 def poll_config(db, config, stop, connected, multiple=None):
+    generation=storage_generation(db)
     previous = None
     deadline = 0
     retries = iter(STARTUP_RETRY_DELAYS)
@@ -1777,6 +1811,15 @@ def poll_config(db, config, stop, connected, multiple=None):
             previous = None
             stop.wait(1)
             continue
+        revision=storage_generation(db)
+        if revision!=generation:
+            generation=revision
+            connected.clear()
+            previous=current
+            deadline=time.monotonic()+current['interval_seconds']
+            folder_deadlines={path:deadline for path in current.get('folders',[])}
+            folder_retries.clear()
+            retries=iter(STARTUP_RETRY_DELAYS)
         if "folders" in current:
             if multiple is not None:
                 multiple.set()
@@ -2007,13 +2050,6 @@ def start_in_background(state, model_data, config):
         )
 
 
-HISTORY_FILTERS = {
-    "all": "j.state NOT IN ('seen','ready','copying','transcribing','exporting')",
-    "errors": "j.state IN ('blocked','failed')",
-    "done": "j.state IN ('done','existing','duplicate')",
-}
-
-
 def history_search_scope(db, query, content_matches=False):
     query = query.strip()
     if not query:
@@ -2037,14 +2073,10 @@ def history_search_scope(db, query, content_matches=False):
 
 def history_counts(db, *, search='', content_matches=False):
     clause, arguments = history_search_scope(db, search, content_matches)
-    counts = dict(db.execute('SELECT j.state, COUNT(*) FROM jobs j LEFT JOIN known_results k ON k.job_id=j.id '
-                             'WHERE 1' + clause + ' GROUP BY j.state', arguments))
-    return {
-        "all": sum(count for state, count in counts.items()
-                   if state not in {'seen', 'ready', 'copying', 'transcribing', 'exporting'}),
-        "errors": counts.get('blocked', 0) + counts.get('failed', 0),
-        "done": sum(counts.get(state, 0) for state in ('done', 'existing', 'duplicate')),
-    }
+    keys=list(HISTORY_FILTERS)
+    aggregates=','.join(f'COALESCE(SUM({HISTORY_FILTERS[key]}),0)' for key in keys)
+    counts=db.execute('SELECT '+aggregates+' FROM jobs j LEFT JOIN known_results k ON k.job_id=j.id WHERE 1'+clause,arguments).fetchone()
+    return dict(zip(keys,counts))
 
 
 def history_jobs(db, order, limit, *, terminal_only=False, history_filter="all", search='', content_matches=False):
@@ -2254,7 +2286,8 @@ def main(argv=None):
                 content_matches = False
                 if args.content_results:
                     content = json.loads(args.content_results.read_text(encoding='utf-8'))
-                    if not args.content_token or content.get('token') != args.content_token or content.get('query') != args.search:
+                    if (not args.content_token or content.get('token') != args.content_token
+                            or content.get('query') != args.search or content.get('generation')!=storage_generation(db)):
                         raise ValueError('Die Detailsuche ist nicht mehr aktuell. Bitte erneut starten.')
                     identifiers = content.get('job_ids', [])
                     if not isinstance(identifiers, list) or any(type(identifier) is not int for identifier in identifiers):
@@ -2297,6 +2330,10 @@ def main(argv=None):
                             "current": dict(current) if current else None,
                             "jobs": [dict(job) for job in jobs],
                             "history_counts": history_counts(db, search=args.search, content_matches=content_matches),
+                            "stored_jobs": db.execute('SELECT COUNT(*) FROM jobs').fetchone()[0],
+                            "has_stored_data": bool(db.execute('SELECT 1 FROM jobs UNION ALL SELECT 1 FROM drop_batches LIMIT 1').fetchone()
+                                or (state/'transcript-search.sqlite3').exists() or (state/'content-search-result.json').exists()
+                                or next(state.glob('.history-clear-*'),None) is not None),
                         },
                         ensure_ascii=False,
                         indent=2,

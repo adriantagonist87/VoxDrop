@@ -651,7 +651,7 @@ ApplicationWindow {
                             else { api.setHistorySearch(''); api.stopContentSearch() }
                         }
                     }
-                    AppActionButton { text: "Verlauf leeren …"; enabled: viewState.canClear; onClicked: confirmClear.open() }
+                    AppActionButton { objectName: 'clearHistoryButton'; text: "Verlauf leeren …"; enabled: viewState.canClear; onClicked: confirmClear.open() }
                 }
                 ColumnLayout {
                     visible: window.historySearchOpen
@@ -672,7 +672,7 @@ ApplicationWindow {
                     AppActionButton {
                         objectName: 'contentSearchButton'
                         text: viewState.contentSearchRunning ? 'Detailsuche stoppen' : viewState.contentSearchActive ? 'Detailsuche beenden' : 'Detailsuche starten'
-                        enabled: !viewState.contentSearchStopping && (viewState.contentSearchRunning || viewState.contentSearchActive || viewState.historySearch.trim().length > 0)
+                        enabled: !viewState.busy && !viewState.contentSearchStopping && (viewState.contentSearchRunning || viewState.contentSearchActive || viewState.historySearch.trim().length > 0)
                         onClicked: {
                             if (viewState.contentSearchRunning || viewState.contentSearchActive) api.stopContentSearch()
                             else api.startContentSearch()
@@ -697,6 +697,26 @@ ApplicationWindow {
                             onClicked: api.setFilter(modelData.value)
                         }
                     }
+                }
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 4
+                    Repeater {
+                        model: [{label: 'Abgebrochen', value: 'cancelled'}, {label: 'Bestand', value: 'existing'}]
+                        delegate: AppActionButton {
+                            required property var modelData
+                            objectName: 'historyFilter_' + modelData.value
+                            Layout.fillWidth: true
+                            text: modelData.label + ' (' + (viewState.historyCounts[modelData.value] || 0) + ')'
+                            checkable: true
+                            checked: viewState.filter === modelData.value
+                            onClicked: api.setFilter(modelData.value)
+                        }
+                    }
+                }
+                Muted {
+                    Layout.fillWidth: true
+                    text: viewState.filter === 'existing' ? 'Vorhandene oder übernommene Transkripte; keine neue Verarbeitung.' : 'Verlauf: gestartete Verarbeitungen. Vor dem Start entfernte Aufträge werden nicht gezählt.'
                 }
                 RowLayout {
                     Layout.fillWidth: true
@@ -817,14 +837,14 @@ ApplicationWindow {
         id: confirmClear
         objectName: "confirmClear"
         modal: true
-        title: "Verlauf und bekannte Dateien leeren?"
+        title: "Alle Auftrags- und Suchdaten leeren?"
         anchors.centerIn: Overlay.overlay
         width: Math.min(480, window.width - 48)
         standardButtons: Dialog.Cancel | Dialog.Ok
         background: Rectangle { color: surface; radius: 9; border.color: line }
         onAccepted: api.clearHistory()
         contentItem: Copy {
-            text: "Die Auftragsdaten werden zurückgesetzt. Aufnahmen und exportierte Transkripte bleiben erhalten."
+            text: "Alle Aufträge, die Warteschlange, der Dateibestand, gespeicherte Abbrüche und der Suchindex werden aus der lokalen Datenbank entfernt – unabhängig vom aktuellen Filter.\n\nAufnahmen und TXT-Dateien bleiben auf ihren Laufwerken erhalten. Bei aktiver Ordnerüberwachung werden die Ordner beim nächsten Intervall vollständig neu eingelesen. Vorhandene Transkripte erscheinen wieder im Bestand; Dateien ohne TXT werden neu eingereiht. Ordner- und Pauseneinstellungen bleiben erhalten."
         }
     }
 }
