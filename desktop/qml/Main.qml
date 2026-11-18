@@ -635,6 +635,7 @@ ApplicationWindow {
                     anchors.fill: parent
                     anchors.margins: 20
                     spacing: 12
+                    PlaybackButton { api: window.api; viewState: window.viewState; Layout.fillWidth: true }
                     Rectangle {
                         Layout.fillWidth: true
                         implicitHeight: warningBox.implicitHeight + 22

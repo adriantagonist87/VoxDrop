@@ -1,5 +1,9 @@
 # Übergabeauftrag für Codex auf dem Windows-PC
 
+## Neuer Auftrag: Play/Stopp eindeutig steuern
+
+Großer fester rot/grüner Knopf und atomarer nicht leerender Queue-Stopp implementiert, 179 Regressionen mit sieben Plattformskips bestanden. Native Windows-/CUDA-Paketprüfung vor Update/Release ausführen. Produktiven Auftrag für die Installation nicht testweise stoppen; nur Folgeübernahme zurückhalten und danach ursprüngliche Pause wiederherstellen. [Prüfung und Bedienung](PLAY_STOPP.md).
+
 ## Aktuell: Windows v1.3.4 – GPU-Arbeitsbudget
 
 Regler links unter dem Rechengerät: 10–100 % für Windows-CUDA, unabhängig von anderen Entwurfsänderungen sofort gespeichert und auch für laufende/alte Queueaufträge wirksam. Qwen, Aligner, Whisper und beide Sprechermodelle geben gezielt Rechenzeit frei. Kein exaktes systemweites Prozent-/VRAM-Limit; CPU/Mac-Regler deaktiviert. [Umsetzung, Messungen und Mac-Aufgabe](GPU_ARBEITSBUDGET.md).

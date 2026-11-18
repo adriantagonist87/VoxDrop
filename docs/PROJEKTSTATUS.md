@@ -1,5 +1,9 @@
 # Projektstatus VoxDrop
 
+## In Arbeit: große Play-/Stopp-Steuerung
+
+Fester großer grüner Start-/roter Stoppknopf in der Mitte. Stopp beendet die laufende Erkennung und erhält ihre Queueposition; fertiger Export darf noch abschließen. Warteschlange leeren bleibt eine gesonderte bestätigte Aktion. 179 Windows-Fälle in 54,085 s erfolgreich, sieben Plattformskips; native Paketabnahme folgt. [Verhalten und Prüfauftrag](PLAY_STOPP.md).
+
 ## Aktuell: Windows v1.3.4 – GPU-Arbeitsbudget
 
 Regler links unter dem Rechengerät: 10–100 % für Windows-CUDA, unabhängig von anderen Entwurfsänderungen sofort gespeichert und auch für laufende/alte Queueaufträge wirksam. Qwen, Aligner, Whisper und beide Sprechermodelle geben gezielt Rechenzeit frei. Kein exaktes systemweites Prozent-/VRAM-Limit; CPU/Mac-Regler deaktiviert. [Umsetzung, Messungen und Mac-Aufgabe](GPU_ARBEITSBUDGET.md).

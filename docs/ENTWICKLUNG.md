@@ -1,5 +1,9 @@
 # Entwicklung auf macOS und Windows
 
+## Große Wiedergabesteuerung
+
+`PlaybackButton.qml` sitzt fest über der aktuellen Verarbeitung und gehört durch die rekursive Desktop-Kopie in beide Pakete. `stop-queue` verwendet die vorhandene persistente Pause/Abbruch-/Preemption-Mechanik, erhält Queuepositionen und schützt fertige Exporte. Keine neue Tabelle oder Abhängigkeit. UI-Wartesperre und CLI-Guard verhindern vorzeitigen Neustart während eines Abbruchs. [Details und neue Tests](PLAY_STOPP.md).
+
 ## Aktuell: Windows v1.3.4 – GPU-Arbeitsbudget
 
 Regler links unter dem Rechengerät: 10–100 % für Windows-CUDA, unabhängig von anderen Entwurfsänderungen sofort gespeichert und auch für laufende/alte Queueaufträge wirksam. Qwen, Aligner, Whisper und beide Sprechermodelle geben gezielt Rechenzeit frei. Kein exaktes systemweites Prozent-/VRAM-Limit; CPU/Mac-Regler deaktiviert. [Umsetzung, Messungen und Mac-Aufgabe](GPU_ARBEITSBUDGET.md).

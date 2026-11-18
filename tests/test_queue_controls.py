@@ -15,7 +15,7 @@ import watch_service as service
 from platform_io import WINDOWS, file_is_being_written
 from queue_control import (
     JobCancelled, cancel_job, cancel_queue, move_queue_item, queue_jobs,
-    queue_paused, set_queue_paused,
+    queue_paused, set_queue_paused, start_queue, stop_queue,
 )
 from transcription_worker import run_transcription
 
@@ -38,6 +38,67 @@ class QueueTests(unittest.TestCase):
 
     def row(self,identifier):
         return self.db.execute('select * from jobs where id=?',(identifier,)).fetchone()
+
+    def test_stop_interrupts_current_and_preserves_queue_then_play_restarts_in_order(self):
+        source, one=self.add();_,two=self.add('Second.wav',b'second')
+        before={row['id']:row['settings'] for row in queue_jobs(self.db)}
+        def engine(*args,**options):
+            with closing(service.database(self.state)) as other:
+                result=stop_queue(other)
+                self.assertEqual(result['current_id'],one)
+                self.assertFalse(result['export_finishes'])
+                stop_queue(other)  # repeated Stop must preserve resumability
+                with self.assertRaisesRegex(ValueError,'noch gestoppt'):
+                    start_queue(other)
+            self.assertTrue(options['cancelled']())
+            return 'Unfinished text must not be published'
+        self.assertTrue(service.next_job(self.db,self.state,engine))
+        self.assertEqual(self.row(one)['state'],'ready')
+        self.assertTrue(queue_paused(self.db))
+        self.assertEqual([row['id'] for row in queue_jobs(self.db)],[one,two])
+        self.assertEqual({row['id']:row['settings'] for row in queue_jobs(self.db)},before)
+        self.assertFalse(source.with_suffix('.txt').exists())
+        self.assertFalse(service.next_job(self.db,self.state,self.engine))
+        start_queue(self.db)
+        self.assertTrue(service.next_job(self.db,self.state,self.engine))
+        self.assertEqual(self.row(one)['state'],'done')
+        self.assertEqual(self.row(two)['state'],'ready')
+        self.assertEqual(source.read_bytes(),b'synthetic media')
+
+    def test_stopped_queue_recovers_without_auto_resuming_and_can_play_with_monitoring_off(self):
+        _,one=self.add();_,two=self.add('Second.wav',b'second')
+        with self.db:self.db.execute("update jobs set state='transcribing' where id=?",(one,))
+        stop_queue(self.db);service.recover(self.db,self.state);service.recover(self.db,self.state)
+        self.assertTrue(queue_paused(self.db))
+        self.assertEqual([row['id'] for row in queue_jobs(self.db)],[one,two])
+        self.assertFalse(service.next_job(self.db,self.state,self.engine,allow_automatic=False))
+        start_queue(self.db)
+        self.assertTrue(service.next_job(self.db,self.state,self.engine,allow_automatic=False))
+        self.assertEqual(self.row(one)['state'],'done')
+
+    def test_stop_finishes_completed_export_and_keeps_following_jobs_waiting(self):
+        source,one=self.add();_,two=self.add('Second.wav',b'second')
+        publish=service.publish_transcript_only
+        def save_completed(db,job,*args,**kwargs):
+            result=stop_queue(db)
+            self.assertTrue(result['export_finishes'])
+            self.assertEqual(result['current_id'],one)
+            self.assertFalse(service.cancellation_requested(db,one))
+            return publish(db,job,*args,**kwargs)
+        with patch.object(service,'publish_transcript_only',side_effect=save_completed):
+            self.assertTrue(service.next_job(self.db,self.state,self.engine))
+        self.assertEqual(self.row(one)['state'],'done')
+        self.assertTrue(source.with_suffix('.txt').exists())
+        self.assertFalse(service.next_job(self.db,self.state,self.engine))
+        self.assertEqual(self.row(two)['state'],'ready')
+
+    def test_stop_does_not_restore_an_explicitly_removed_active_job(self):
+        _,one=self.add();_,two=self.add('Second.wav',b'second')
+        with self.db:self.db.execute("update jobs set state='transcribing' where id=?",(one,))
+        cancel_job(self.db,one);stop_queue(self.db);service.recover(self.db,self.state)
+        self.assertEqual(self.row(one)['state'],'cancelled')
+        self.assertTrue(queue_paused(self.db))
+        self.assertEqual([row['id'] for row in queue_jobs(self.db)],[two])
 
     def test_existing_queued_job_uses_live_budget_config_without_overwriting_job_options(self):
         source, identifier = self.add()
