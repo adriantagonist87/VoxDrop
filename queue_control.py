@@ -93,7 +93,7 @@ def prune_immediate(db):
                  AND NOT (j.state='failed' AND r.job_id IS NOT NULL))""")
 
 
-def move_queue_item(db, job_id, before_id=0):
+def move_queue_item(db, job_id, before_id=0, *, after=False):
     with db:
         db.execute('BEGIN IMMEDIATE')
         ids=[row['id'] for row in queue_jobs(db)]
@@ -102,9 +102,27 @@ def move_queue_item(db, job_id, before_id=0):
         if job_id==before_id:
             return
         ids.remove(job_id)
-        ids.insert(ids.index(before_id) if before_id else len(ids),job_id)
+        ids.insert(ids.index(before_id) + int(after) if before_id else len(ids),job_id)
         db.executemany('UPDATE queue_positions SET position=? WHERE job_id=?',
                        [(index,identifier) for index,identifier in enumerate(ids,1)])
+
+
+def move_queue_relative(db, job_id, direction):
+    """Resolve menu actions against the complete current queue inside one transaction."""
+    if direction not in ('first','up','down','last'):
+        raise ValueError('Unbekannte Reihenfolgeaktion.')
+    with db:
+        db.execute('BEGIN IMMEDIATE')
+        ids=[row['id'] for row in queue_jobs(db)]
+        if job_id not in ids:
+            raise ValueError('Die Warteschlange hat sich geändert. Bitte erneut versuchen.')
+        index=ids.index(job_id)
+        destination={'first':0,'up':max(0,index-1),'down':min(len(ids)-1,index+1),'last':len(ids)-1}[direction]
+        if index==destination:
+            return
+        ids.pop(index);ids.insert(destination,job_id)
+        db.executemany('UPDATE queue_positions SET position=? WHERE job_id=?',
+                       [(position,identifier) for position,identifier in enumerate(ids,1)])
 
 
 def _cancel(db, job_id):

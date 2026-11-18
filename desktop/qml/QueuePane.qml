@@ -22,6 +22,14 @@ ColumnLayout {
         contentItem: Text { text: parent.text; font: parent.font; color: parent.enabled ? "#e8e8e8" : "#777"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter; wrapMode: Text.WordWrap }
         background: Rectangle { radius: 5; color: parent.down ? "#456653" : parent.hovered ? "#383838" : "#282828"; border.color: "#454545" }
     }
+    component QueueMenuAction: MenuItem {
+        id: menuAction
+        contentItem: Text {
+            text: menuAction.text; font: menuAction.font
+            color: menuAction.enabled ? '#ededee' : '#7e7e84'
+            verticalAlignment: Text.AlignVCenter
+        }
+    }
 
     RowLayout {
         Layout.fillWidth: true
@@ -75,7 +83,7 @@ ColumnLayout {
             onClicked: confirmCancelQueue.open()
         }
     }
-    Text { text: pane.searching ? 'Suche zurücksetzen, um die Reihenfolge zu ändern.' : "Am Griff ziehen oder Reihenfolge im Menü ändern"; color: "#ababab"; font.pixelSize: 11; wrapMode: Text.WordWrap; Layout.fillWidth: true }
+    Text { text: pane.searching ? 'Reihenfolge und Griff gelten für die gesamte Warteschlange.' : "Am Griff ziehen oder Reihenfolge im Menü ändern"; color: "#ababab"; font.pixelSize: 11; wrapMode: Text.WordWrap; Layout.fillWidth: true }
     Text {
         Layout.fillWidth: true
         visible: pane.viewState.queuePaused
@@ -134,7 +142,7 @@ ColumnLayout {
                 id: dragMouse
                 objectName: "queueDragHandle" + row.modelData.id
                 x: 8; y: 9; width: 28; height: 30
-                enabled: !pane.viewState.busy && !pane.searching
+                enabled: !pane.viewState.busy
                 cursorShape: Qt.OpenHandCursor
                 drag.target: token
                 drag.axis: Drag.YAxis
@@ -185,7 +193,7 @@ ColumnLayout {
                 RowLayout {
                     visible: row.expanded && pane.width >= 340
                     Layout.fillWidth: true; spacing: 4
-                    QueueButton { text: "Reihenfolge"; enabled: !pane.viewState.busy && !pane.searching; Accessible.name: "Reihenfolge ändern: " + row.modelData.name; onClicked: moveMenu.open() }
+                    QueueButton { text: "Reihenfolge"; enabled: !pane.viewState.busy; Accessible.name: "Reihenfolge ändern: " + row.modelData.name; onClicked: moveMenu.open() }
                     QueueButton { text: "Details"; enabled: !pane.viewState.busy; onClicked: pane.api.showDetails(row.modelData.id) }
                     Item { Layout.fillWidth: true }
                     QueueButton { objectName: "removeQueue" + row.modelData.id; text: "Entfernen"; enabled: !pane.viewState.busy; Accessible.name: "Aus Warteschlange entfernen: " + row.modelData.name; onClicked: pane.api.cancelJob(row.modelData.id) }
@@ -193,13 +201,14 @@ ColumnLayout {
             }
             Menu {
                 id: moveMenu
-                MenuItem { text: "Als Nächstes"; enabled: !pane.searching && row.index > 0; onTriggered: pane.api.moveQueueItem(row.modelData.id, pane.items[0].id) }
-                MenuItem { text: "Einen Platz nach oben"; enabled: !pane.searching && row.index > 0; onTriggered: pane.api.moveQueueItem(row.modelData.id, pane.items[row.index - 1].id) }
-                MenuItem { text: "Einen Platz nach unten"; enabled: !pane.searching && row.index + 1 < pane.items.length; onTriggered: pane.api.moveQueueItem(row.modelData.id, row.index + 2 < pane.items.length ? pane.items[row.index + 2].id : 0) }
-                MenuItem { text: "Ans Ende"; enabled: !pane.searching && row.index + 1 < pane.items.length; onTriggered: pane.api.moveQueueItem(row.modelData.id, 0) }
+                objectName: 'queueMoveMenu' + row.modelData.id
+                QueueMenuAction { objectName: 'queueMoveFirst' + row.modelData.id; text: "Als Nächstes"; enabled: !pane.viewState.busy && row.modelData.position > 1; onTriggered: pane.api.moveQueueRelative(row.modelData.id, 'first') }
+                QueueMenuAction { objectName: 'queueMoveUp' + row.modelData.id; text: "Einen Platz nach oben"; enabled: !pane.viewState.busy && row.modelData.position > 1; onTriggered: pane.api.moveQueueRelative(row.modelData.id, 'up') }
+                QueueMenuAction { objectName: 'queueMoveDown' + row.modelData.id; text: "Einen Platz nach unten"; enabled: !pane.viewState.busy && row.modelData.position < pane.viewState.queueCount; onTriggered: pane.api.moveQueueRelative(row.modelData.id, 'down') }
+                QueueMenuAction { objectName: 'queueMoveLast' + row.modelData.id; text: "Ans Ende"; enabled: !pane.viewState.busy && row.modelData.position < pane.viewState.queueCount; onTriggered: pane.api.moveQueueRelative(row.modelData.id, 'last') }
                 MenuSeparator {}
-                MenuItem { text: "Auftragsdetails öffnen"; onTriggered: pane.api.showDetails(row.modelData.id) }
-                MenuItem { text: "Aus Warteschlange entfernen"; onTriggered: pane.api.cancelJob(row.modelData.id) }
+                QueueMenuAction { text: "Auftragsdetails öffnen"; onTriggered: pane.api.showDetails(row.modelData.id) }
+                QueueMenuAction { text: "Aus Warteschlange entfernen"; onTriggered: pane.api.cancelJob(row.modelData.id) }
             }
             DropArea {
                 id: drop
@@ -209,8 +218,7 @@ ColumnLayout {
                 onDropped: event => {
                     if (!event.source || event.source.modelData.id === row.modelData.id) return
                     var after = event.y > height / 2
-                    var before = after ? (row.index + 1 < pane.items.length ? pane.items[row.index + 1].id : 0) : row.modelData.id
-                    pane.api.moveQueueItem(event.source.modelData.id, before)
+                    pane.api.moveQueueDrop(event.source.modelData.id, row.modelData.id, after)
                     event.accept(Qt.MoveAction)
                 }
                 Rectangle { anchors.left: parent.left; anchors.right: parent.right; height: 3; color: "#8dc5ac"; visible: drop.containsDrag; y: drop.drag.y > parent.height / 2 ? parent.height - height : 0 }

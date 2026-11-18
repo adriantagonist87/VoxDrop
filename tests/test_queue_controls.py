@@ -88,6 +88,29 @@ class QueueTests(unittest.TestCase):
             if selected == 'errors':
                 self.assertEqual({job['id'] for job in snapshot['jobs']}, set(identifiers[:2]))
 
+    def test_relative_queue_moves_use_all_rows_and_preserve_detection_times(self):
+        identifiers=[self.add(f'Item-{index}.wav',str(index).encode())[1] for index in range(5)]
+        detected={row['id']:row['detected'] for row in queue_jobs(self.db)}
+        selected=identifiers[3]
+        cases=[('up',[0,1,3,2,4]),('down',[0,1,2,3,4]),('first',[3,0,1,2,4]),('last',[0,1,2,4,3])]
+        for direction,order in cases:
+            service.move_queue_relative(self.db,selected,direction)
+            self.assertEqual([row['id'] for row in queue_jobs(self.db)],[identifiers[index] for index in order])
+        self.assertEqual({row['id']:row['detected'] for row in queue_jobs(self.db)},detected)
+        with self.db:
+            self.db.execute("update jobs set state='transcribing' where id=?",(selected,))
+        with self.assertRaises(ValueError):
+            service.move_queue_relative(self.db,selected,'first')
+
+    def test_drop_after_anchor_keeps_hidden_following_rows_in_place(self):
+        identifiers=[self.add(f'Item-{index}.wav',str(index).encode())[1] for index in range(5)]
+        service.move_queue_item(self.db,identifiers[0],identifiers[2],after=True)
+        expected=[identifiers[index] for index in (1,2,0,3,4)]
+        with closing(service.database(self.state)) as reopened:
+            self.assertEqual([row['id'] for row in queue_jobs(reopened)],expected)
+        service.move_queue_item(self.db,identifiers[0],identifiers[1])
+        self.assertEqual([row['id'] for row in queue_jobs(self.db)],identifiers)
+
     def plan_drop(self, paths):
         with patch.object(service, 'inspect_folders_with_deadline', side_effect=service.inspect_folders):
             return service.prepare_drop(self.db, self.settings, [str(path) for path in paths])

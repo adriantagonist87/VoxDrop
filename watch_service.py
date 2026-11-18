@@ -45,6 +45,7 @@ from queue_control import (
     move_queue_item, cancel_job, cancel_queue, cancellation_requested, poll_cancellation,
     prioritise_jobs, restore_preempted,
     immediate_count, prune_immediate,
+    move_queue_relative,
 )
 from media_history import MediaBusy, initialise_media_history, remember_result, previously_transcribed
 from voxdrop import (
@@ -2106,6 +2107,10 @@ def main(argv=None):
     move=commands.add_parser('move-queue')
     move.add_argument('job_id',type=int)
     move.add_argument('before_id',type=int)
+    move.add_argument('--after',action='store_true')
+    relative = commands.add_parser('move-queue-relative')
+    relative.add_argument('job_id',type=int)
+    relative.add_argument('direction',choices=('first','up','down','last'))
     rerun = commands.add_parser("retranscribe")
     rerun.add_argument("job_id", type=int)
     rerun.add_argument("config", type=Path)
@@ -2224,7 +2229,9 @@ def main(argv=None):
             elif args.command == 'queue-pause':
                 set_queue_paused(db,args.mode=='on')
             elif args.command == 'move-queue':
-                move_queue_item(db,args.job_id,args.before_id)
+                move_queue_item(db,args.job_id,args.before_id,after=args.after)
+            elif args.command == 'move-queue-relative':
+                move_queue_relative(db,args.job_id,args.direction)
             elif args.command == "retranscribe":
                 print(retranscribe(db, args.job_id, read_settings(args.config)))
             elif args.command == "clear-history":

@@ -6,7 +6,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from PySide6.QtCore import QCoreApplication, QEvent, QObject, Qt, QUrl, QPoint, QPointF
-from PySide6.QtQml import QQmlApplicationEngine
+from PySide6.QtQml import QQmlApplicationEngine, QQmlEngine
 from PySide6.QtQuickControls2 import QQuickStyle
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication
@@ -117,7 +117,7 @@ class DesktopWindowTests(unittest.TestCase):
                 QTest.mouseMove(self.window,point,30)
             QTest.mouseRelease(self.window,Qt.MouseButton.LeftButton,Qt.KeyboardModifier.NoModifier,end)
             QTest.qWait(50)
-        command.assert_called_once_with('move-queue',1,3)
+        command.assert_called_once_with('move-queue',1,2,'--after')
         self.assertFalse(self.controller.queue_dragging)
 
     def test_history_buttons_show_global_counts_and_highlight_errors_until_zero(self):
@@ -237,7 +237,7 @@ class DesktopWindowTests(unittest.TestCase):
         QTest.qWait(25)
         self.assertEqual([job['id'] for job in self.controller.queue], [2])
         self.assertEqual(self.controller.queue[0]['position'], 2)
-        self.assertFalse(self.visual('queueDragHandle2').property('enabled'))
+        self.assertTrue(self.visual('queueDragHandle2').property('enabled'))
         click('queueSearchToggle')
         self.assertEqual(len(self.controller.queue), 12)
         self.assertEqual(self.controller.queue_query, '')
@@ -295,3 +295,46 @@ class DesktopWindowTests(unittest.TestCase):
             QTest.mouseClick(self.window, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, point)
             QTest.qWait(20)
         command.assert_called_once_with('queue-pause', 'on')
+
+    def test_filtered_queue_menu_enables_moves_against_global_positions(self):
+        self.queue_fixture(4)
+        self.controller.setQueueSearch('* 3 mit*')
+        QTest.qWait(30)
+        self.assertEqual([job['id'] for job in self.controller.queue],[3])
+        actions=self.visual('queueActions3')
+        point=actions.mapToScene(QPointF(actions.width()/2,actions.height()/2)).toPoint()
+        QTest.mouseClick(self.window,Qt.MouseButton.LeftButton,Qt.KeyboardModifier.NoModifier,point)
+        QTest.qWait(40)
+        row=self.visual('queueRow3')
+        menu=row.findChild(QObject,'queueMoveMenu3')
+        self.assertTrue(menu.property('visible'))
+        for action in ('First','Up','Down','Last'):
+            self.assertTrue(menu.findChild(QObject,'queueMove'+action+'3').property('enabled'))
+        up=menu.findChild(QObject,'queueMoveUp3')
+        point=up.mapToScene(QPointF(up.width()/2,up.height()/2)).toPoint()
+        popup_window=up.window()
+        QQmlEngine.setObjectOwnership(popup_window,QQmlEngine.ObjectOwnership.CppOwnership)
+        with patch.object(self.controller_module,'command',return_value='') as command, patch.object(self.controller,'action',side_effect=lambda operation,message:operation()):
+            QTest.mouseClick(popup_window,Qt.MouseButton.LeftButton,Qt.KeyboardModifier.NoModifier,point)
+            QTest.qWait(30)
+        command.assert_called_once_with('move-queue-relative',3,'up')
+
+    def test_real_filtered_drag_targets_actual_neighbor_instead_of_filtered_end(self):
+        jobs=self.queue_fixture(4)
+        for index in (0,2):
+            jobs[index]['source']=str(self.controller_module.PROFILE/f'Treffer {jobs[index]["id"]}.wav')
+        self.controller.update_queue()
+        self.controller.setQueueSearch('Treffer')
+        QTest.qWait(40)
+        self.assertEqual([job['id'] for job in self.controller.queue],[1,3])
+        handle=self.visual('queueDragHandle1');target=self.visual('queueRow3')
+        start=handle.mapToScene(QPointF(14,15)).toPoint()
+        end=target.mapToScene(QPointF(20,target.height()-8)).toPoint()
+        with patch.object(self.controller_module,'command',return_value='') as command, patch.object(self.controller,'action',side_effect=lambda operation,message:operation()):
+            QTest.mousePress(self.window,Qt.MouseButton.LeftButton,Qt.KeyboardModifier.NoModifier,start)
+            for step in range(1,13):
+                point=QPoint(start.x(),round(start.y()+(end.y()-start.y())*step/12))
+                QTest.mouseMove(self.window,point,30)
+            QTest.mouseRelease(self.window,Qt.MouseButton.LeftButton,Qt.KeyboardModifier.NoModifier,end)
+            QTest.qWait(40)
+        command.assert_called_once_with('move-queue',1,3,'--after')

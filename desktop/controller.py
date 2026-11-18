@@ -1195,6 +1195,15 @@ class Controller(QObject):
     def moveQueueItem(self, identifier, before):
         self.action(lambda:command('move-queue',identifier,before),'Reihenfolge gespeichert.')
 
+    @Slot(int,str)
+    def moveQueueRelative(self, identifier, direction):
+        self.action(lambda:command('move-queue-relative',identifier,direction),'Reihenfolge gespeichert.')
+
+    @Slot(int,int,bool)
+    def moveQueueDrop(self, identifier, anchor, after):
+        arguments = ['move-queue',identifier,anchor] + (['--after'] if after else [])
+        self.action(lambda:command(*arguments),'Reihenfolge gespeichert.')
+
     @Slot(int)
     def cancelJob(self, identifier):
         self.action(lambda:command('cancel-job',identifier),'Auftrag wird abgebrochen; Originaldatei bleibt erhalten.')
