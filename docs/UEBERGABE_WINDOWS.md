@@ -1,6 +1,10 @@
 # Übergabeauftrag für Codex auf dem Windows-PC
 
-## Neuer Funktionsstand: Preview 5
+## Aktuell: Preview 6
+
+Aktuell installierter App-Code `97cbfb81ed3b91b927f51db9d412adb6536387c9`, [Preview 6](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.2-windows-preview.6), SHA-256 `944ebeb82e89115bd148ba6099f73193a7b4735ce34126bd538d308074d53484`. Historische Detailangaben importierter Ergebnisse zeigen Modell/Sprecher nicht als neu ermittelt. 109 Tests (102 bestanden, sieben Skips), dazu abschließende sieben Qt-Regressionen bestanden. Alle 32 Engine-Dateien sind bytegleich mit dem darunter beschriebenen realen EXE-/CUDA-Prüfstand von Preview 5. Erneutes GitHub-Update mit Null-Aktiv-Guard und vollständiger Profil-/Codesicherung durchgeführt; Queue und Überwachung wieder fortgesetzt. Mac-Gegenprüfung weiter erforderlich.
+
+## Funktionsentwicklung und native Engineprüfung: Preview 5
 
 App-Code `94e333153db90dc57c917575a8ba39040716a170`, [GitHub-Preview 5](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.2-windows-preview.5), SHA-256 `c6ebc9d660e4ea9e2b9356bcc08023b28f73179f03f5d50b107f36dcf0c04d6c`. Vollständige bedienbare Warteschlange, OS-Standardöffner für TXT, Ergebnis-/Inhaltserkennung und Windows-Schreibschutzprüfung implementiert und produktiv installiert. [Detaillierte Übergabe](WARTESCHLANGE_UND_DATEISCHUTZ.md). 108 Tests (101 bestanden, sieben Skips); echtes EXE-/CUDA-Paket einschließlich Abbruch, Wiederverwendung, Neutranskription und Wiederanlauf bestanden. Bisherige 241 Aufträge erhalten; native Integrität/Fremdschlüssel und bestehende TXT bestätigt. Vorübergehende Updatepause beendet, produktive Überwachung aktiv.
 
