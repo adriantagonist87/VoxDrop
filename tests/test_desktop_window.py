@@ -304,6 +304,8 @@ class DesktopWindowTests(unittest.TestCase):
         button=self.visual('startProcessingButton')
         self.assertTrue(button.property('visible'));self.assertTrue(button.property('enabled'))
         self.assertEqual(button.property('text'),'Fortsetzen')
+        self.assertEqual(self.visual('pauseQueueButton').property('text'),'Pausieren')
+        self.assertFalse(self.visual('pauseQueueButton').property('enabled'))
         self.assertIn('pausiert',self.visual('processingStatus').property('text'))
         point=button.mapToScene(QPointF(button.width()/2,button.height()/2)).toPoint()
         with patch.object(self.controller_module,'command',return_value='') as command,patch.object(self.controller,'action',side_effect=lambda operation,message:operation()):

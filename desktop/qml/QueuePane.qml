@@ -60,9 +60,9 @@ ColumnLayout {
         }
         QueueButton {
             objectName: "pauseQueueButton"
-            text: pane.viewState.queuePaused ? (pane.viewState.queueImmediateCount > 0 ? 'Auswahl pausieren' : "Fortsetzen") : "Pausieren"
-            enabled: !pane.viewState.busy
-            onClicked: pane.api.pauseQueue(pane.viewState.queuePaused && pane.viewState.queueImmediateCount > 0 ? true : !pane.viewState.queuePaused)
+            text: pane.viewState.queuePaused && pane.viewState.queueImmediateCount > 0 ? 'Auswahl pausieren' : "Pausieren"
+            enabled: !pane.viewState.busy && (!pane.viewState.queuePaused || pane.viewState.queueImmediateCount > 0)
+            onClicked: pane.api.pauseQueue(true)
         }
     }
     RowLayout {
