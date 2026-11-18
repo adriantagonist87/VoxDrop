@@ -6,7 +6,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from PySide6.QtCore import QCoreApplication, QEvent, QObject, Qt, QUrl, QPoint, QPointF
-from PySide6.QtQml import QQmlApplicationEngine, QQmlEngine
+from PySide6.QtQml import QQmlApplicationEngine
 from PySide6.QtQuickControls2 import QQuickStyle
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication
@@ -312,10 +312,8 @@ class DesktopWindowTests(unittest.TestCase):
             self.assertTrue(menu.findChild(QObject,'queueMove'+action+'3').property('enabled'))
         up=menu.findChild(QObject,'queueMoveUp3')
         point=up.mapToScene(QPointF(up.width()/2,up.height()/2)).toPoint()
-        popup_window=up.window()
-        QQmlEngine.setObjectOwnership(popup_window,QQmlEngine.ObjectOwnership.CppOwnership)
         with patch.object(self.controller_module,'command',return_value='') as command, patch.object(self.controller,'action',side_effect=lambda operation,message:operation()):
-            QTest.mouseClick(popup_window,Qt.MouseButton.LeftButton,Qt.KeyboardModifier.NoModifier,point)
+            QTest.mouseClick(self.window,Qt.MouseButton.LeftButton,Qt.KeyboardModifier.NoModifier,point)
             QTest.qWait(30)
         command.assert_called_once_with('move-queue-relative',3,'up')
 
