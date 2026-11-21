@@ -1,84 +1,52 @@
-<img src="macos/VoxDropLogo.png" alt="VoxDrop – Audio und Video zu Transkripten" width="144" height="144">
-
 # VoxDrop
 
-VoxDrop ist eine kostenlose App für macOS und Windows auf Basis von aTrain. Sie überwacht lokale Ordner und eingebundene SMB-Freigaben und transkribiert neue Audio- und Videodateien automatisch auf dem eigenen Rechner. Das Transkript wird als TXT neben der Aufnahme oder zusammen mit ihr in einem Unterordner gespeichert.
+VoxDrop macht aus Audio- und Videoaufnahmen durchsuchbare Textdateien. So kannst du eine Besprechung, ein Interview oder eine Sprachnachricht später nachlesen und gezielt nach einer Stelle suchen. Die Transkription läuft auf deinem Mac oder Windows-PC. Deine Aufnahmen bleiben bei dir.
 
-| System | Download | Stand |
-| --- | --- | --- |
-| **Windows 11 x64 / NVIDIA CUDA** | **[Windows-ZIP herunterladen](https://github.com/adriantagonist87/VoxDrop/releases/download/v1.4.1/VoxDrop-1.4.1-Windows-x64.zip)** · [Release und Prüfsumme](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.4.1) | Neue Arbeitsübersicht; Programmdateien und SHA-256 im [Release-Manifest](releases/v1.4.1/windows-release.json). |
-| **macOS / Apple Silicon** | **[Mac-DMG herunterladen](https://github.com/adriantagonist87/VoxDrop/releases/download/v1.5.0-macos/VoxDrop-1.5.0-macOS-arm64.dmg)** · [Mac-Release und Prüfsumme](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.5.0-macos) | 1.5.0 Build 27: vollständiger [Import und Export](docs/IMPORT_EXPORT.md) mit Checkboxen und sicherem Reimport; symmetrische Unterordneroptionen. Windows-1.4.1-Funktionen, Metal-GPU-Budget und sequenzielle Modelle bleiben enthalten. |
+**[Für macOS herunterladen](https://github.com/adriantagonist87/VoxDrop/releases/download/v1.5.0-macos/VoxDrop-1.5.0-macOS-arm64.dmg)** · **[Für Windows herunterladen](https://github.com/adriantagonist87/VoxDrop/releases/download/v1.4.1/VoxDrop-1.4.1-Windows-x64.zip)** · [Alle Versionen](https://github.com/adriantagonist87/VoxDrop/releases)
 
-## Windows einrichten
+## Was VoxDrop kann
 
-![VoxDrop-Arbeitsübersicht mit synthetischen Beispieldateien](docs/images/workspace-wide.png)
+- **Dateien und Ordner ablegen.** Zieh eine Aufnahme oder einen ganzen Ordner ins Fenster. VoxDrop nimmt auch Dateien aus Unterordnern auf und speichert die TXT-Dateien neben den Originalen. Unterstützt werden unter anderem MP3, M4A, WAV, OPUS, MP4 und MOV.
+- **Eingänge automatisch überwachen.** Lass einen oder mehrere lokale Ordner oder eingebundene Netzwerkordner prüfen. VoxDrop wartet, bis eine neue Datei stabil ist. Du kannst Ordner einzeln pausieren und die Ausgabe pro Ordner festlegen. Auf Wunsch landen Aufnahme und TXT gemeinsam in einem Ordner für Fertiggestelltes.
+- **Sprache, Zeitmarken und Sprecher erfassen.** Wähle zwischen Qwen3-ASR 1.7B und Whisper Large v3 Turbo. Die Sprache lässt sich automatisch erkennen oder vorgeben. Optional kennzeichnet VoxDrop Sprecher, prüft die Zuordnung in mehreren Durchgängen und überspringt lange Stille bei weiterhin passenden Zeitmarken.
+- **Aufträge steuern und Ergebnisse wiederfinden.** Ändere die Reihenfolge, halte die Verarbeitung an oder starte einen Auftrag erneut. Suche im Verlauf nach Dateinamen oder im Transkripttext. Eine erneute Transkription erhält eine eigene TXT-Datei.
+- **Daten sichern und mitnehmen.** In **macOS 1.5.0** kannst du unter **Einstellungen → Import & Export** Einstellungen, Verlauf und Warteschlange sichern. Modelle sowie Aufnahmen und TXT-Dateien lassen sich separat dazuwählen. Der Import zeigt dir vorab die enthaltenen Daten und lässt dich Ordner auf dem neuen Mac zuordnen.
 
-**Neu in 1.4:** Queue und kompakter Verlauf nebeneinander, bei kleinen Fenstern als Reiter. Aktueller Auftrag, quadratisches Play/Stopp, Ordnerstatus und GPU-Budget bleiben erreichbar. Die Einstellungen sind in **Transkription**, **Ordner & Überwachung** und **App & Daten** gegliedert, mit Speichern/Verwerfen. Große Verläufe erhalten Seitenwahl; aufgeklappte Queuezeilen und Scrollposition bleiben beim Abarbeiten erhalten. [Alle Funktionen, Screenshots und Prüfung](docs/WORKSPACE_LAYOUT.md).
+![VoxDrop mit laufender Transkription, Warteschlange und Verlauf anhand von Testdaten](docs/images/workspace-wide.png)
 
-Die ZIP vollständig in einen beschreibbaren lokalen Ordner entpacken und **VoxDrop.exe** starten. Beim ersten Start werden die passende Python-/CUDA-Laufzeit und anschließend die ausgewählten Modelle heruntergeladen. Danach erfolgen Transkription und Suche lokal. Überwachte Ordner und Einstellungen richtet jede Installation selbst ein. [Voraussetzungen und Einrichtung](windows/README.md)
+## Installation
 
-Bei einem Update die Ordner **Laufzeit** und **Modelle** erhalten. Einstellungen und Auftragsdaten liegen unter **%LOCALAPPDATA%\VoxDrop**. Der Download enthält keine persönlichen Medien, Transkripte oder Einstellungen.
+### macOS
 
-## Funktionen für Windows und macOS
+**Apple Silicon, macOS 26.2 oder neuer.**
 
-- **GPU-Arbeitsbudget:** Regler von 10–100 % für Windows-CUDA und Apple-Metal, während der Verarbeitung änderbar. Gezielte Rechenpausen entlasten den Desktop; kurze Spitzen und der Grafikspeicherbedarf bleiben bestehen. [Messungen und Grenzen](docs/GPU_ARBEITSBUDGET.md).
-- **Play und Stopp:** Normaler quadratischer 44×44-Knopf an fester Stelle oben, auch im Vollbild. Starten setzt die Queue fort; Stopp beendet die aktuelle Erkennung und behält die Warteschlange. Fertige Ergebnisse werden noch sicher gespeichert. [Bedienung](docs/PLAY_STOPP.md).
-- **Vollständige Warteschlange:** Alle wartenden Dateien mit Dateiname, Pfad, Position und Status im Arbeitsbereich. Kompakte Ansicht sowie ausklappbare Details für die ganze Liste oder einzelne Aufträge.
-- **Ordner einzeln steuern:** Wartende automatische Aufträge eines pausierten oder entfernten Pfads verlassen die Queue. Unter **Warteschlange → Aktionen → Überwachte Ordner neu einlesen** lassen sich aktive Pfade sofort zum Scan vormerken. Jeder Pfad kann die globale Ausgabe übernehmen, TXT neben der Quelle speichern oder Aufnahme und TXT gemeinsam in den Zielunterordner verschieben.
-- **Reihenfolge und Abbruch:** Dateien per Drag-and-drop oder Menü vorziehen/verschieben, einzelne Einträge entfernen, die aktuelle Transkription oder die ganze Warteschlange abbrechen und pausieren/fortsetzen. Die Reihenfolge bleibt beim Neustart erhalten; Umordnen funktioniert auch in Suchergebnissen.
-- **Schnelle Suche:** Lupenbuttons öffnen die Suche nach Dateinamen und vollständigen Pfaden, einschließlich Wildcards. Im Verlauf durchsucht **Detailsuche starten** auf ausdrücklichen Wunsch auch Transkriptinhalte; die Suche kann wieder gestoppt werden. Der lokale Suchindex wird anschließend wiederverwendet.
-- **Verarbeitungsverlauf und Bestand:** **Alle**, **Fehler**, **Fertig**, **Abgebrochen** und **Bestand** zeigen Anzahlen in Klammern. Fehler werden bei positiver Anzahl rot hervorgehoben. Nie gestartete, aus der Queue entfernte Dateien zählen nicht als bearbeitet; bereits vorhandene TXT werden separat als Bestand geführt.
-- **Transkripte direkt öffnen:** In den Auftragsdetails das TXT mit der Standardanwendung des Betriebssystems öffnen oder seinen tatsächlichen Speicherort im Explorer beziehungsweise Finder anzeigen. Historische Fremdtranskripte erhalten keine erfundenen Modell- oder Laufzeitangaben.
-- **Konflikte bei Datei-/Ordnerdrops:** Ein gemeinsamer Dialog erklärt bereits eingereihte und schon transkribierte Dateien. Je nach Konflikt lassen sich Dateien priorisieren, separat neu transkribieren, sofort bearbeiten oder ignorieren. Mehrfach abgelegte Dateien werden dedupliziert.
-- **Dateischutz:** Vorhandene Ergebnisse werden geschützt. Ausdrückliche Neutranskriptionen erhalten separate Ergebnisdateien. Inhaltsgleiche umbenannte Aufnahmen können bekannte Ergebnisse wiederverwenden; noch geschriebene Aufnahmen, etwa von OBS, werden zurückgestellt.
-- **Verlauf wirklich bereinigen:** Nach Bestätigung werden sämtliche gespeicherten Auftrags-, Queue-, Datei- und Suchdaten einschließlich des lokalen Arbeitscaches entfernt. Originalaufnahmen, TXT und Einstellungen bleiben bestehen. Bei aktiver Überwachung liest das nächste Intervall die Ordner neu ein: vorhandene TXT erscheinen wieder im Bestand, fehlende Ergebnisse werden neu eingereiht.
-- **Fenster und Hintergrundbetrieb:** **X** blendet das Fenster in den Systemtray beziehungsweise die Mac-Menüleiste aus; Überwachung und Verarbeitung laufen weiter. **Minimieren** legt es in die Taskleiste beziehungsweise ins Dock. **VoxDrop beenden** und auf dem Mac **Cmd-Q** stoppen die gesamte App samt Arbeitsprozessen und entladen Modelle aus RAM/GPU-Speicher. Eine tatsächlich beendete App überwacht keine Ordner.
-- **Mehrere Ordner und Netzlaufwerke:** Lokale Ordner und eingerichtete SMB-/UNC-Freigaben überwachen, optional rekursiv. Ordnerausfälle werden sichtbar; erreichbare andere Ordner können weiter bearbeitet werden. Einmalige Datei-/Ordnerdrops funktionieren auch bei ausgeschalteter regulärer Überwachung.
-- **Lokale KI:** Qwen3-ASR 1.7B oder Whisper Large v3 Turbo, Zeitmarken, Deutsch/Englisch beziehungsweise automatische Spracherkennung, optional Stilleüberspringen und pyannote-Sprecherzuordnung mit DOVER-Lap. Sprach- und Sprechermodelle werden nacheinander geladen.
-- **Mehr Platz und klare Bedienung:** Dunkle Oberfläche mit verstellbaren Spalten, neues transparentes App-Icon, kein platzverbrauchender Logo-Header im Fenster und konsolenlose Hintergrundprozesse.
+1. Lade die [DMG für macOS](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.5.0-macos) herunter und öffne sie im Finder.
+2. Lege in **Programme** einen Ordner namens **VoxDrop** an. Öffne den Ordner **VoxDrop** in der DMG und kopiere **VoxDrop.app direkt** in den neu angelegten Ordner. Wirf die DMG aus und starte die App aus **Programme → VoxDrop**.
+3. Falls macOS die App beim ersten Start blockiert, schließe die Meldung mit **Fertig**. Öffne **Systemeinstellungen → Datenschutz & Sicherheit**, wähle bei VoxDrop **Dennoch öffnen** und bestätige die Abfrage.
+4. Öffne **Einstellungen → Transkription → Modelle herunterladen**. Als Modellspeicher soll **`/Applications/VoxDrop/Modelle`** angezeigt werden. Falls dort stattdessen der Benutzerordner steht, beende die App und prüfe die direkte Kopie aus Schritt 2.
 
-Metadaten- und Inhaltssuche wurden mit 20.000 synthetischen Transkripten geprüft. Die Detailsuche indexiert Inhalte ausdrücklich im Hintergrund; beim Tippen in die normale Dateisuche wird kein vollständiger Inhaltslauf gestartet. [Prüfungen und Grenzen](docs/SUCHE_UND_DROP_KONFLIKTE.md)
+### Windows
 
-## Mac einrichten
+**Windows 11, 64 Bit.** Für die GPU-Beschleunigung brauchst du eine CUDA-fähige NVIDIA-Grafikkarte mit passendem Treiber. Getestet mit einer RTX 5060 mit 8 GB VRAM.
 
-Voraussetzung für die Mac-Version ist ein Mac mit Apple Silicon und macOS 26.2 oder neuer.
+1. Lade die [ZIP für Windows](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.4.1) herunter und entpacke sie vollständig in einen lokalen Ordner, in den du schreiben kannst.
+2. Öffne **`VoxDrop.exe`** im entpackten Ordner. Beim ersten Start richtet VoxDrop seine Laufzeit automatisch im Unterordner **Laufzeit** ein.
+3. Öffne **Einstellungen → Transkription → Modelle herunterladen**. Die Modelle landen im Ordner **Modelle** neben der EXE.
 
-Die DMG öffnen, den gesamten Ordner **VoxDrop** nach **Programme** ziehen und darin **VoxDrop.app** öffnen. Beim ersten Start kann macOS eine Bestätigung unter **Systemeinstellungen → Datenschutz & Sicherheit → Dennoch öffnen** verlangen. Der Download ist ad hoc signiert. [Apples Anleitung](https://support.apple.com/de-de/102445)
+Für die Einrichtung brauchst du Internet und mehrere Gigabyte freien Speicher. Sobald die Modelle eingerichtet sind, zieh eine Aufnahme ins Fenster und starte die Verarbeitung mit **▶**. Für die automatische Verarbeitung fügst du unter **Einstellungen → Ordner & Überwachung** einen Ordner hinzu und schaltest die Überwachung ein.
 
-Über **Modelle herunterladen** werden die gewünschten Modelle und ihr Download-Cache im Programmordner unter **VoxDrop/Modelle** eingerichtet. Zum Entfernen der App samt Modellen den gesamten Ordner **VoxDrop** löschen. Bei Updates die neue **VoxDrop.app** in den vorhandenen VoxDrop-Ordner kopieren. Einstellungen und Verlauf liegen im Benutzerordner unter **Library/Application Support/VoxDrop**.
+## Gemessene Laufzeit und Speichernutzung
 
-Mac 1.4.1 verwendet dieselbe Arbeitsübersicht und dieselben Queue-/Such-/Dateischutzfunktionen wie Windows. ASR, Wortausrichtung und Sprecherpipeline werden nacheinander geladen; der GPU-Regler steuert auch Metal. Die native Abnahme umfasst Cocoa, echte deutsche/englische Modellläufe, SMB, Abbruch, Wiederanlauf und vollständiges Beenden. [Mac-Abnahme und verbleibende Prüfgrenzen](docs/MAC_ABNAHME_2026-11-21.md).
+| Testrechner | Modell und Einstellungen | Audiolänge | Verarbeitung | Gemessene Spitze |
+| --- | --- | ---: | ---: | --- |
+| Mac mini M5 Pro, 64 GB | Qwen, Metal, mit Sprecherzuordnung | 11 s | 23 s | 3,52 GiB RAM des Auftrags |
+| Mac mini M5 Pro, 64 GB | Whisper, Metal, mit Sprecherzuordnung | 11 s | 11 s | 1,92 GiB RAM des Auftrags |
+| Windows 11, RTX 5060, 8 GB | Qwen, CUDA, drei Sprecher-Prüfdurchgänge | 51,3 s | 35,5 s | 6,31 GiB VRAM gesamt |
+| Windows 11, RTX 5060, 8 GB | Whisper, CUDA, drei Sprecher-Prüfdurchgänge | 51,3 s | 19,7 s | 6,54 GiB VRAM gesamt |
+| Windows 11, RTX 5060, 8 GB | Qwen, CUDA, drei Sprecher-Prüfdurchgänge, Stille übersprungen | 48 min 55 s | 7 min 36 s | 7,29 GiB VRAM gesamt |
 
-[Arbeitsregeln](AGENTS.md) · [Projektstatus](docs/PROJEKTSTATUS.md) · [Entwicklung](docs/ENTWICKLUNG.md) · [Windows-Übergabe](docs/UEBERGABE_WINDOWS.md) · [Release-Identität und Branchschutz](docs/GITHUB_ABSCHLUSS_2026-11-18.md)
+Die Mac-Kurztests stammen aus der Neuinstallation von **1.5.0**. Apple Silicon hat gemeinsamen Speicher für CPU und GPU. In einem separaten Qwen-Kurztest sank die gemessene GPU-Speicherspitze für Erkennung und Zeitmarken von **5,29 auf 3,58 GiB**, nachdem beide Schritte nacheinander ausgeführt wurden. [Mac-Messprotokoll](docs/MAC_ABNAHME_2026-11-21.md#direkter-qwen-speichervergleich)
 
-## Gemeinsame Grundlagen
+Die Windows-Werte stammen aus früheren nativen Abnahmeläufen. Der VRAM-Wert umfasst auch den Desktop und andere laufende Programme. Audiomaterial und Sprecheroptionen unterscheiden sich zwischen den Plattformen. [Windows-Kurztests](docs/PROJEKTSTATUS.md#abschließende-paket-dateiprüfungen-und-präzisierte-meldungen) · [Windows-Langtest](docs/WINDOWS_ABNAHME_2026-11-18.md)
 
-- **Qwen3-ASR 1.7B** ist das Standardmodell. **Whisper Large v3 Turbo** ist als Alternative auswählbar.
-- Transkripte mit Zeitstempeln und optionaler Sprecherzuordnung über pyannote. DOVER-Lap kann drei Durchgänge der Sprecherzuordnung zusammenführen.
-- Lange Sprechpausen überspringen und Aufträge aus dem Verlauf mit anderen Einstellungen erneut transkribieren.
-- Start bei der Anmeldung, Menüleistenstatus und Hinweise bei unerreichbaren oder schreibgeschützten Ordnern.
-- Gemeinsame dunkelgraue Oberfläche mit verstellbarer Queue-/Verlaufsansicht und getrennten Einstellungen.
-- **Unterordner mit einbeziehen** erweitert die Überwachung auf verschachtelte Ordner. Die TXT-Dateien landen direkt neben den Aufnahmen.
-- Ordner lassen sich für eine einmalige Transkription ins Fenster ziehen. VoxDrop reiht die Aufnahmen samt Unterordnern ein und legt die TXT-Dateien neben den Originalen ab.
-
-## Benchmark auf einem Mac mini M5 Pro
-
-Die folgenden Langlaufmessungen stammen aus der früheren Mac-Ausgabe. Ein neuer Kurzvergleich von Mac 1.3.1 zu 1.4.0 reduzierte die gemessene Qwen-MLX-Allokationsspitze von 5,29 auf 3,58 GiB bei identischem Ergebnis. Diese MLX-Kennzahl misst nicht den gesamten App-RAM und ersetzt keinen neuen Langlauf. [Messung und Umfang](docs/MAC_ABNAHME_2026-11-21.md).
-
-Je ein Lauf pro Modell und Aufnahme auf der Apple-GPU eines Mac mini mit M5 Pro und 64 GB gemeinsamem Speicher. Die Gesamtzeit umfasst Dekodierung, Modellladen, Transkription, Zeitabgleich und die gemeinsame Sprecheranalyse mit pyannote. Der RAM-Wert ist die physische Spitzenbelegung des jeweiligen Spracherkennungsprozesses.
-
-| Aufnahme | Audiodauer (Std:Min:Sek) | Qwen gesamt (Min:Sek) | Qwen RAM | Whisper gesamt (Min:Sek) | Whisper RAM |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| Telefon | 0:48:19 | 3:48 | 5,28 GiB | 4:22 | 7,34 GiB |
-| Raum | 1:58:02 | 9:35 | 5,09 GiB | 12:58 | 25,06 GiB |
-| Video | 2:48:03 | 12:17 | 5,13 GiB | 17:26 | 30,10 GiB |
-
-## Lizenzhinweise
-
-VoxDrop steht unter der GNU Affero General Public License Version 3 (AGPL-3.0-only). [Lizenztext für VoxDrop](LICENSE)
-
-Die eingebundene aTrain-Version steht unter AGPL-3.0-or-later. Bei der Weitergabe der DMG ist der zugehörige Quellcode gemäß § 6 der AGPL bereitzustellen. [aTrain-Quellstand](https://github.com/aTrainTranscription/aTrain/tree/ea8a7057857220b4299c0ba0b2aaf6def2f35b87) · [Lizenztext](https://spdx.org/licenses/AGPL-3.0-or-later.html)
-
-Die Oberfläche verwendet Qt und Qt for Python. Der entsprechende Quellcode steht bei den Release-Downloads bereit. [Lizenzhinweise](desktop/Qt-Lizenzen.md)
-
-Qwen3-ASR und der Forced Aligner stehen unter Apache-2.0, Whisper unter MIT und das Sprechermodell unter CC BY 4.0. [Qwen3-ASR](https://huggingface.co/Qwen/Qwen3-ASR-1.7B) · [Forced Aligner](https://huggingface.co/Qwen/Qwen3-ForcedAligner-0.6B) · [Whisper](https://huggingface.co/aTrain-core/faster-whisper-large-v3-turbo) · [Sprechermodell](https://huggingface.co/aTrain-core/speaker-detection)
+VoxDrop ist Open Source unter der [AGPL-3.0](LICENSE). [Hinweise für Entwickler](docs/ENTWICKLUNG.md) · [Qt-Lizenzhinweise](desktop/Qt-Lizenzen.md)
