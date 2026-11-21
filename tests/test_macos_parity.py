@@ -40,6 +40,7 @@ class MacQwenTests(unittest.TestCase):
                  patch('gpu_budget.pace_mlx',new=lambda *a,**k:nullcontext()), patch('qwen_backend.emit'):
                 qwen_backend.run(root, root, root/'audio.npy', root/'result.json','metal','de')
             self.assertEqual(timed.call_args.args[2:], ('Text','German',0,16000,16000))
+            timed.reset_mock()  # Release the mapped test audio before Windows cleanup.
             mx.synchronize.assert_called_once(); mx.clear_cache.assert_called_once()
 
     def test_mlx_blocks_finish_before_idle_and_restore_their_types_after_failure(self):
