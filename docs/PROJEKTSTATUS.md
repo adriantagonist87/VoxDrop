@@ -1,5 +1,11 @@
 # Projektstatus VoxDrop
 
+## Stabile Veröffentlichung 1.5.0
+
+Der gemeinsame [Stable-Release v1.5.0](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.5.0) bündelt die bereits plattformspezifisch abgenommenen Pakete für macOS auf Apple Silicon und Windows 11 auf x64. SHA-256, Paketmanifeste und der Mac-Verifikationsnachweis werden mitgeliefert. Die ursprünglichen Plattform-Releases bleiben als Herkunftsnachweise und direkte Downloadziele verfügbar.
+
+Windows verwendet unverändert Paketcode `5a1854ec650415d7f18ffea0da0163ec1f6b6334`, macOS Build 27 den Paketcode `060ce5b7a1f597ec55d28255dcd07a296e6da73f`. Die gemeinsame Release-Seite verlinkt beide Abnahmen und den Benchmark. [Windows-Manifest](../releases/v1.5.0/windows-release.json) · [Mac-Manifest](../releases/v1.5.0/macos-release.json)
+
 ## Windows 1.5.0 – Funktionsabgleich und Schutz bei Grafikfehlern
 
 Windows übernimmt den gemeinsamen Stand von Mac 1.5.0 einschließlich Profil-ZIP, Auswahl von Einstellungen/Datenbanken/Modellen/Medien, Pfadzuordnung beim Gerätewechsel und symmetrischer Ordnerauswahl. [Import und Export](IMPORT_EXPORT.md).
