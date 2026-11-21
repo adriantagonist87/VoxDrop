@@ -7,7 +7,7 @@ VoxDrop ist eine kostenlose App für macOS und Windows auf Basis von aTrain. Sie
 | System | Download | Stand |
 | --- | --- | --- |
 | **Windows 11 x64 / NVIDIA CUDA** | **[Windows-ZIP herunterladen](https://github.com/adriantagonist87/VoxDrop/releases/download/v1.4.0/VoxDrop-1.4.0-Windows-x64.zip)** · [Release und Prüfsumme](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.4.0) | Neue Arbeitsübersicht; Programmdateien und SHA-256 im [Release-Manifest](releases/v1.4.0/windows-release.json). |
-| **macOS / Apple Silicon** | **[Mac-DMG herunterladen](https://github.com/adriantagonist87/VoxDrop/releases/download/v1.4.0-macos/VoxDrop-1.4.0-macOS-arm64.dmg)** · [Mac-Release und Prüfsumme](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.4.0-macos) | 1.4.0 Build 24 mit derselben Arbeitsübersicht, Queue und Suche; Metal-GPU-Budget und sequenzielle Modelle. [Native Abnahme](docs/MAC_ABNAHME_2026-11-21.md). |
+| **macOS / Apple Silicon** | **[Mac-DMG herunterladen](https://github.com/adriantagonist87/VoxDrop/releases/download/v1.4.0-macos/VoxDrop-1.4.0-macOS-arm64.dmg)** · [Mac-Release und Prüfsumme](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.4.0-macos) | 1.4.0 Build 25 mit derselben Arbeitsübersicht, Queue und Suche; Metal-GPU-Budget und sequenzielle Modelle. [Native Abnahme](docs/MAC_ABNAHME_2026-11-21.md). |
 
 ## Windows einrichten
 

@@ -1,6 +1,6 @@
 # Mac auf den aktuellen Windows-Funktionsstand bringen
 
-**Abschluss vom 21.11.2026:** Die folgende Übergabe wurde mit macOS 1.4.0 Build 24 umgesetzt, nativ abgenommen und auf dem Mac mini produktiv installiert. Maßgeblicher aktueller Prüfstand und verbleibende Grenzen: [Mac-Abnahme](MAC_ABNAHME_2026-11-21.md). Die frühere Mac-DMG 1.3.1 und die bisherige Windows-ZIP werden nicht überschrieben; die neue Mac-Ausgabe erhält eine separate Veröffentlichung.
+**Abschluss vom 21.11.2026:** Die folgende Übergabe wurde mit macOS 1.4.0 Build 25 umgesetzt, nativ abgenommen und auf dem Mac mini produktiv installiert. Maßgeblicher aktueller Prüfstand und verbleibende Grenzen: [Mac-Abnahme](MAC_ABNAHME_2026-11-21.md). Die frühere Mac-DMG 1.3.1 und die bisherige Windows-ZIP werden nicht überschrieben; die neue Mac-Ausgabe erhält eine separate Veröffentlichung.
 
 ## Auftrag und Ausgangspunkt
 

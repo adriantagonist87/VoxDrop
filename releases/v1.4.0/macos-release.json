@@ -1,8 +1,8 @@
 {
   "platform": "macOS-arm64",
   "version": "1.4.0",
-  "build": "24",
-  "code_commit": "7fcf56a7e2fce89ba49d8c07db8b34b419c3de84",
+  "build": "25",
+  "code_commit": "c6ef0b7433727eea357cf85798585ab326edb2f7",
   "dirty": false,
   "atrain_commit": "ea8a7057857220b4299c0ba0b2aaf6def2f35b87",
   "files": [
@@ -173,8 +173,8 @@
     },
     {
       "path": "Engine/qwen_backend.py",
-      "size": 12776,
-      "sha256": "5d3681876f02dd00d1f7de9da9a53036040ebc79221517488c919f35fbcc78c2"
+      "size": 13069,
+      "sha256": "09e0d76f884dbb1fc25acec11392f5bfe33f75a6c9178176fe8a484810bf0ad6"
     },
     {
       "path": "Engine/runtime_logs.py",
@@ -228,11 +228,12 @@
     "native_cases": 209,
     "native_passed": 202,
     "native_platform_skips": 7,
-    "native_test_commit": "c1e1f285ba4e79c7a0d363e1d9c55deb76493627",
+    "native_test_commit": "c6ef0b7433727eea357cf85798585ab326edb2f7",
     "metal_language_cases": 12,
     "queue_stop_restart": true,
     "owner_loss_locked_sqlite": true,
-    "smb_synthetic_drop_and_retranscription": true
+    "smb_synthetic_drop_and_retranscription": true,
+    "cpu_language_cases": 2
   },
   "runtime_pins": {
     "python": "3.12.13",

@@ -2,7 +2,7 @@
 
 ## Mac-Portierung vom 21.11.2026
 
-1.4.0 Build 24 ist auf dem Mac mini produktiv installiert. Programmdateien/Signatur, unveränderte Modelle/Einstellungen und der aktive appgebundene Dienst wurden geprüft. Der aktuelle vollständige native Testlauf umfasst 209 Fälle mit sieben reinen Windows-Skips; zwölf Metal-Sprachläufe, Paketsteuerung, SMB und harte Ausfälle ergänzen ihn. [Exakte SHAs, Werkzeuge und Grenzen](MAC_ABNAHME_2026-11-21.md).
+1.4.0 Build 25 ist auf dem Mac mini produktiv installiert. Programmdateien/Signatur, unveränderte Modelle/Einstellungen und der aktive appgebundene Dienst wurden geprüft. Der aktuelle vollständige native Testlauf umfasst 209 Fälle mit sieben reinen Windows-Skips; zwölf Metal-Sprachläufe, Paketsteuerung, SMB und harte Ausfälle ergänzen ihn. [Exakte SHAs, Werkzeuge und Grenzen](MAC_ABNAHME_2026-11-21.md).
 
 Der Mac übernimmt die gemeinsame 1.4-Arbeitsübersicht. MLX-ASR und Aligner laufen jetzt nacheinander; Metal-GPU-Budget synchronisiert MLX-Blöcke, native CTranslate2-Aufrufe und Torch-MPS-Sprechermodelle. `posix_guard.py` muss in jedem Mac-Engine-Paket liegen. Auch macOS verwendet nun den bestehenden Supervisor, Logrotation und automatische Wiederaufnahme. Cmd-Q wird vor QML-Fensterschließen zum vollständigen App-Abschluss geleitet. Alle späteren Hinweise „Mac unverändert/Portierung offen“ beschreiben historische Übergaben; die tatsächlichen neuen Prüfungen und Grenzen stehen in der [Mac-Abnahme](MAC_ABNAHME_2026-11-21.md).
 

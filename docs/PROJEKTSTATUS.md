@@ -2,7 +2,7 @@
 
 ## Mac-Portierung am 21. November 2026
 
-Der gemeinsame Windows-Stand 1.4 läuft jetzt auch produktiv auf diesem Mac mini als **1.4.0 Build 24**. Neue Oberfläche/Queue/Suche übernommen; zusätzlich sequenzielle Qwen-MLX-Modellphasen, Metal-/MPS-GPU-Budget, Unix-Prozesswächter, Mac-Supervisor/Wiederaufnahme, offene lokale Aufnahmen und Cmd-Q angebunden. Ein echter Cocoa-Vollbild-/Minimierungsfehler wurde reproduziert und korrigiert. Final 209 native Regressionen (202 bestanden/sieben Windows-Skips), zwölf echte Metal-Sprachläufe, große native QML-Listen bei 100/125/150 %, SMB, echte QML-Steuerung und Ausfall/Wiederaufnahme bestanden. Programmcode `7fcf56a7e2fce89ba49d8c07db8b34b419c3de84`; native Testsuite samt Cocoa-Regressionsfolge bei `c1e1f285ba4e79c7a0d363e1d9c55deb76493627`. Der zugehörige aktuelle Windows-Check ist [erfolgreich](https://github.com/adriantagonist87/VoxDrop/actions/runs/44926847171).
+Der gemeinsame Windows-Stand 1.4 läuft jetzt auch produktiv auf diesem Mac mini als **1.4.0 Build 25**. Neue Oberfläche/Queue/Suche übernommen; zusätzlich sequenzielle Qwen-MLX-Modellphasen, Metal-/MPS-GPU-Budget, Unix-Prozesswächter, Mac-Supervisor/Wiederaufnahme, offene lokale Aufnahmen und Cmd-Q angebunden. Ein echter Cocoa-Vollbild-/Minimierungsfehler wurde reproduziert und korrigiert. Final 209 native Regressionen (202 bestanden/sieben Windows-Skips), zwölf echte Metal-Sprachläufe, große native QML-Listen bei 100/125/150 %, SMB, echte QML-Steuerung und Ausfall/Wiederaufnahme bestanden. Programmcode `c6ef0b7433727eea357cf85798585ab326edb2f7`; native Testsuite samt Cocoa-Regressionsfolge bei `c6ef0b7433727eea357cf85798585ab326edb2f7`. Der zugehörige aktuelle Windows-Check ist [erfolgreich](https://github.com/adriantagonist87/VoxDrop/actions/runs/44927646527).
 
 Installation geprüft: Einstellungen bytegleich, vier bisherige DB-Aufträge erhalten, alle 106 Modell-/Cachedateien mit gleichen Hashes, Inodes, Größen und Änderungszeiten. Anmeldestart erhalten. Tatsächliche installierte Oberfläche geöffnet: Überwachung an, SMB-Ordner 1/1 verfügbar, kein Fehler, kein aktiver Auftrag. Qwen-MLX-Spitze im direkten Kurzvergleich 5,29 → 3,58 GiB (−32,4 %, kein Gesamt-RAM-/Langlaufbenchmark). Separate Mac-DMG für `v1.4.0-macos` wird mit Prüfsumme bereitgestellt; Windows-Assets bleiben erhalten. [Nachweise, Grenzen und genaue Prüfwerkzeuge](MAC_ABNAHME_2026-11-21.md).
 
@@ -238,8 +238,8 @@ GitHub-Übergabe: [Windows-Branch](https://github.com/adriantagonist87/VoxDrop/t
 | Gegenstand | Stand |
 | --- | --- |
 | Öffentliches Repository | `adriantagonist87/VoxDrop`, Hauptbranch `main` |
-| Freigegebene Plattformstände | Windows `v1.4.0`; macOS `v1.4.0-macos`, App 1.4.0 Build 24 |
-| Getesteter Mac-Implementierungscommit | `7fcf56a7e2fce89ba49d8c07db8b34b419c3de84` |
+| Freigegebene Plattformstände | Windows `v1.4.0`; macOS `v1.4.0-macos`, App 1.4.0 Build 25 |
+| Getesteter Mac-Implementierungscommit | `c6ef0b7433727eea357cf85798585ab326edb2f7` |
 | Gemeinsame Entwicklungsbasis | `main` mit App-Code, Arbeitsregeln und gemeinsamer Dokumentation |
 | Betriebsmodell | Eigenständige lokale macOS- und Windows-Apps, auch in verschiedenen Netzwerken |
 | Referenzbibliothek | aTrain `ea8a7057857220b4299c0ba0b2aaf6def2f35b87` |
@@ -256,7 +256,7 @@ Die ursprüngliche Mac-Historie von v1.2.0 mit Code-Commit `19c8084193ec96717d87
 
 | Umgebung | Letzter geprüfter öffentlicher Commit | Prüfung und Ergebnis |
 | --- | --- | --- |
-| macOS, Apple Silicon | `7fcf56a7e2fce89ba49d8c07db8b34b419c3de84` | 1.4.0 Build 24 produktiv installiert. 209 native Regressionen, Qwen/Whisper, DOVER, Metal-Budget, Suche, SMB, Cmd-Q, harte Abbrüche und automatische Wiederaufnahme geprüft. Details und Grenzen im Mac-Abnahmebericht. Kein neuer Betriebssystem-Neustart behauptet. |
+| macOS, Apple Silicon | `c6ef0b7433727eea357cf85798585ab326edb2f7` | 1.4.0 Build 25 produktiv installiert. 209 native Regressionen, Qwen/Whisper, DOVER, Metal-Budget, Suche, SMB, Cmd-Q, harte Abbrüche und automatische Wiederaufnahme geprüft. Details und Grenzen im Mac-Abnahmebericht. Kein neuer Betriebssystem-Neustart behauptet. |
 | Windows 11 mit NVIDIA | `48ff35f43f07c07b4b7abd0b22561c9096fbe1cc` | Produktives Paket 1.4.0 unverändert. Native Windows-/CUDA-Abnahme oben; zusätzliche synthetische Windows-CI auf dem Mac-Portierungs-PR erfolgreich. Neue native CUDA-Läufe nach den Mac-Ergänzungen werden daraus nicht abgeleitet. |
 | Linux | **UNGEPRÜFT**, Zielport offen | Gemeinsame Qt-Oberfläche vorhanden. Backends, Plattformadapter, Einrichtung und Pakete sind auf macOS/Windows ausgerichtet. |
 
