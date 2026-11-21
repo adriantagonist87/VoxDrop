@@ -382,7 +382,7 @@ class QueueTests(unittest.TestCase):
         service.resolve_drop(self.db, plan['token'], 'front')
         self.assertEqual([job['id'] for job in queue_jobs(self.db)], [one])
 
-    def test_cancel_all_pauses_and_cancels_automatic_retries_without_readding(self):
+    def test_clear_refills_from_watch_scan_but_keeps_processing_paused_and_errors(self):
         source,one=self.add();_,two=self.add('two.wav',b'other')
         with self.db:
             self.db.execute("update jobs set state='failed' where id=?",(two,))
@@ -394,7 +394,8 @@ class QueueTests(unittest.TestCase):
         self.assertFalse(service.next_job(self.db,self.state,self.engine))
         set_queue_paused(self.db,False)
         self.assertTrue(service.next_job(self.db,self.state,self.engine))
-        self.assertEqual(self.row(one)['state'],'cancelled')
+        self.assertEqual(self.row(one)['state'],'done')
+        self.assertEqual(self.row(two)['state'],'failed')
         self.assertEqual(source.read_bytes(),b'synthetic media')
 
     def test_active_cancel_stops_before_export_and_crash_recovery_keeps_intent(self):

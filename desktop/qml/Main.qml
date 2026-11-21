@@ -273,7 +273,7 @@ ApplicationWindow {
                 spacing: 12
                 AppActionButton {
                     objectName: "folderStatusButton"
-                    text: "Überwachung " + (viewState.monitoringEnabled ? "an" : "aus") + " · Ordner " + viewState.availableFolderCount + "/" + viewState.folderCount
+                    text: "Überwachung " + (viewState.monitoringEnabled ? "an" : "aus") + " · Ordner " + viewState.availableFolderCount + "/" + (viewState.folderCount - viewState.pausedFolderCount) + (viewState.pausedFolderCount ? " · " + viewState.pausedFolderCount + " pausiert" : "")
                     Accessible.description: "Überwachungszustand und Erreichbarkeit. Einstellungen für Ordner öffnen."
                     errorAlert: viewState.folderWarnings.length > 0
                     onClicked: window.openSettings(1)
@@ -725,6 +725,7 @@ ApplicationWindow {
                                         id: folder
                                         required property int index
                                         required property string modelData
+                                        readonly property var options: (settings.folder_options || ({}))[pathField.text.trim()] || ({})
                                         readonly property var status: viewState.checked[pathField.text] || ({})
                                         Layout.fillWidth: true
                                         spacing: 3
@@ -743,6 +744,16 @@ ApplicationWindow {
                                                 ToolTip.text: text
                                                 ToolTip.delay: 500
                                                 onTextChanged: api.editFolder(folder.index, text)
+                                            }
+                                            AppActionButton {
+                                                objectName: "folderPause" + folder.index
+                                                text: folder.options.paused ? "▶" : "Ⅱ"
+                                                Layout.preferredWidth: 34
+                                                enabled: viewState.ready && !viewState.busy && pathField.text.trim().length > 0
+                                                Accessible.name: folder.options.paused ? "Überwachung dieses Ordners fortsetzen" : "Überwachung dieses Ordners pausieren"
+                                                ToolTip.visible: hovered
+                                                ToolTip.text: Accessible.name
+                                                onClicked: api.toggleFolderPause(pathField.text.trim())
                                             }
                                             AppActionButton {
                                                 text: "↻"
@@ -766,18 +777,32 @@ ApplicationWindow {
                                         }
                                         RowLayout {
                                             Layout.fillWidth: true
-                                            visible: Boolean(folder.status.error || folder.status.available)
+                                            visible: folder.options.paused || Boolean(folder.status.error || folder.status.available)
                                             Muted {
                                                 text: "⚠"
                                                 color: warningColor
-                                                visible: Boolean(folder.status.error)
+                                                visible: !folder.options.paused && Boolean(folder.status.error)
                                                 opacity: window.warningPulse ? 1 : 0.4
                                                 Accessible.name: "Ordnerproblem"
                                             }
                                             Muted {
                                                 Layout.fillWidth: true
-                                                color: folder.status.error ? warningColor : muted
-                                                text: folder.status.error || "Erreichbar und beschreibbar"
+                                                color: !folder.options.paused && folder.status.error ? warningColor : muted
+                                                text: folder.options.paused ? "Pausiert" : folder.status.error || "Erreichbar und beschreibbar"
+                                            }
+                                        }
+                                        RowLayout {
+                                            Layout.fillWidth: true
+                                            Muted { text: "Ausgabe" }
+                                            Picker {
+                                                objectName: "folderOutput" + folder.index
+                                                Layout.fillWidth: true
+                                                Accessible.name: "Ausgabe für Ordner " + (folder.index + 1)
+                                                property var modes: ["global", "beside", "subfolder"]
+                                                model: ["Globale Vorgabe", "TXT neben Quelldatei", "Aufnahme und TXT in Zielunterordner"]
+                                                currentIndex: modes.indexOf(folder.options.output || "global")
+                                                enabled: pathField.text.trim().length > 0
+                                                onActivated: index => api.setFolderOutput(pathField.text.trim(), modes[index])
                                             }
                                         }
                                     }
@@ -796,7 +821,7 @@ ApplicationWindow {
                                 }
                                 Toggle {
                                     objectName: "createOutputSubfolder"
-                                    text: "Unterordner für fertige Transkripte erstellen?"
+                                    text: "Globale Vorgabe: Unterordner für fertige Transkripte erstellen"
                                     Layout.fillWidth: true
                                     enabled: !settings.include_subfolders
                                     checked: settings.create_output_subfolder
@@ -805,7 +830,8 @@ ApplicationWindow {
                                 Field {
                                     objectName: "outputSubfolderName"
                                     Layout.fillWidth: true
-                                    visible: settings.create_output_subfolder && !settings.include_subfolders
+                                    visible: (settings.create_output_subfolder && !settings.include_subfolders) ||
+                                        Object.values(settings.folder_options || ({})).some(choice => choice.output === "subfolder")
                                     text: settings.output_subfolder || ""
                                     Accessible.name: "Name des Unterordners"
                                     placeholderText: "_FERTIGGESTELLT"
@@ -823,7 +849,7 @@ ApplicationWindow {
                                     onActivated: index => api.setSetting("interval_seconds", options[index])
                                 }
 
-                                Muted { Layout.fillWidth: true; text: "Pfadänderungen erst speichern. Rekursive Überwachung und einmalige Drops erhalten Originalhierarchie und TXT neben Aufnahme. Ohne Unterordner kann die Zieloption Aufnahme und TXT gemeinsam verschieben. Noch geschriebene Aufnahmen werden zurückgestellt." }
+                                Muted { Layout.fillWidth: true; text: "Pfad- und Ausgabeänderungen speichern. Pause/Fortsetzen wirkt für gespeicherte Pfade sofort. Ein Zielunterordner verarbeitet nur die oberste Ebene dieses Pfads und verschiebt Aufnahme und TXT gemeinsam. Einmalige Drops speichern TXT neben der Aufnahme." }
                             }
                             ColumnLayout {
                                 Layout.fillWidth: true; visible: window.settingsTab === 2; spacing: 14

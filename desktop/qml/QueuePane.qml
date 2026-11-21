@@ -225,6 +225,12 @@ ColumnLayout {
         x: Math.max(0, Math.min(pane.width - width, queueActionTrigger.mapToItem(pane, 0, 0).x))
         y: queueActionTrigger.mapToItem(pane, 0, queueActionTrigger.height).y
         QueueMenuAction {
+            objectName: "rescanFoldersButton"
+            text: "Überwachte Ordner neu einlesen"
+            enabled: Boolean(pane.viewState.canRescanFolders)
+            onTriggered: pane.api.rescanFolders()
+        }
+        QueueMenuAction {
             objectName: "cancelQueueButton"
             text: "Warteschlange leeren …"
             enabled: !pane.viewState.busy && (pane.viewState.queueCount > 0 || Boolean(pane.viewState.current.name))
@@ -241,7 +247,7 @@ ColumnLayout {
         standardButtons: Dialog.Cancel | Dialog.Ok
         background: Rectangle { color: "#292929"; radius: 8; border.color: "#454545" }
         contentItem: Text {
-            text: pane.viewState.queueCount + " wartende Aufträge werden entfernt" + (pane.viewState.current.name ? " und der aktuelle Auftrag wird abgebrochen" : "") + ". Ein bereits begonnener Export wird fertiggestellt. Originale und vorhandene Transkripte bleiben erhalten.\n\nZum bloßen Anhalten nutze Stopp. Ungestartete Aufträge zählen nicht als Verarbeitung im Verlauf. Nach dem Leeren werden abgebrochene Dateiversionen nicht automatisch erneut eingereiht."
+            text: pane.viewState.queueCount + " wartende Aufträge werden entfernt" + (pane.viewState.current.name ? " und der aktuelle Auftrag wird abgebrochen" : "") + ". Ein bereits begonnener Export wird fertiggestellt. Originale und vorhandene Transkripte bleiben erhalten.\n\nDie Verarbeitung bleibt pausiert. Aktive überwachte Ordner füllen die Liste bei den nächsten Scans mit noch ungestarteten Aufnahmen wieder auf."
             wrapMode: Text.WordWrap; color: "#ddd"; font.pixelSize: 13
         }
         onAccepted: pane.api.cancelQueue()
