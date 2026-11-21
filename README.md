@@ -6,7 +6,7 @@ VoxDrop ist eine kostenlose App für macOS und Windows auf Basis von aTrain. Sie
 
 | System | Download | Stand |
 | --- | --- | --- |
-| **Windows 11 x64 / NVIDIA CUDA** | **[Windows-ZIP herunterladen](https://github.com/adriantagonist87/VoxDrop/releases/download/v1.4.0/VoxDrop-1.4.0-Windows-x64.zip)** · [Release und Prüfsumme](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.4.0) | Neue Arbeitsübersicht; Programmdateien und SHA-256 im [Release-Manifest](releases/v1.4.0/windows-release.json). |
+| **Windows 11 x64 / NVIDIA CUDA** | **[Windows-ZIP herunterladen](https://github.com/adriantagonist87/VoxDrop/releases/download/v1.4.1/VoxDrop-1.4.1-Windows-x64.zip)** · [Release und Prüfsumme](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.4.1) | Neue Arbeitsübersicht; Programmdateien und SHA-256 im [Release-Manifest](releases/v1.4.1/windows-release.json). |
 | **macOS / Apple Silicon** | **[Mac-DMG herunterladen](https://github.com/adriantagonist87/VoxDrop/releases/download/v1.3.1/VoxDrop-1.3.1-macOS-arm64.dmg)** · [Mac-Release](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.3.1) | Bisherige native Mac-Ausgabe. Die unten beschriebenen neuen Windows-Funktionen werden auf dieser gemeinsamen Codebasis für Mac nachgezogen. |
 
 ## Windows einrichten
