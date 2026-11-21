@@ -1,10 +1,16 @@
 # Projektstatus VoxDrop
 
+## Veröffentlichung und Installation 1.4.1 abgeschlossen
+
+Mac 1.4.1 Build 26 ist produktiv installiert und mit Signatur sowie allen 43 Paketdateien geprüft. Die 106 vorhandenen Modell-/Cachedateien, Konfiguration, vier bisherigen DB-Aufträge und Anmeldestart blieben erhalten; die vorhandene SMB-Überwachung läuft. Die neuen Ordnersteuerungen wurden zusätzlich an der tatsächlichen installierten Oberfläche bestätigt. Benutzerentwürfe bleiben unangetastet.
+
+Der separate [Mac-Release 1.4.1](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.4.1-macos) wurde vollständig erneut ohne Anmeldung öffentlich heruntergeladen. SHA-256 `1b64574c8349c662b912cf81d872e9fd6d8925393102c4ec672224a7036f2add` stimmt mit dem lokalen Paket und dem Release überein. DMG, Signatur, Quellarchive und installierte App sind abgeglichen. [Öffentlicher Verifikationsbericht](../releases/v1.4.1/macos-verification.json). Windows 1.4.1 und der frühere Mac-1.4.0-Download bleiben unverändert.
+
 ## Aktuell: Mac 1.4.1 Build 26
 
 Während der Mac-Abnahme wurde Windows 1.4.1 über PR #7 auf `main` integriert. Auch dessen Ordnerpause, Ausgabe je Pfad, sofortiges Neueinlesen und Zurückstellen verwaister automatischer Aufträge sind übernommen. Windows-Basis `3033503929f9e59592636d975cf03ef043a4f721`, gemeinsam geprüfter Mac-Code `f1b9e69c553b935a5cb940434b2c2cb55ea9160d`. Native Cocoa-Suite: 214 Fälle in 52,601 s, 207 bestanden/sieben reine Windows-Skips. Vollständige native Paketsteuerung mit geladenem Qwen, Stopp/Wiederaufnahme, drei DOVER-Durchgängen, Suche und Quit, SMB-Neutranskription sowie 8.000/20.000-Zeilen-Layout bei 125 % erneut bestanden. Kein Modell-/Laufzeitwechsel; ASR-, Budget-, Sprecher-, Stille- und Worker-Backends sind bytegleich zum abgenommenen Build 25. Die frühere 1.4.0-Mac-Veröffentlichung bleibt als eingefrorener Zwischenstand erhalten. [Manifest 1.4.1](../releases/v1.4.1/macos-release.json).
 
-## Mac-Portierung am 21. November 2026
+## Vorangegangener Mac-Stand 1.4.0 vom 21. November 2026
 
 Der gemeinsame Windows-Stand 1.4 läuft jetzt auch produktiv auf diesem Mac mini als **1.4.0 Build 25**. Neue Oberfläche/Queue/Suche übernommen; zusätzlich sequenzielle Qwen-MLX-Modellphasen, Metal-/MPS-GPU-Budget, Unix-Prozesswächter, Mac-Supervisor/Wiederaufnahme, offene lokale Aufnahmen und Cmd-Q angebunden. Ein echter Cocoa-Vollbild-/Minimierungsfehler wurde reproduziert und korrigiert. Final 209 native Regressionen (202 bestanden/sieben Windows-Skips), zwölf echte Metal-Sprachläufe, große native QML-Listen bei 100/125/150 %, SMB, echte QML-Steuerung und Ausfall/Wiederaufnahme bestanden. Programmcode `c6ef0b7433727eea357cf85798585ab326edb2f7`; native Testsuite samt Cocoa-Regressionsfolge bei `c6ef0b7433727eea357cf85798585ab326edb2f7`. Der zugehörige aktuelle Windows-Check ist [erfolgreich](https://github.com/adriantagonist87/VoxDrop/actions/runs/44927646527).
 
@@ -251,7 +257,7 @@ GitHub-Übergabe: [Windows-Branch](https://github.com/adriantagonist87/VoxDrop/t
 | --- | --- |
 | Öffentliches Repository | `adriantagonist87/VoxDrop`, Hauptbranch `main` |
 | Freigegebene Plattformstände | Windows `v1.4.1`; macOS `v1.4.1-macos`, App 1.4.1 Build 26 |
-| Getesteter Mac-Implementierungscommit | `c6ef0b7433727eea357cf85798585ab326edb2f7` |
+| Getesteter Mac-Implementierungscommit | `f1b9e69c553b935a5cb940434b2c2cb55ea9160d` |
 | Gemeinsame Entwicklungsbasis | `main` mit App-Code, Arbeitsregeln und gemeinsamer Dokumentation |
 | Betriebsmodell | Eigenständige lokale macOS- und Windows-Apps, auch in verschiedenen Netzwerken |
 | Referenzbibliothek | aTrain `ea8a7057857220b4299c0ba0b2aaf6def2f35b87` |
@@ -268,8 +274,8 @@ Die ursprüngliche Mac-Historie von v1.2.0 mit Code-Commit `19c8084193ec96717d87
 
 | Umgebung | Letzter geprüfter öffentlicher Commit | Prüfung und Ergebnis |
 | --- | --- | --- |
-| macOS, Apple Silicon | `c6ef0b7433727eea357cf85798585ab326edb2f7` | 1.4.0 Build 25 produktiv installiert. 209 native Regressionen, Qwen/Whisper, DOVER, Metal-Budget, Suche, SMB, Cmd-Q, harte Abbrüche und automatische Wiederaufnahme geprüft. Details und Grenzen im Mac-Abnahmebericht. Kein neuer Betriebssystem-Neustart behauptet. |
-| Windows 11 mit NVIDIA | `48ff35f43f07c07b4b7abd0b22561c9096fbe1cc` | Produktives Paket 1.4.0 unverändert. Native Windows-/CUDA-Abnahme oben; zusätzliche synthetische Windows-CI auf dem Mac-Portierungs-PR erfolgreich. Neue native CUDA-Läufe nach den Mac-Ergänzungen werden daraus nicht abgeleitet. |
+| macOS, Apple Silicon | `f1b9e69c553b935a5cb940434b2c2cb55ea9160d` | 1.4.1 Build 26 produktiv installiert; 214 native Regressionen, neue Ordnersteuerung, geladenes Qwen/Play-Stopp/Wiederaufnahme, DOVER, Suche, SMB und Paketidentität geprüft. Backends unverändert zum vollständig geprüften Build 25; Grenzen im Mac-Abnahmebericht. |
+| Windows 11 mit NVIDIA | `9748af27d5234490d4c24e1c9a2f535f598d7563` | Produktives Paket 1.4.1 mit Ordnersteuerung. 208 native Windows-Regressionen laut dortigem Prüfbericht; Mac-Port ergänzt aktuelle Windows-CI. Windows-Asset unverändert. |
 | Linux | **UNGEPRÜFT**, Zielport offen | Gemeinsame Qt-Oberfläche vorhanden. Backends, Plattformadapter, Einrichtung und Pakete sind auf macOS/Windows ausgerichtet. |
 
 Der macOS-Testbefehl war `MPLCONFIGDIR=<lokales Testverzeichnis> .runtime/aTrain/.venv/bin/python -m unittest discover -s tests`. Das Ergebnis war `Ran 58 tests … OK`. Dieser Testlauf prüft teilweise gemockte Abläufe. Die zusätzlichen GUI- und Modellprüfungen haben den jeweils unten angegebenen Umfang. Die Ersteinrichtung wurde in einem leeren Profil auf dem vorhandenen Mac geprüft. Die Prüfung auf einem physisch zweiten Mac ist offen.

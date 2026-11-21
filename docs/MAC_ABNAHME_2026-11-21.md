@@ -1,5 +1,11 @@
 # macOS auf dem gemeinsamen Stand 1.4
 
+## Veröffentlichung und Installation 1.4.1 abgeschlossen
+
+Mac 1.4.1 Build 26 ist produktiv installiert und mit Signatur sowie allen 43 Paketdateien geprüft. Die 106 vorhandenen Modell-/Cachedateien, Konfiguration, vier bisherigen DB-Aufträge und Anmeldestart blieben erhalten; die vorhandene SMB-Überwachung läuft. Die neuen Ordnersteuerungen wurden zusätzlich an der tatsächlichen installierten Oberfläche bestätigt. Benutzerentwürfe bleiben unangetastet.
+
+Der separate [Mac-Release 1.4.1](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.4.1-macos) wurde vollständig erneut ohne Anmeldung öffentlich heruntergeladen. SHA-256 `1b64574c8349c662b912cf81d872e9fd6d8925393102c4ec672224a7036f2add` stimmt mit dem lokalen Paket und dem Release überein. DMG, Signatur, Quellarchive und installierte App sind abgeglichen. [Öffentlicher Verifikationsbericht](../releases/v1.4.1/macos-verification.json). Windows 1.4.1 und der frühere Mac-1.4.0-Download bleiben unverändert.
+
 ## Aktuell: Mac 1.4.1 Build 26
 
 Während der Mac-Abnahme wurde Windows 1.4.1 über PR #7 auf `main` integriert. Auch dessen Ordnerpause, Ausgabe je Pfad, sofortiges Neueinlesen und Zurückstellen verwaister automatischer Aufträge sind übernommen. Windows-Basis `3033503929f9e59592636d975cf03ef043a4f721`, gemeinsam geprüfter Mac-Code `f1b9e69c553b935a5cb940434b2c2cb55ea9160d`. Native Cocoa-Suite: 214 Fälle in 52,601 s, 207 bestanden/sieben reine Windows-Skips. Vollständige native Paketsteuerung mit geladenem Qwen, Stopp/Wiederaufnahme, drei DOVER-Durchgängen, Suche und Quit, SMB-Neutranskription sowie 8.000/20.000-Zeilen-Layout bei 125 % erneut bestanden. Kein Modell-/Laufzeitwechsel; ASR-, Budget-, Sprecher-, Stille- und Worker-Backends sind bytegleich zum abgenommenen Build 25. Die frühere 1.4.0-Mac-Veröffentlichung bleibt als eingefrorener Zwischenstand erhalten. [Manifest 1.4.1](../releases/v1.4.1/macos-release.json).
