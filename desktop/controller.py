@@ -95,6 +95,7 @@ DEFAULTS = {
     "skip_silence": False,
     "monitoring": False,
     "gpu_budget_percent": 100,
+    "windows_cpu_only": False,
 }
 
 
@@ -438,6 +439,7 @@ class Controller(QObject):
         current = {}
         if job:
             settings = job_settings(job)
+            hardware = settings.get("execution_hardware", settings.get("hardware", "cpu"))
             current = {
                 "id": job['id'],
                 "name": Path(job["source"]).name,
@@ -447,8 +449,8 @@ class Controller(QObject):
                 if job.get("started")
                 else "",
                 "model": MODELS.get(settings.get("model"), MODELS["large-v3-turbo"]),
-                "hardware": GPU_NAME.get(settings.get("hardware"), "CPU"),
-                "hardwareValue": settings.get("hardware", "cpu"),
+                "hardware": GPU_NAME.get(hardware, "CPU"),
+                "hardwareValue": hardware,
                 "canCancel": job['state'] in ('copying','transcribing') and not job.get('publication_started') and not job.get('cancel_requested'),
             }
         checked = {path: self.folder_status(path) for path in self.paths}
@@ -484,6 +486,8 @@ class Controller(QObject):
             if running
             else "Dienst aus",
             "serviceError": service.get("error") or "",
+            "graphicsHold": self.snapshot.get("graphics_hold", "") if sys.platform == "win32" else "",
+            "windowsCpuOnly": sys.platform == "win32" and bool(self.saved_config.get("windows_cpu_only")),
             "monitoringEnabled": bool(self.saved_config.get('monitoring')),
             "folderCount": len(saved_paths),
             "pausedFolderCount": len(saved_paths) - len(enabled_paths),
@@ -548,6 +552,7 @@ class Controller(QObject):
             return {}
         job = self.selected
         settings = job_settings(job)
+        hardware = settings.get("execution_hardware", settings.get("hardware", "cpu"))
         speakers = settings.get("speakers", True)
         known_result = job.get('result_kind') in ('existing','reused','duplicate')
         pending = job['state'] in ('seen', 'ready') and not known_result
@@ -605,7 +610,7 @@ class Controller(QObject):
                         else "Deaktiviert",
                     ),
                     ("Dauer gesamt", duration(total_duration(job))),
-                    ("Rechengerät", 'Keine neue Inferenz' if known_result else GPU_NAME.get(settings.get("hardware"), "CPU")),
+                    ("Rechengerät", 'Keine neue Inferenz' if known_result else GPU_NAME.get(hardware, "CPU")),
                 )
             ],
         }
@@ -1449,6 +1454,7 @@ class Controller(QObject):
         if self.queue_dragging:
             return
         queue=[]
+        cpu_only = sys.platform == "win32" and self.saved_config.get("windows_cpu_only")
         for position, job in enumerate(self.snapshot.get('queue',[]), 1):
             settings=job_settings(job)
             size=job['size']
@@ -1458,7 +1464,7 @@ class Controller(QObject):
                 size=f'{size/2**30:.2f} GiB' if size>=2**30 else f'{size/2**20:.1f} MiB',
                 model=MODELS.get(settings.get('model'),settings.get('model','—')),
                 language={'auto':'Automatisch','de':'Deutsch','en':'Englisch'}.get(settings.get('language'),'—'),
-                hardware=GPU_NAME.get(settings.get('hardware'),'CPU'),
+                hardware='CPU' if cpu_only else GPU_NAME.get(settings.get('hardware'),'CPU'),
                 audio=duration(job.get('audio_seconds')),added=clock(job['detected'],'%d.%m. %H:%M'),
                 retryAt=clock(job.get('retry_at')) if job.get('retry_at') else '',
                 options=' · '.join(name for name,key in [('Stille','skip_silence'),('Sprecher','speakers'),('DOVER','dover_lap')] if settings.get(key)),

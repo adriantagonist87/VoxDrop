@@ -4,9 +4,44 @@ import errno
 import os
 import stat
 import sys
+import time
 from contextlib import contextmanager
 
 WINDOWS = sys.platform == "win32"
+
+
+def graphics_timeout_since(started):
+    """Look for display recovery or a GPU engine timeout during this CUDA run."""
+    if not WINDOWS or not started:
+        return None
+    import subprocess
+    from pathlib import Path
+
+    elapsed_ms = round((time.time() - started) * 1000)
+    if not 0 <= elapsed_ms <= 48 * 60 * 60 * 1000:
+        return None
+    date = f"TimeCreated[timediff(@SystemTime) <= {elapsed_ms}]"
+    queries = (
+        ("System", f"*[System[{date} and ((Provider[@Name='Display'] and EventID=4101)"
+         " or (Provider[@Name='nvlddmkm'] and EventID=153))]]", "Grafiktreiber-Ereignis"),
+        ("Application", f"*[System[{date} and Provider[@Name='Windows Error Reporting'] and EventID=1001]"
+         " and EventData[Data[@Name='EventName']='LiveKernelEvent'"
+         " and (Data[@Name='P1']='141' or Data[@Name='P1']='117')]]", "GPU-Timeout (LiveKernelEvent)"),
+    )
+    wevtutil = Path(os.environ.get("SystemRoot", r"C:\Windows")) / "System32/wevtutil.exe"
+    for channel, query, evidence in queries:
+        try:
+            result = subprocess.run([str(wevtutil), "qe", channel, f"/q:{query}", "/rd:true", "/c:1", "/f:xml"],
+                                    capture_output=True, timeout=2, **process_options())
+        except (OSError, subprocess.TimeoutExpired):
+            continue
+        if result.returncode == 0 and b"<Event " in result.stdout:
+            return evidence
+    return None
+
+
+def inference_cpu_threads():
+    return min(6, max(1, (os.cpu_count() or 2) // 3))
 
 
 def windows_process_job(child):

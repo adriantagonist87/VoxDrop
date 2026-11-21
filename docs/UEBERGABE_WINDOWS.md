@@ -1,5 +1,9 @@
 # Übergabeauftrag für Codex auf dem Windows-PC
 
+## Windows 1.5.0
+
+Mac-Funktionsabgleich auf Basis von `e9307cc301223a129de7dc48b172bfa89a74185c`. Import/Export und Ordneroptionen stehen jetzt auch im Windows-Paket. Nach dokumentierten Grafik-Timeouts ist **CPU-Schutz für alle wartenden und neuen Aufträge** der Betriebspfad für den betroffenen PC. Zur späteren CUDA-Dauerabnahme mehrere Stunden mit gleichem Rechner und KVM prüfen und Zeitpunkt, Windows-Ereigniscodes, Auftragsphase, Gerätewahl und GPU-/RAM-Messwerte erfassen. Ein kurzer Funktionslauf allein belegt diese Dauerstabilität nicht.
+
 ## Ordnersteuerung und Scan
 
 Nach einem Update von 1.4.0 in **Warteschlange → Aktionen → Überwachte Ordner neu einlesen** bislang ausgeblendete, ungestartete Dateien der aktiven Ordner wieder erfassen. Entfernte und pausierte Pfade behalten ihre fertigen Ergebnisse; ihre wartenden automatischen Aufträge werden ausgeblendet. Die Ausgabe je Pfad wird in **Einstellungen → Ordner & Überwachung** gespeichert. Ein Zielunterordner verarbeitet die oberste Pfadebene und verschiebt Aufnahme und TXT zusammen.

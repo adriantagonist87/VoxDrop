@@ -10,6 +10,32 @@ from platform_io import WINDOWS
 
 
 class TranscriptionTemporaryTests(unittest.TestCase):
+    @unittest.skipUnless(WINDOWS, "Windows-Grafiküberwachung")
+    def test_display_timeout_terminates_windowless_worker_and_cleans_temporary_audio(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary).resolve()
+            media = root / "example.wav"
+            media.write_bytes(b"synthetic media")
+            ready = root / "inference-started"
+            worker = root / "sleeping_worker.py"
+            worker.write_text(
+                "from pathlib import Path\nimport sys,tempfile,time\n"
+                "Path(tempfile.mkdtemp(), 'test-audio.npy').write_bytes(b'audio')\n"
+                "Path(sys.argv[2]).with_name('inference-started').touch()\n"
+                "time.sleep(12)\n",
+                encoding="utf-8",
+            )
+            with (
+                patch.object(transcription_worker, "__file__", str(worker)),
+                patch.object(transcription_worker, "GRAPHICS_POLL_INTERVAL", .05),
+                patch.object(transcription_worker, "graphics_timeout_since",
+                             side_effect=lambda _: "Test-Timeout" if ready.is_file() else None),
+                self.assertRaisesRegex(transcription_worker.GraphicsTimeout, "Test-Timeout"),
+            ):
+                transcription_worker.run_transcription(media, report=lambda *_: None, measurements={}, hardware="cuda")
+            self.assertTrue(ready.is_file())
+            self.assertEqual(list(root.glob("transcription-*")), [])
+
     def test_crashed_worker_cannot_leave_audio_outside_its_job_directory(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary).resolve()
