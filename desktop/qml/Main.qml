@@ -895,7 +895,7 @@ ApplicationWindow {
                                         text: modelData.label
                                         checked: api.transfer.exportOptions[modelData.key]
                                         enabled: !viewState.busy
-                                        onClicked: api.setTransferOption("export", modelData.key, checked)
+                                        onToggled: api.setTransferOption("export", modelData.key, checked)
                                     }
                                 }
                                 Muted { Layout.fillWidth: true; text: "Gesichert werden gespeicherte Einstellungen. Netzwerk-Zugangsdaten und die Anmeldestart-Registrierung gehören zum jeweiligen Gerät. Medien werden nur mit der entsprechenden Checkbox kopiert; Originale bleiben erhalten." }
@@ -919,7 +919,7 @@ ApplicationWindow {
                                             Layout.fillWidth: true; text: modelData.label
                                             checked: api.transfer.importOptions[modelData.key]
                                             enabled: !viewState.busy && Boolean((api.transfer.preview.available || ({}))[modelData.key]) && (modelData.key !== "models" || api.transfer.preview.platform === api.nativePlatform)
-                                            onClicked: api.setTransferOption("import", modelData.key, checked)
+                                            onToggled: api.setTransferOption("import", modelData.key, checked)
                                         }
                                     }
                                     Muted { Layout.fillWidth: true; visible: api.transfer.preview.platform !== api.nativePlatform; text: "Beim Wechsel zwischen Windows und macOS werden Rechengerät und Pfade angepasst. Modelle sind plattformspezifisch und werden auf dem Zielgerät neu eingerichtet." }

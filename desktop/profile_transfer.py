@@ -257,7 +257,7 @@ def export_backup(profile, models, destination, options=None, *, cancel=None, pr
                 manifest['files'].append(dict(area=area, path=name, size=before.st_size, mtime_ns=before.st_mtime_ns, sha256=sha))
             archive.writestr('manifest.json', json.dumps(manifest, ensure_ascii=False, indent=2))
         check(cancel)
-        with output.open('rb') as stream:
+        with output.open('r+b') as stream:
             os.fsync(stream.fileno())
         os.replace(output, destination)
     return manifest

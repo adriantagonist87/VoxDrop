@@ -53,6 +53,12 @@ class WorkspaceTests(unittest.TestCase):
         self.assertFalse(self.controller.export_options['models'])
         self.click('exportOption_models')
         self.assertTrue(self.controller.export_options['models'])
+        from PySide6.QtGui import QAccessible, QAccessibleActionInterface
+        accessible=QAccessible.queryAccessibleInterface(self.visual('exportOption_models'))
+        self.assertIsNotNone(accessible)
+        accessible.actionInterface().doAction(QAccessibleActionInterface.toggleAction())
+        QTest.qWait(30)
+        self.assertFalse(self.controller.export_options['models'])
         self.assertFalse(self.controller.export_options['media'])
         self.controller.import_preview = dict(fileCount=3, jobs=4, bytes=1024,
             created='2026-11-21', platform=self.controller_module.sys.platform,
