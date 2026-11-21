@@ -21,7 +21,7 @@
 ## Verbindliches Dateiverhalten
 
 - Bei Drag-and-drop ganzer Ordner werden Aufnahmen samt Unterordnern einmalig eingereiht. Die TXT-Datei gehört neben die Originalaufnahme. Originaldateien, Ordner und ihre Hierarchie bleiben erhalten. Diese Regel gilt unabhängig von den sonstigen Einstellungen.
-- Bei aktiver Option „Unterordner mit einbeziehen“ liegt jedes Transkript neben seiner Aufnahme. Die Zielunterordner-Option ist gesperrt.
+- Bei aktiver Option „Unterordner mit einbeziehen“ liegt jedes Transkript neben seiner Aufnahme. Beide Unterordner-Checkboxen bleiben anwählbar; das Einschalten einer Option schaltet die andere aus (Nutzerpräzisierung vom 21.11.2026).
 - Bei regulärer Überwachung ohne rekursive Option darf die aktivierte Zielunterordner-Option Aufnahme und Transkript gemeinsam in den gewählten Unterordner verschieben. Erhalte die vorhandenen Prüfungen, exklusiven Veröffentlichungen und Wiederanlaufpfade.
 - Bestehende Ergebnisse werden geschützt. Neutranskriptionen aus dem Verlauf erhalten eigene Ausgabedateien. Bewahre SQLite-Historie, Dateiversionsschutz und Wiederholbarkeit bei Fehlern.
 - Die Auftragsdatenbank und temporäre Arbeitskopien liegen lokal. SMB ist ein Medien-/Ergebnisordner. Verwende die am jeweiligen Betriebssystem bereits eingerichtete Freigabe und dessen Zugangsdatenverwaltung.

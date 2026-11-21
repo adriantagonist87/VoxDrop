@@ -2,6 +2,7 @@
 from contextlib import contextmanager
 import subprocess
 from threading import Lock
+import time
 
 from platform_io import WINDOWS, child_process
 
@@ -43,3 +44,12 @@ class CommandProcesses:
                     if cancel:cancel()
                     elif process.poll() is None:process.terminate()
                 except ProcessLookupError:pass
+
+    def wait_idle(self, timeout=15):
+        deadline=time.monotonic()+timeout
+        while True:
+            with self.lock:
+                if not self.active:return
+            if time.monotonic()>=deadline:
+                raise RuntimeError('Eine vorherige Aktion läuft noch. Bitte kurz warten und erneut versuchen.')
+            time.sleep(.05)

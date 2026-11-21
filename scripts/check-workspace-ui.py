@@ -148,7 +148,7 @@ def main():
         view=item('queueList');assert view.height()>=330
         click('historyTab');capture('history-minimum')
         window.setProperty('workTab',0)
-        for tab,name in enumerate(('transcription','folders','app')):
+        for tab,name in enumerate(('transcription','folders','app','import-export')):
             window.setProperty('settingsOpen',True);window.setProperty('settingsTab',tab)
             capture('settings-'+name+'-minimum')
             scroll=window.findChild(QObject,'settingsScroll').property('contentItem')
@@ -166,7 +166,7 @@ def main():
             dict(source=queue[i]['source'],kind='queued',status='Bereits in der Warteschlange') for i in range(100)])
         api.changed.emit();api.dropConflictOpened.emit();capture('drop-conflicts')
         QMetaObject.invokeMethod(window.findChild(QObject,'dropConflictDialog'),'close')
-        for name in ('aboutDialog','feedbackDialog','confirmClear'):
+        for name in ('aboutDialog','feedbackDialog','confirmClear','confirmImport'):
             if name=='feedbackDialog':api.notify('Beispiel einer vollständigen Rückmeldung.\n'*100,True)
             dialog=window.findChild(QObject,name)
             assert dialog is not None and QMetaObject.invokeMethod(dialog,'open'),name

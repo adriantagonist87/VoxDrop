@@ -17,6 +17,7 @@ from transcript_search import path_matches, run_content_search, transcript_path,
 from command_process import CommandProcesses
 from rows_model import StableRows
 from network_wait import NetworkPermissionError, retry_network_permission
+import profile_transfer
 from PySide6.QtCore import (
     Property,
     QObject,
@@ -309,12 +310,15 @@ class Controller(QObject):
     dropConflictOpened = Signal()
     dropResolved = Signal()
     detailsOpened = Signal()
+    importPreviewOpened = Signal()
+    transferProgress = Signal(str)
     windowRequested = Signal()
     networkPermissionChanged = Signal(bool)
     logo = Property(QUrl, lambda self: QUrl.fromLocalFile(str(LOGO)), constant=True)
     modelLocation = Property(str, lambda self: str(MODEL_DATA), constant=True)
     gpuName = Property(str, lambda self: GPU_NAME[GPU], constant=True)
     gpuValue = Property(str, lambda self: GPU, constant=True)
+    nativePlatform = Property(str, lambda self: sys.platform, constant=True)
 
     def __init__(self, *, preview=False):
         super().__init__()
@@ -351,6 +355,18 @@ class Controller(QObject):
         self.content_done = Event()
         self.content_done.set()
         self.clearing = False
+        self.transfer_running = False
+        self.transfer_status = ''
+        self.transfer_cancel = Event()
+        self.transfer_done = Event(); self.transfer_done.set()
+        self.export_options = dict(profile_transfer.DEFAULT_OPTIONS)
+        self.import_options = dict(profile_transfer.DEFAULT_OPTIONS)
+        self.import_preview = {}
+        self.import_archive = None
+        self.import_identity = None
+        self.import_mappings = []
+        self.import_media_directory = str(Path.home() / 'Documents/VoxDrop-Migration')
+        self.transferProgress.connect(self.set_transfer_progress)
         self.reset_generation = 0
         self.content_generation = 0
         self.contentSearchProgress.connect(self.content_search_progress)
@@ -404,6 +420,14 @@ class Controller(QObject):
     queueModel = Property(QObject, lambda self:self.queue_model, constant=True)
     historyModel = Property(QObject, lambda self:self.history_model, constant=True)
     dropPlan = Property('QVariantMap', lambda self: self.drop_plan, notify=changed)
+    transfer = Property('QVariantMap', lambda self: dict(running=self.transfer_running, status=self.transfer_status,
+        exportOptions=self.export_options, importOptions=self.import_options, preview=self.import_preview,
+        mappings=self.import_mappings, mediaDirectory=self.import_media_directory), notify=changed)
+
+    @Slot(str)
+    def set_transfer_progress(self, text):
+        self.transfer_status = text
+        self.changed.emit()
 
     @Property("QVariantMap", notify=changed)
     def state(self):
@@ -651,6 +675,7 @@ class Controller(QObject):
         self.changed.emit()
 
         def prepare():
+            profile_transfer.recover_interrupted(PROFILE)
             resume = (
                 sys.platform == "darwin"
                 and PROFILE == NATIVE_PROFILE
@@ -691,11 +716,10 @@ class Controller(QObject):
     @Slot(str, "QVariant")
     def setSetting(self, key, value):
         if key in DEFAULTS and key != "folders":
-            if key == "create_output_subfolder" and self.draft["include_subfolders"]:
-                return
             self.draft[key] = value
-            if key == "include_subfolders" and value:
-                self.draft["create_output_subfolder"] = False
+            if value and key in ('include_subfolders', 'create_output_subfolder'):
+                other = 'create_output_subfolder' if key == 'include_subfolders' else 'include_subfolders'
+                self.draft[other] = False
             self.changed.emit()
 
     @Slot()
@@ -808,6 +832,8 @@ class Controller(QObject):
 
     @Slot(str)
     def setWorkspaceView(self, value):
+        if self.transfer_running:
+            return
         if value in ('auto', 'focus'):
             self.preferences.setValue('workspace/view', value)
             self.preferences.sync()
@@ -819,6 +845,8 @@ class Controller(QObject):
 
     @Slot(int)
     def saveWorkspaceHistoryWidth(self, value):
+        if self.transfer_running:
+            return
         self.preferences.setValue('workspace/historyWidth', max(340, min(720, value)))
         self.preferences.sync()
 
@@ -1240,6 +1268,7 @@ class Controller(QObject):
         return self.tray is not None and self.tray.isVisible()
 
     def cancelForegroundWork(self):
+        self.transfer_cancel.set()
         self.content_cancel.set()
         self.network_cancel.set()
         self.timer.stop()
@@ -1258,6 +1287,8 @@ class Controller(QObject):
         if self.tray:self.quit_action.setEnabled(False)
 
         def shutdown():
+            if not self.transfer_done.wait(15):
+                raise RuntimeError('Die Sicherung oder Wiederherstellung wird noch sicher abgeschlossen. Bitte erneut versuchen.')
             if not self.content_done.wait(6):
                 raise RuntimeError('Die Detailsuche wird noch beendet. Bitte erneut versuchen.')
             return command('stop')
@@ -1287,6 +1318,7 @@ class Controller(QObject):
         self.quitting=True
         self.cancelForegroundWork()
         self.content_done.wait(6)
+        self.transfer_done.wait(15)
         try:
             command('stop')
             self.shutdown_complete=True
@@ -1344,6 +1376,8 @@ class Controller(QObject):
 
     @Slot(str)
     def setOrder(self, value):
+        if self.transfer_running:
+            return
         self.history_page = 0
         self.order = value
         self.preferences.setValue("historyOrder", value)
@@ -1517,6 +1551,8 @@ class Controller(QObject):
 
     @Slot(bool)
     def setQueueCompact(self, compact):
+        if self.transfer_running:
+            return
         self.queue_compact = compact
         self.preferences.setValue("queueCompact", compact)
         self.preferences.sync()
@@ -1696,6 +1732,172 @@ class Controller(QObject):
             self.refresh()
         self.submit(clear,cleared)
 
+    @Slot(str, str, bool)
+    def setTransferOption(self, direction, key, enabled):
+        if self.transfer_running or key not in profile_transfer.COMPONENTS:
+            return
+        if direction == 'export':
+            self.export_options = {**self.export_options, key: enabled}
+        elif direction == 'import' and self.import_preview.get('available', {}).get(key):
+            if key == 'models' and self.import_preview.get('platform') != sys.platform:
+                return
+            self.import_options = {**self.import_options, key: enabled}
+        self.changed.emit()
+
+    @Slot()
+    def cancelTransfer(self):
+        self.transfer_cancel.set()
+
+    def run_transfer(self, operation, completed, *, restoring=False):
+        if self.busy or self.stop_command_pending or not self.ready or self.quitting:
+            return
+        self.busy = self.transfer_running = True
+        self.transfer_cancel.clear(); self.transfer_done.clear()
+        self.preferences.sync()
+        if restoring:
+            self.clearing = True
+            self.reset_generation += 1
+            self.timer.stop(); self.history_search_timer.stop(); self.drop_timer.stop()
+            self.content_cancel.set()
+        self.set_transfer_progress('Wiederherstellung wird vorbereitet …' if restoring else 'Sicherung wird vorbereitet …')
+        def work():
+            try:
+                return operation()
+            finally:
+                self.transfer_done.set()
+        def finished(result, error):
+            self.busy = self.transfer_running = False
+            if restoring:
+                self.clearing = False
+                if not self.quitting:
+                    self.timer.start()
+            if error:
+                self.set_transfer_progress(str(error))
+                self.notify(str(error), True)
+            else:
+                completed(result)
+            self.changed.emit()
+            self.refresh()
+        self.submit(work, finished)
+
+    @Slot()
+    def exportBackup(self):
+        if self.busy or not self.ready:
+            return
+        if self.export_options['settings'] and self.settings_dirty():
+            self.notify('Bitte die Einstellungsänderungen vor der Sicherung speichern oder verwerfen.', True)
+            return
+        filename, _ = QFileDialog.getSaveFileName(None, 'VoxDrop-Sicherung exportieren',
+            str(Path.home() / f'VoxDrop-{datetime.now():%Y-%m-%d-%H%M%S}.voxdrop.zip'), 'VoxDrop-Sicherung (*.voxdrop.zip)')
+        if not filename:
+            return
+        if not filename.lower().endswith('.zip'):
+            filename += '.voxdrop.zip'
+        options = dict(self.export_options)
+        def completed(result):
+            missing = len(result['missing_folders'])
+            text = f'Sicherung gespeichert: {filename}'
+            if missing:
+                text += f' · {missing} nicht erreichbare Medienordner fehlen; siehe Sicherungsmanifest.'
+            self.set_transfer_progress(text); self.notify(text, bool(missing))
+        self.run_transfer(lambda: profile_transfer.export_backup(PROFILE, MODEL_DATA, filename, options,
+            cancel=self.transfer_cancel, progress=self.transferProgress.emit), completed)
+
+    @Slot()
+    def chooseImportBackup(self):
+        if self.busy or not self.ready:
+            return
+        filename, _ = QFileDialog.getOpenFileName(None, 'VoxDrop-Sicherung auswählen', '',
+            'VoxDrop-Sicherung (*.voxdrop.zip *.zip)')
+        if not filename:
+            return
+        def inspect():
+            path = Path(filename)
+            data = profile_transfer.inspect_backup(path)
+            metadata = path.stat()
+            return data, (metadata.st_size, metadata.st_mtime_ns)
+        def inspected(result):
+            data, identity = result
+            self.import_archive = filename; self.import_identity = identity
+            self.import_preview = {key: data[key] for key in ('available', 'options', 'platform', 'created', 'jobs', 'bytes', 'missing_folders')}
+            self.import_preview['fileCount'] = len(data['files'])
+            self.import_options = {key: bool(data['available'][key] and data['options'][key]) for key in profile_transfer.COMPONENTS}
+            if data['platform'] != sys.platform:
+                self.import_options['models'] = False
+            roots = data.get('folders', []) + [root['source'] for root in data['media_roots']]
+            self.import_mappings = [dict(source=p, target=p if Path(p).is_absolute() else '') for p in dict.fromkeys(roots)]
+            self.set_transfer_progress('Sicherung ausgewählt. Bestandteile und Zielordner prüfen, anschließend importieren.')
+            self.importPreviewOpened.emit()
+        self.run_transfer(inspect, inspected)
+
+    @Slot(int, str)
+    def setImportMapping(self, index, value):
+        if not self.transfer_running and 0 <= index < len(self.import_mappings):
+            self.import_mappings[index] = {**self.import_mappings[index], 'target': value}
+            self.changed.emit()
+
+    @Slot(int)
+    def pickImportMapping(self, index):
+        if 0 <= index < len(self.import_mappings):
+            folder = QFileDialog.getExistingDirectory(None, 'Ordner auf diesem Gerät zuordnen')
+            if folder:
+                self.setImportMapping(index, folder)
+
+    @Slot()
+    def pickImportMediaDirectory(self):
+        folder = QFileDialog.getExistingDirectory(None, 'Ziel für importierte Aufnahmen und TXT', self.import_media_directory)
+        if folder:
+            self.import_media_directory = folder
+            self.changed.emit()
+
+    @Slot()
+    def importBackup(self):
+        if not self.import_archive or self.busy or self.snapshot.get('current') or self.quitting:
+            return
+        if self.settings_dirty():
+            self.notify('Bitte Einstellungsänderungen vor dem Import speichern oder verwerfen.', True)
+            return
+        archive, identity = self.import_archive, self.import_identity
+        options = dict(self.import_options)
+        mappings = {row['source']: row['target'].strip() for row in self.import_mappings}
+        media = self.import_media_directory
+        was_running = self.snapshot.get('running', False)
+        def restore():
+            metadata = Path(archive).stat()
+            if (metadata.st_size, metadata.st_mtime_ns) != identity:
+                raise ValueError('Die Sicherungsdatei wurde geändert. Bitte erneut auswählen.')
+            if not self.content_done.wait(15):
+                raise RuntimeError('Die Detailsuche wird noch beendet. Bitte erneut versuchen.')
+            COMMANDS.wait_idle()
+            profile_transfer.check(self.transfer_cancel)
+            command('stop')
+            try:
+                return profile_transfer.restore_backup(PROFILE, MODEL_DATA, archive, options,
+                    mappings=mappings, media_destination=media, hardware=GPU, cancel=self.transfer_cancel,
+                    progress=self.transferProgress.emit)
+            finally:
+                if was_running and CONFIG.is_file() and not self.quitting:
+                    command('start', CONFIG)
+        def completed(result):
+            self.preferences.sync()
+            self.draft = read_settings(); self.saved_config = dict(self.draft)
+            self.paths = list(self.draft.get('folders', []))
+            self.queue_compact = self.preferences.value('queueCompact', True, type=bool)
+            self.order = self.preferences.value('historyOrder', 'desc')
+            self.direct = {}; self.snapshot = {}; self.selected = None
+            self.filter = 'all'; self.history_page = 0; self.history_query = ''; self.queue_query = ''
+            self.content_token = ''; self.content_status = ''; self.drop_plan = {}; self.drop_backlog = []
+            self.foldersChanged.emit(); self.dropResolved.emit()
+            self.update_queue(); self.update_history()
+            text = 'Import abgeschlossen. Verarbeitung und Überwachung sind pausiert. Ordner prüfen und bewusst starten.\nVorheriger Stand: ' + result['backup']
+            if result['media_directory']:
+                text += '\nAufnahmen und TXT: ' + result['media_directory']
+            if result['model_backup']:
+                text += '\nVorheriger Modellspeicher: ' + result['model_backup']
+            self.set_transfer_progress(text); self.notify(text)
+            self.import_preview = {}; self.import_archive = None
+        self.run_transfer(restore, completed, restoring=True)
+
     @Slot(result="QVariantMap")
     def columnWidths(self):
         return {
@@ -1714,6 +1916,8 @@ class Controller(QObject):
 
     @Slot(int, int)
     def saveColumnWidths(self, left, right):
+        if self.transfer_running:
+            return
         self.preferences.setValue("columns/left", left)
         self.preferences.setValue("columns/right", right)
         self.preferences.sync()
