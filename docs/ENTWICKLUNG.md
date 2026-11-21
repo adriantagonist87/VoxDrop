@@ -1,5 +1,11 @@
 # Entwicklung auf macOS und Windows
 
+## Windows-CPU-Schutz und Grafikfehler
+
+Unter **Einstellungen → Transkription** wählt `windows_cpu_only` bei Übernahme des nächsten Auftrags CPU für alle Windows-CUDA-Aufträge. Die ursprüngliche Auftragswahl bleibt in `hardware`. `execution_hardware` zeichnet einen tatsächlich verwendeten CPU-Override auf. Die Anzeige unterscheidet geplantes und verwendetes Gerät. Windows-CPU-Worker verwenden niedrigere Prozesspriorität und bis zu sechs Threads für PyTorch/BLAS bzw. CTranslate2.
+
+Während CUDA liest ein paralleler Wächter alle zehn Sekunden die relevanten Ereignisse seit Prozessbeginn: Display 4101, NVIDIA 153 und WER LiveKernelEvent 141/117. Bekannte CUDA-Treiberfehler beim Prozessende führen zum selben Schutz. Der bestehende Prozessbaum wird beendet, die SQLite-Queue pausiert atomar und der unterbrochene Auftrag bleibt wiederholbar. Die Erklärung steht in `queue_graphics_hold` und wird über `status` angezeigt. Explizites Play hebt die Pause auf. Windows-Recovery berücksichtigt Grafikereignisse einer unterbrochenen CUDA-Erkennung. Die Abfrage ist lesend und zeitlich begrenzt. Support und Diagnose des Windows-Grafikpfads bleiben separat.
+
 ## Profilübertragung und symmetrische Ordnerauswahl (1.5)
 
 `desktop/profile_transfer.py` implementiert das versionierte `.voxdrop.zip`-Format ohne zusätzliche Abhängigkeiten. Die Desktop-Paketlisten nehmen das Modul über den vorhandenen Verzeichniskopiervorgang auf. `manifest.json` enthält Bestandteile, Quellplattform, Ordnerwurzeln und Größen/SHA-256; `blobs/<sha256>` enthält jeden unterschiedlichen Dateiinhalt einmal. SQLite-Snapshots schließen bestätigte WAL-Änderungen ein. Export erfordert keinen Dienstabbruch. Logs, Laufzeitsperren, Arbeitskopien und Anmeldetokens bleiben außen vor; alle regulären `service/*.sqlite3` werden angeboten.

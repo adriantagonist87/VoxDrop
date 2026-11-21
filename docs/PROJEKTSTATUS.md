@@ -1,5 +1,13 @@
 # Projektstatus VoxDrop
 
+## Windows 1.5.0 – Funktionsabgleich und Schutz bei Grafikfehlern
+
+Windows übernimmt den gemeinsamen Stand von Mac 1.5.0 einschließlich Profil-ZIP, Auswahl von Einstellungen/Datenbanken/Modellen/Medien, Pfadzuordnung beim Gerätewechsel und symmetrischer Ordnerauswahl. [Import und Export](IMPORT_EXPORT.md).
+
+Nutzerbefund unter Windows 1.4.1: nach längerer CUDA-Verarbeitung eingefrorenes Bild, keine Mauseingaben und zeitweilig kein HDMI-Signal am KVM. Windows protokollierte wiederholte `LiveKernelEvent 141`, ein NVIDIA-Treiberereignis 153 und an einem Vortag einen Neustart nach `0x133`. Beim beobachteten DOVER-Lauf lag die GPU bei 100 % und 3.537 MiB belegtem VRAM. Nach kontrolliertem Stopp und Freigabe der Modellprozesse sank die Last auf etwa 1 %. Der Befund belegt Grafik-Timeouts bei CUDA-Last; die Ursache in Treiber, Hardware oder Grafikpfad ist nicht abschließend bestimmt.
+
+Der Windows-CPU-Schutz greift auch bei bereits eingeplanten CUDA-Aufträgen. Während CUDA überwacht VoxDrop protokollierte Grafik-Timeouts und stoppt seinen Modellprozess kontrolliert. Die Queue bleibt anhaltbar und der Auftrag an seiner Position. Beim Wiederanlauf nach einem Abbruch kann ein protokollierter Timeout den erneuten automatischen GPU-Start verhindern. Eine CUDA-Dauerfreigabe erfordert einen beobachteten Mehrstundenlauf mit KVM.
+
 ## Langbenchmark mit 16 Varianten auf dem Mac mini
 
 Am 21.11.2026 auf dem Mac mini M5 Pro mit 64 GB und macOS 27.2 gemessen. Eine 1259,435 Sekunden lange MP4-Audiospur (AAC, 48 kHz, Stereo) wurde für alle Varianten aus derselben lokalen Kopie dekodiert. Verwendet wurde der gebündelte Transkriptionsworker `transcription_worker.run_transcription` aus VoxDrop 1.5.0 Build 27 (Code `060ce5b7a1f597ec55d28255dcd07a296e6da73f`) in einem separaten Programm- und Modellspeicher.
@@ -19,6 +27,8 @@ Am 21.11.2026 auf dem Mac mini M5 Pro mit 64 GB und macOS 27.2 gemessen. Verwend
 | 50 % | Einzellauf | 11,963 / 12,069 / 11,959 | 7,837 / 7,937 / 7,929 | 5,243 / 5,641 / 5,695 |
 
 In allen DOVER-Lap-Läufen wurden drei Durchgänge erfolgreich fusioniert. Die neun Transkripte waren einschließlich Sprecherlabels und Zeitmarken bytegleich. Der Versuch erfasst Laufzeit und Auftragsspeicher, keine Sprecherfehlerrate oder gemessene Mac-GPU-Auslastung. Die RTX-5060-Werte zum GPU-Budget stammen aus der getrennten [Windows-Kontrolllast](GPU_ARBEITSBUDGET.md#geprüfter-stand--windows-v134).
+
+Funktionaler Windows-Paketcode `5a1854ec650415d7f18ffea0da0163ec1f6b6334`. 231 lokale Windows-Fälle, 219 bestanden und zwölf Plattformskips. Windows-Qt-Prüfung aus der entpackten ZIP bei 125 % Skalierung inklusive Import-/Export-Einstellungen und Importbestätigung bestanden. [Windows-Manifest 1.5.0](../releases/v1.5.0/windows-release.json).
 
 ## Import und Export für Gerätewechsel · Mac 1.5.0 Build 27
 

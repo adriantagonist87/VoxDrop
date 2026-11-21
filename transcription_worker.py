@@ -7,14 +7,16 @@ import subprocess
 import sys
 import tempfile
 import threading
+import time
 from pathlib import Path
 
-from platform_io import WINDOWS, child_process, process_options
+from platform_io import WINDOWS, child_process, graphics_timeout_since, inference_cpu_threads, process_options
 from queue_control import JobCancelled
 from voxdrop import DEFAULT_DATA, configure_runtime, transcribe
 
 EVENT = "smb-transcription:"
 SAMPLE_INTERVAL = 0.2
+GRAPHICS_POLL_INTERVAL = 10
 
 
 class ProcessUsage(ctypes.Structure):
@@ -70,6 +72,19 @@ def emit(**event):
     print(EVENT + json.dumps(event), flush=True)
 
 
+class GraphicsTimeout(RuntimeError):
+    pass
+
+
+def cuda_driver_failed(error):
+    detail = (error or "").casefold()
+    return any(message in detail for message in (
+        "unspecified launch failure", "launch timed out", "the launch timed out",
+        "cuda driver error", "cuda driver initialization failed", "cuda error: unknown error",
+        "cuda is not available", "cuda ist nicht verfügbar", "die nvidia-gpu ist für qwen nicht verfügbar",
+    ))
+
+
 def run_transcription(media, *, report, measurements, cancelled=None, gpu_budget_config=None, **settings):
     data_dir = os.environ.get("ATRAIN_USER_DIR", str(DEFAULT_DATA))
     with tempfile.TemporaryDirectory(
@@ -89,6 +104,15 @@ def run_transcription(media, *, report, measurements, cancelled=None, gpu_budget
         error = None
         peak = [0]
         environment = os.environ.copy()
+        launch_options = process_options()
+        cuda_guard = WINDOWS and settings.get("hardware") == "cuda"
+        started = time.time()
+        graphics_error = []
+        if WINDOWS and settings.get("hardware") == "cpu":
+            environment["CUDA_VISIBLE_DEVICES"] = "-1"
+            for key in ("OMP_NUM_THREADS", "MKL_NUM_THREADS", "OPENBLAS_NUM_THREADS", "NUMEXPR_NUM_THREADS"):
+                environment[key] = str(inference_cpu_threads())
+            launch_options["creationflags"] |= subprocess.BELOW_NORMAL_PRIORITY_CLASS
         if gpu_budget_config is not None:
             environment['VOXDROP_GPU_BUDGET_CONFIG'] = str(gpu_budget_config)
         # Keep decoded audio recoverable on both platforms after a hard stop.
@@ -100,7 +124,7 @@ def run_transcription(media, *, report, measurements, cancelled=None, gpu_budget
             text=True,
             encoding="utf-8",
             env=environment,
-            **process_options(),
+            **launch_options,
         ) as child:
             stop = threading.Event()
             aborted = threading.Event()
@@ -113,9 +137,21 @@ def run_transcription(media, *, report, measurements, cancelled=None, gpu_budget
                         aborted.set()
                         child.cancel_tree()
                         return
+                    if graphics_error:
+                        child.cancel_tree()
+                        return
+
+            def monitor_graphics():
+                while not stop.wait(GRAPHICS_POLL_INTERVAL):
+                    if evidence := graphics_timeout_since(started):
+                        graphics_error.append(evidence)
+                        return
 
             monitor = threading.Thread(target=monitor_cancel)
             monitor.start()
+            graphics = threading.Thread(target=monitor_graphics) if cuda_guard else None
+            if graphics is not None:
+                graphics.start()
             try:
                 for line in child.stdout:
                     if line.startswith(EVENT):
@@ -127,7 +163,13 @@ def run_transcription(media, *, report, measurements, cancelled=None, gpu_budget
                 code = child.wait()
                 if aborted.is_set():
                     raise JobCancelled('Auftrag abgebrochen.')
+                if graphics_error:
+                    raise GraphicsTimeout(graphics_error[0])
                 if code:
+                    if cuda_guard:
+                        evidence = graphics_timeout_since(started)
+                        if evidence or cuda_driver_failed(error):
+                            raise GraphicsTimeout(evidence or error)
                     raise RuntimeError(
                         error or "Transkriptionsprozess vor Abschluss beendet."
                     )
@@ -135,6 +177,8 @@ def run_transcription(media, *, report, measurements, cancelled=None, gpu_budget
                 stop.set()
                 sampler.join()
                 monitor.join()
+                if graphics is not None:
+                    graphics.join()
                 if child.poll() is None:
                     child.terminate()
                     child.wait()
