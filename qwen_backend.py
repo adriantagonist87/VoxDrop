@@ -318,6 +318,10 @@ def run(packages, model_root, recording, result, hardware, language):
     accelerator = "Apple-GPU" if hardware == "metal" else "CPU"
     emit(phase=f"Qwen-Modell laden ({accelerator})", fraction=None)
     asr = load(model_root / ASR)
+    if hardware == 'cpu':
+        # The pinned MLX BF16 quantized CPU kernel is scalar and extremely slow.
+        # Keep packed integer weights; use native FP32 floating-point CPU math.
+        asr.set_dtype(mx.float32)
     audio = np.load(recording, mmap_mode="r", allow_pickle=False)
     from gpu_budget import pace_mlx
     report = lambda phase, fraction: emit(phase=phase, fraction=fraction)
@@ -333,6 +337,8 @@ def run(packages, model_root, recording, result, hardware, language):
     if chunks:
         report("Qwen-Wortzeiten berechnen", 0.0)
         aligner = load(model_root / ALIGNER)
+        if hardware == 'cpu':
+            aligner.set_dtype(mx.float32)
         with pace_mlx(aligner, hardware=hardware):
             for index, chunk in enumerate(chunks, start=1):
                 words.extend(timed_words(aligner, *chunk, len(audio)))
