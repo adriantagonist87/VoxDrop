@@ -1,5 +1,17 @@
 # Projektstatus VoxDrop
 
+## Messung für die README: DOVER-Lap und GPU-Budget
+
+Am 21.11.2026 auf dem Mac mini M5 Pro mit 64 GB und macOS 27.2 gemessen. Verwendet wurden der gebündelte Transkriptionsworker aus Mac 1.5.0 Build 27 (Code `060ce5b7a1f597ec55d28255dcd07a296e6da73f`), Whisper Large v3 Turbo auf Metal, eine 27,812 s lange künstliche deutsche Sprachaufnahme und ein temporärer Modellspeicher. Sprechererkennung mit automatischer Sprecherzahl war immer aktiv, Stilleüberspringen immer aus. Je Konfiguration drei frische Worker-Prozesse in wechselnder Reihenfolge, ohne Download oder Wartezeit der Ordnerüberwachung. Gesamtzeit von Worker-Aufruf bis Ergebnis. RAM ist der physische Footprint des Auftragsprozesses und seiner Kinder in Stichproben.
+
+| GPU-Budget | Sprecherprüfung | Gesamtzeit (s) | Sprecherphase (s) | RAM-Spitzen (GiB) |
+| --- | --- | --- | --- | --- |
+| 100 % | Einzellauf | 10,894 / 9,422 / 9,258 | 7,548 / 6,228 / 6,188 | 5,471 / 5,456 / 5,456 |
+| 100 % | DOVER-Lap | 9,965 / 9,958 / 9,993 | 6,817 / 6,809 / 6,778 | 7,943 / 7,547 / 7,848 |
+| 50 % | Einzellauf | 11,963 / 12,069 / 11,959 | 7,837 / 7,937 / 7,929 | 5,243 / 5,641 / 5,695 |
+
+In allen DOVER-Lap-Läufen wurden drei Durchgänge erfolgreich fusioniert. Die neun Transkripte waren einschließlich Sprecherlabels und Zeitmarken bytegleich. Der Versuch erfasst Laufzeit und Auftragsspeicher, keine Sprecherfehlerrate oder gemessene Mac-GPU-Auslastung. Die RTX-5060-Werte zum GPU-Budget stammen aus der getrennten [Windows-Kontrolllast](GPU_ARBEITSBUDGET.md#geprüfter-stand--windows-v134).
+
 ## Import und Export für Gerätewechsel · Mac 1.5.0 Build 27
 
 Neue gemeinsame Einstellungsgruppe „Import & Export“ mit unabhängigen Checkboxen für gespeicherte Einstellungen/Layout, sämtliche lokalen SQLite-Datenbanken mit vollständigem Verlauf/Bestand/Queue/Suchindex, Modelle/Hub-Cache sowie Aufnahmen/TXT aus überwachten Ordnern und Verlauf. Konsistente WAL-Snapshots, blockweise ZIP64-/SHA-256-Verarbeitung, Inhaltsdeduplizierung, Importvorschau und Pfadzuordnung, automatische Medienzuordnung in einen frischen Zielordner, Rechengerät-Anpassung und zunächst pausierter Betrieb. Vorheriger App-Stand wird automatisch gesichert; Dateiersetzung ist journalisiert und rücknehmbar. Gerätezugänge/Anmelderegistrierung bleiben gerätespezifisch; Modellimport zwischen Windows und Mac ist gesperrt. [Bedienung, Umfang und Wiederherstellung](IMPORT_EXPORT.md).
