@@ -93,19 +93,33 @@ Sobald die Modelle eingerichtet sind, zieh eine Aufnahme ins Fenster und starte 
 
 ## Gemessene Laufzeit und Speichernutzung
 
-| Testrechner | Modell und Einstellungen | Audiolänge | Verarbeitung | Gemessene Spitze |
-| --- | --- | ---: | ---: | --- |
-| Mac mini M5 Pro, 64 GB | Qwen, Metal, mit Sprecherzuordnung | 11 s | 23 s | 3,52 GiB RAM des Auftrags |
-| Mac mini M5 Pro, 64 GB | Whisper, Metal, mit Sprecherzuordnung | 11 s | 11 s | 1,92 GiB RAM des Auftrags |
-| Windows 11, RTX 5060, 8 GB | Qwen, CUDA, drei Sprecher-Prüfdurchgänge | 51,3 s | 35,5 s | 6,31 GiB VRAM gesamt |
-| Windows 11, RTX 5060, 8 GB | Whisper, CUDA, drei Sprecher-Prüfdurchgänge | 51,3 s | 19,7 s | 6,54 GiB VRAM gesamt |
-| Windows 11, RTX 5060, 8 GB | Qwen, CUDA, drei Sprecher-Prüfdurchgänge, Stille übersprungen | 48 min 55 s | 7 min 36 s | 7,29 GiB VRAM gesamt |
+Messreihe mit **16 Kombinationen** auf derselben realen MP4-Aufnahme (20:59 min Audio) auf einem **Mac mini M5 Pro mit 64 GB**. VoxDrop 1.5.0 nutzt Metal mit Qwen3-ASR 1.7B und Whisper Large v3 Turbo. Jede Variante beginnt mit einem frischen Auftragsprozess. Die Sprechererkennung ist immer aktiv, mit einem Durchgang ohne DOVER-Lap und drei mit DOVER-Lap. Die Option „Lange Stille überspringen“ blieb aus.
 
-Die Mac-Kurztests stammen aus der Neuinstallation von **1.5.0**. Apple Silicon hat gemeinsamen Speicher für CPU und GPU. In einem separaten Qwen-Kurztest sank die gemessene GPU-Speicherspitze für Erkennung und Zeitmarken von **5,29 auf 3,58 GiB**, nachdem beide Schritte nacheinander ausgeführt wurden. [Mac-Messprotokoll](docs/MAC_ABNAHME_2026-11-21.md#direkter-qwen-speichervergleich)
+| Modell | GPU-Budget | DOVER-Lap | Sprache | Gesamt | Echtzeitfaktor | Sprecherphase | RAM-Spitze | Ø GPU |
+| --- | ---: | --- | --- | ---: | ---: | ---: | ---: | ---: |
+| Whisper | 100 % | Aus | Automatisch | 2:23 min | 8,8× | 0:47 min | 5,74 GiB | 74,4 % |
+| Whisper | 100 % | Aus | Deutsch | 2:16 min | 9,3× | 0:51 min | 5,75 GiB | 71,9 % |
+| Whisper | 100 % | An | Automatisch | 2:48 min | 7,5× | 1:13 min | 5,72 GiB | 79,0 % |
+| Whisper | 100 % | An | Deutsch | 2:35 min | 8,1× | 1:13 min | 5,79 GiB | 75,8 % |
+| Whisper | 50 % | Aus | Automatisch | 4:21 min | 4,8× | 1:35 min | 5,97 GiB | 58,3 % |
+| Whisper | 50 % | Aus | Deutsch | 4:16 min | 4,9× | 1:33 min | 5,99 GiB | 62,9 % |
+| Whisper | 50 % | An | Automatisch | 5:16 min | 4,0× | 2:30 min | 5,88 GiB | 66,0 % |
+| Whisper | 50 % | An | Deutsch | 5:23 min | 3,9× | 2:34 min | 5,96 GiB | 64,7 % |
+| Qwen | 100 % | Aus | Automatisch | 2:07 min | 9,9× | 1:11 min | 5,65 GiB | 68,5 % |
+| Qwen | 100 % | Aus | Deutsch | 1:36 min | 13,1× | 0:47 min | 5,64 GiB | 85,8 % |
+| Qwen | 100 % | An | Automatisch | 2:06 min | 10,0× | 1:15 min | 5,67 GiB | 87,3 % |
+| Qwen | 100 % | An | Deutsch | 2:06 min | 10,0× | 1:16 min | 5,72 GiB | 87,0 % |
+| Qwen | 50 % | Aus | Automatisch | 11:23 min | 1,8× | 1:34 min | 5,91 GiB | 47,1 % |
+| Qwen | 50 % | Aus | Deutsch | 11:14 min | 1,9× | 1:39 min | 5,90 GiB | 48,1 % |
+| Qwen | 50 % | An | Automatisch | 12:01 min | 1,7× | 2:31 min | 5,86 GiB | 49,5 % |
+| Qwen | 50 % | An | Deutsch | 12:08 min | 1,7× | 2:33 min | 5,90 GiB | 49,6 % |
 
-Die Windows-Werte stammen aus früheren nativen Abnahmeläufen. Der VRAM-Wert umfasst auch den Desktop und andere laufende Programme. Die Testläufe verwendeten unterschiedliche Aufnahmen und Sprecheroptionen. [Windows-Kurztests](docs/PROJEKTSTATUS.md#abschließende-paket-dateiprüfungen-und-präzisierte-meldungen) · [Windows-Langtest](docs/WINDOWS_ABNAHME_2026-11-18.md)
+**Gesamt** umfasst Dekodierung, Spracherkennung und Sprecherzuordnung aus der lokalen Kopie. **Echtzeitfaktor** ist Audiolänge geteilt durch Gesamtzeit. Bei 4× dauert die Verarbeitung ein Viertel der Aufnahmedauer. **RAM-Spitze** ist der höchste gemessene Speicherbedarf des Auftragsprozesses samt Kindprozessen. Der Mac teilt sich den Speicher zwischen CPU und GPU. **Ø GPU** ist der Mittelwert der gesamten Apple-GPU aus Stichproben im Abstand von rund zwei Sekunden. Das eingestellte GPU-Budget steuert die Rechenpausen von VoxDrop. Die Messreihe erfasst Laufzeit und Speicherbedarf. Die Transkriptionsqualität wurde nicht benotet.
 
 ### Auftragsdetails zum Langtest auf der RTX 5060
+
+<details>
+<summary>Frühere Windows-Messung mit einer anderen Aufnahme anzeigen</summary>
 
 Die Auftragsdetails zeigen **7 min 36 s Verarbeitung** für **48 min 55 s Audio** mit Qwen und drei DOVER-Lap-Durchgängen. Die Anzeige nennt **3,40 GiB RAM** für den Auftrag. Beim selben Lauf erreichte die **gesamte Grafikkarte 7,29 GiB VRAM** in der höchsten Stichprobe. Der VRAM-Wert stammt aus einer separaten GPU-Messung und umfasst weitere Programme. [Messprotokoll](docs/WINDOWS_ABNAHME_2026-11-18.md#aktueller-paketstand-und-fortsetzung)
 
@@ -113,18 +127,8 @@ Die Auftragsdetails zeigen **7 min 36 s Verarbeitung** für **48 min 55 s Audio*
 
 Nachgestellte Ansicht mit den Messwerten des echten Langtests. Dateiname und Uhrzeiten sind Beispiele.
 
-### Was DOVER-Lap und ein kleineres GPU-Budget kosten
+Für die Aufnahme der Mac-Messreihe liegt kein Windows-Messwert vor. In einer früheren kontrollierten Messung auf der RTX 5060 senkte ein GPU-Budget von 50 % die durchschnittliche Auslastung von 92,4 % auf 42,3 %. [Windows-Messprotokoll](docs/GPU_ARBEITSBUDGET.md#geprüfter-stand--windows-v134)
 
-Auf dem **Mac mini M5 Pro** lief dieselbe 27,8 Sekunden lange Aufnahme mit Whisper auf Metal je dreimal pro Einstellung. In allen Läufen war die Sprecherzuordnung aktiv. Die Tabelle zeigt den jeweiligen Median.
-
-| GPU-Budget | Sprecherzuordnung | Gesamtzeit | Davon Sprecherphase | RAM-Spitze des Auftrags |
-| ---: | --- | ---: | ---: | ---: |
-| 100 % | Ein Durchgang | 9,42 s | 6,23 s | 5,46 GiB |
-| 100 % | Drei Durchgänge mit DOVER-Lap | 9,97 s | 6,81 s | 7,85 GiB |
-| 50 % | Ein Durchgang | 11,96 s | 7,93 s | 5,64 GiB |
-
-Bei dieser kurzen Aufnahme lieferten alle Varianten denselben Text mit denselben Sprecherlabels. Der Test misst Aufwand und Speicherbedarf. Wie stark DOVER-Lap die Sprecherzuordnung verbessert, hängt von der Aufnahme ab. [Mac-Messprotokoll](docs/PROJEKTSTATUS.md#messung-für-die-readme-dover-lap-und-gpu-budget) · [DOVER-Lap-Fachartikel](https://arxiv.org/abs/2011.01997)
-
-Auf der **RTX 5060** sank die GPU-Auslastung bei kontrollierter Rechenlast von **92,4 %** auf **42,3 %**, als das Budget von 100 % auf 50 % gestellt wurde. Dabei sank der Durchsatz von **405 auf 191 Modellschritte pro Sekunde**. Wie viel länger die Transkription dauert, hängt auch davon ab, wie viel Zeit der Auftrag für Laden, Einlesen und andere Schritte benötigt. [Windows-Messprotokoll](docs/GPU_ARBEITSBUDGET.md#geprüfter-stand--windows-v134)
+</details>
 
 VoxDrop ist Open Source unter der [AGPL-3.0](LICENSE). [Hinweise für Entwickler](docs/ENTWICKLUNG.md) · [Qt-Lizenzhinweise](desktop/Qt-Lizenzen.md)

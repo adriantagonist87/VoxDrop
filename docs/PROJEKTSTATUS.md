@@ -8,6 +8,14 @@ Nutzerbefund unter Windows 1.4.1: nach längerer CUDA-Verarbeitung eingefrorenes
 
 Der Windows-CPU-Schutz greift auch bei bereits eingeplanten CUDA-Aufträgen. Während CUDA überwacht VoxDrop protokollierte Grafik-Timeouts und stoppt seinen Modellprozess kontrolliert. Die Queue bleibt anhaltbar und der Auftrag an seiner Position. Beim Wiederanlauf nach einem Abbruch kann ein protokollierter Timeout den erneuten automatischen GPU-Start verhindern. Eine CUDA-Dauerfreigabe erfordert einen beobachteten Mehrstundenlauf mit KVM.
 
+## Langbenchmark mit 16 Varianten auf dem Mac mini
+
+Am 21.11.2026 auf dem Mac mini M5 Pro mit 64 GB und macOS 27.2 gemessen. Eine 1259,435 Sekunden lange MP4-Audiospur (AAC, 48 kHz, Stereo) wurde für alle Varianten aus derselben lokalen Kopie dekodiert. Verwendet wurde der gebündelte Transkriptionsworker `transcription_worker.run_transcription` aus VoxDrop 1.5.0 Build 27 (Code `060ce5b7a1f597ec55d28255dcd07a296e6da73f`) in einem separaten Programm- und Modellspeicher.
+
+Jeweils ein Lauf für jede Kombination aus Qwen3-ASR 1.7B und Whisper Large v3 Turbo, GPU-Budget 100/50 %, DOVER-Lap aus/an und automatischer/deutscher Sprache. Sprechererkennung mit automatischer Sprecherzahl war immer aktiv. „Lange Stille überspringen“ blieb aus. Bei aktivem DOVER-Lap wurden jeweils drei Durchgänge tatsächlich zusammengeführt. Die Zeit reicht vom Aufruf des Workers bis zum fertigen Text. Modell- und App-Einrichtung, Kopieren vom Netzlaufwerk sowie Warten in der Warteschlange gingen nicht in die Messung ein.
+
+Der Echtzeitfaktor ist Audiozeit geteilt durch Gesamtzeit. RAM ist die höchste Stichprobe des physischen Speicherbedarfs des Auftragsprozesses und seiner Kinder (ca. 0,2 s). Die GPU-Auslastung ist das Mittel der systemweiten `Device Utilization %` des Apple-GPU-Treibers (ca. 2 s) und unterscheidet sich vom eingestellten GPU-Budget. [Alle Messwerte](../README.md#gemessene-laufzeit-und-speichernutzung)
+
 ## Messung für die README: DOVER-Lap und GPU-Budget
 
 Am 21.11.2026 auf dem Mac mini M5 Pro mit 64 GB und macOS 27.2 gemessen. Verwendet wurden der gebündelte Transkriptionsworker aus Mac 1.5.0 Build 27 (Code `060ce5b7a1f597ec55d28255dcd07a296e6da73f`), Whisper Large v3 Turbo auf Metal, eine 27,812 s lange künstliche deutsche Sprachaufnahme und ein temporärer Modellspeicher. Sprechererkennung mit automatischer Sprecherzahl war immer aktiv, Stilleüberspringen immer aus. Je Konfiguration drei frische Worker-Prozesse in wechselnder Reihenfolge, ohne Download oder Wartezeit der Ordnerüberwachung. Gesamtzeit von Worker-Aufruf bis Ergebnis. RAM ist der physische Footprint des Auftragsprozesses und seiner Kinder in Stichproben.
