@@ -20,6 +20,8 @@ Am 21.11.2026 auf dem Mac mini M5 Pro mit 64 GB und macOS 27.2 gemessen. Verwend
 
 In allen DOVER-Lap-Läufen wurden drei Durchgänge erfolgreich fusioniert. Die neun Transkripte waren einschließlich Sprecherlabels und Zeitmarken bytegleich. Der Versuch erfasst Laufzeit und Auftragsspeicher, keine Sprecherfehlerrate oder gemessene Mac-GPU-Auslastung. Die RTX-5060-Werte zum GPU-Budget stammen aus der getrennten [Windows-Kontrolllast](GPU_ARBEITSBUDGET.md#geprüfter-stand--windows-v134).
 
+Funktionaler Windows-Paketcode `5a1854ec650415d7f18ffea0da0163ec1f6b6334`. 231 lokale Windows-Fälle, 219 bestanden und zwölf Plattformskips. Windows-Qt-Prüfung aus der entpackten ZIP bei 125 % Skalierung inklusive Import-/Export-Einstellungen und Importbestätigung bestanden. [Windows-Manifest 1.5.0](../releases/v1.5.0/windows-release.json).
+
 ## Import und Export für Gerätewechsel · Mac 1.5.0 Build 27
 
 Neue gemeinsame Einstellungsgruppe „Import & Export“ mit unabhängigen Checkboxen für gespeicherte Einstellungen/Layout, sämtliche lokalen SQLite-Datenbanken mit vollständigem Verlauf/Bestand/Queue/Suchindex, Modelle/Hub-Cache sowie Aufnahmen/TXT aus überwachten Ordnern und Verlauf. Konsistente WAL-Snapshots, blockweise ZIP64-/SHA-256-Verarbeitung, Inhaltsdeduplizierung, Importvorschau und Pfadzuordnung, automatische Medienzuordnung in einen frischen Zielordner, Rechengerät-Anpassung und zunächst pausierter Betrieb. Vorheriger App-Stand wird automatisch gesichert; Dateiersetzung ist journalisiert und rücknehmbar. Gerätezugänge/Anmelderegistrierung bleiben gerätespezifisch; Modellimport zwischen Windows und Mac ist gesperrt. [Bedienung, Umfang und Wiederherstellung](IMPORT_EXPORT.md).
