@@ -76,7 +76,9 @@ def main():
         window.showNormal();window.resize(1280,820);QTest.qWait(300)
         report['native_window_modes']=True
         api.enqueueFolders([QUrl.fromLocalFile(str(incoming))])
-        wait(lambda:(api.snapshot.get('current') or {}).get('state')=='transcribing','active inference')
+        wait(lambda:(api.snapshot.get('current') or {}).get('state')=='transcribing'
+             and (api.snapshot.get('current') or {}).get('phase')=='Transkribieren (Qwen)',
+             'loaded Qwen inference')
         before=[row['id'] for row in api.snapshot.get('queue',[])]
         active_id=api.snapshot['current']['id']
         if active_id not in before:

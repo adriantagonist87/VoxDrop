@@ -67,6 +67,7 @@ def main():
         digest=hashlib.sha256(first.read_bytes()).hexdigest()
         wait(lambda:(job(first) or {}).get('state')=='transcribing','first inference')
         temporary=wait(lambda:next(state.glob('jobs/*/transcription-*/smb-qwen-*/audio.npy'),None),'recoverable decoded audio')
+        wait(lambda:(job(first) or {}).get('phase')=='Transkribieren (Qwen)','loaded model before service loss')
         service=services()[0];descendants=service.children(recursive=True);old=service.pid
         service.kill()
         wait(lambda:all(gone(p) for p in descendants),'no orphan inference after service SIGKILL',10)
@@ -81,6 +82,7 @@ def main():
             target.setparams(parameters);target.writeframes(frames+b'\0'*(parameters.nchannels*parameters.sampwidth*16000))
         wait(lambda:(job(second) or {}).get('state')=='transcribing','second inference')
         wait(lambda:next(state.glob('jobs/*/transcription-*/smb-qwen-*/audio.npy'),None),'loaded Qwen for GUI loss')
+        wait(lambda:(job(second) or {}).get('phase')=='Transkribieren (Qwen)','loaded model before GUI loss')
         tracked=[]
         for p in psutil.process_iter(['cmdline']):
             try:
