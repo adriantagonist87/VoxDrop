@@ -1,5 +1,13 @@
 # Projektstatus VoxDrop
 
+## Windows 1.5.0 – Funktionsabgleich und Schutz bei Grafikfehlern
+
+Windows übernimmt den gemeinsamen Stand von Mac 1.5.0 einschließlich Profil-ZIP, Auswahl von Einstellungen/Datenbanken/Modellen/Medien, Pfadzuordnung beim Gerätewechsel und symmetrischer Ordnerauswahl. [Import und Export](IMPORT_EXPORT.md).
+
+Nutzerbefund unter Windows 1.4.1: nach längerer CUDA-Verarbeitung eingefrorenes Bild, keine Mauseingaben und zeitweilig kein HDMI-Signal am KVM. Windows protokollierte wiederholte `LiveKernelEvent 141`, ein NVIDIA-Treiberereignis 153 und an einem Vortag einen Neustart nach `0x133`. Beim beobachteten DOVER-Lauf lag die GPU bei 100 % und 3.537 MiB belegtem VRAM. Nach kontrolliertem Stopp und Freigabe der Modellprozesse sank die Last auf etwa 1 %. Der Befund belegt Grafik-Timeouts bei CUDA-Last; die Ursache in Treiber, Hardware oder Grafikpfad ist nicht abschließend bestimmt.
+
+Der Windows-CPU-Schutz greift auch bei bereits eingeplanten CUDA-Aufträgen. Während CUDA überwacht VoxDrop protokollierte Grafik-Timeouts und stoppt seinen Modellprozess kontrolliert. Die Queue bleibt anhaltbar und der Auftrag an seiner Position. Beim Wiederanlauf nach einem Abbruch kann ein protokollierter Timeout den erneuten automatischen GPU-Start verhindern. Eine CUDA-Dauerfreigabe erfordert einen beobachteten Mehrstundenlauf mit KVM.
+
 ## Messung für die README: DOVER-Lap und GPU-Budget
 
 Am 21.11.2026 auf dem Mac mini M5 Pro mit 64 GB und macOS 27.2 gemessen. Verwendet wurden der gebündelte Transkriptionsworker aus Mac 1.5.0 Build 27 (Code `060ce5b7a1f597ec55d28255dcd07a296e6da73f`), Whisper Large v3 Turbo auf Metal, eine 27,812 s lange künstliche deutsche Sprachaufnahme und ein temporärer Modellspeicher. Sprechererkennung mit automatischer Sprecherzahl war immer aktiv, Stilleüberspringen immer aus. Je Konfiguration drei frische Worker-Prozesse in wechselnder Reihenfolge, ohne Download oder Wartezeit der Ordnerüberwachung. Gesamtzeit von Worker-Aufruf bis Ergebnis. RAM ist der physische Footprint des Auftragsprozesses und seiner Kinder in Stichproben.

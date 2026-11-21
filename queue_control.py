@@ -21,6 +21,9 @@ def initialise_queue(db):
             id INTEGER PRIMARY KEY CHECK(id=1), paused INTEGER NOT NULL DEFAULT 0
         );
         INSERT OR IGNORE INTO queue_state VALUES (1,0);
+        CREATE TABLE IF NOT EXISTS queue_graphics_hold (
+            id INTEGER PRIMARY KEY CHECK(id=1), reason TEXT NOT NULL
+        );
         CREATE TABLE IF NOT EXISTS queue_positions (
             job_id INTEGER PRIMARY KEY REFERENCES jobs(id) ON DELETE CASCADE,
             position INTEGER NOT NULL
@@ -80,6 +83,8 @@ def set_queue_paused(db, paused):
     with db:
         db.execute('UPDATE queue_state SET paused=? WHERE id=1',(int(paused),))
         db.execute('DELETE FROM immediate_jobs')
+        if not paused:
+            db.execute('DELETE FROM queue_graphics_hold')
 
 
 def start_queue(db):
@@ -91,6 +96,7 @@ def start_queue(db):
             raise ValueError('Der aktuelle Auftrag wird noch gestoppt. Bitte kurz warten.')
         identifiers=[row['id'] for row in queue_jobs(db)]
         db.execute('UPDATE queue_state SET paused=0 WHERE id=1')
+        db.execute('DELETE FROM queue_graphics_hold')
         db.executemany('INSERT OR IGNORE INTO immediate_jobs(job_id) VALUES (?)',
                        [(identifier,) for identifier in identifiers])
         # An explicit start need not wait for the next scanner interval. The

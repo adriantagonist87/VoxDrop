@@ -10,7 +10,7 @@ from pathlib import Path
 
 import qwen_backend
 from gpu_budget import pace_torch, pace_whisper
-from platform_io import WINDOWS
+from platform_io import WINDOWS, inference_cpu_threads
 from silence import restore_timestamps, select_speech
 
 WHISPER_MODEL = "large-v3-turbo"
@@ -214,7 +214,7 @@ def load_whisper(path, hardware):
 
     if hardware == "cpu":
         return engine.load_transcriber(
-            ModelKey(WHISPER_MODEL, Device.CPU, ComputeType.INT8, 0), path
+            ModelKey(WHISPER_MODEL, Device.CPU, ComputeType.INT8, inference_cpu_threads() if WINDOWS else 0), path
         )
     if hardware == "cuda":
         import torch

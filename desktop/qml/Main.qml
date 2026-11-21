@@ -285,7 +285,7 @@ ApplicationWindow {
                     onClicked: window.openSettings(1)
                 }
                 Item { Layout.fillWidth: true }
-                Copy { text: "GPU-Budget " + Math.round(gpuBudgetSlider.value) + " %"; font.pixelSize: 12 }
+                Copy { text: viewState.windowsCpuOnly ? "CPU-Schutz aktiv" : "GPU-Budget " + Math.round(gpuBudgetSlider.value) + " %"; font.pixelSize: 12 }
                 Slider {
                     id: gpuBudgetSlider
                     objectName: "gpuBudgetSlider"
@@ -297,7 +297,7 @@ ApplicationWindow {
                     stepSize: 5
                     snapMode: Slider.SnapAlways
                     value: settings.gpu_budget_percent || 100
-                    enabled: viewState.ready && !viewState.busy && (settings.hardware === api.gpuValue || viewState.current.hardwareValue === api.gpuValue)
+                    enabled: viewState.ready && !viewState.busy && ((!viewState.windowsCpuOnly && settings.hardware === api.gpuValue) || viewState.current.hardwareValue === api.gpuValue)
                     Accessible.name: "GPU-Arbeitsbudget in Prozent"
                     Accessible.description: "Weniger GPU-Arbeit lässt mehr Zeit für andere Programme und verlängert die Transkription."
                     background: Rectangle {
@@ -386,6 +386,15 @@ ApplicationWindow {
                         onClicked: api.pauseQueue(true)
                     }
                 }
+            }
+        }
+        Rectangle {
+            Layout.fillWidth: true; visible: Boolean(viewState.graphicsHold)
+            implicitHeight: graphicsWarning.implicitHeight + 16; color: "#352825"
+            RowLayout {
+                id: graphicsWarning; x: 16; y: 8; width: parent.width - 32; spacing: 12
+                Copy { Layout.fillWidth: true; color: warningColor; text: viewState.graphicsHold || "" }
+                AppActionButton { text: "Rechengerät einstellen"; onClicked: window.openSettings(0) }
             }
         }
         Rectangle {
@@ -669,6 +678,19 @@ ApplicationWindow {
                                         checked: settings.skip_silence
                                         onToggled: api.setSetting("skip_silence", checked)
                                     }
+                                }
+                                Toggle {
+                                    objectName: "windowsCpuOnlyToggle"
+                                    Layout.fillWidth: true
+                                    visible: Qt.platform.os === "windows"
+                                    text: "CPU-Schutz für alle wartenden und neuen Aufträge"
+                                    checked: Boolean(settings.windows_cpu_only)
+                                    onToggled: api.setSetting("windows_cpu_only", checked)
+                                }
+                                Muted {
+                                    Layout.fillWidth: true
+                                    visible: Qt.platform.os === "windows"
+                                    text: "Verwendet nach dem Speichern die CPU auch für eingereihte CUDA-Aufträge. Ein laufender Auftrag wechselt nach Stopp und Neustart."
                                 }
                                 Rectangle { Layout.fillWidth: true; height: 1; color: line }
                                 Heading { text: "Sprecherzuordnung"; font.pixelSize: 14 }

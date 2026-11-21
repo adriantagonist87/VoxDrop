@@ -17,7 +17,7 @@ from queue_control import (
     JobCancelled, cancel_job, cancel_queue, move_queue_item, queue_jobs,
     queue_paused, set_queue_paused, start_queue, stop_queue,
 )
-from transcription_worker import run_transcription
+from transcription_worker import GraphicsTimeout, run_transcription
 
 
 class QueueTests(unittest.TestCase):
@@ -38,6 +38,45 @@ class QueueTests(unittest.TestCase):
 
     def row(self,identifier):
         return self.db.execute('select * from jobs where id=?',(identifier,)).fetchone()
+
+    @unittest.skipUnless(WINDOWS, "Windows CPU-Schutz")
+    def test_graphics_timeout_pauses_queue_and_cpu_mode_retries_queued_cuda_job(self):
+        config = json.loads(self.config.read_text())
+        config["hardware"] = "cuda"
+        self.config.write_text(json.dumps(config))
+        self.settings = service.folder_profile(service.read_settings(self.config), str(self.incoming))
+        source, one = self.add()
+        _, two = self.add("second.wav", b"second recording")
+        failing = Mock(side_effect=GraphicsTimeout("Test-Timeout"))
+        self.assertTrue(service.next_job(self.db, self.state, failing, config=self.config))
+        self.assertEqual(failing.call_args.kwargs["hardware"], "cuda")
+        self.assertTrue(queue_paused(self.db))
+        self.assertEqual([row["id"] for row in queue_jobs(self.db)], [one, two])
+        self.assertFalse(source.with_suffix(".txt").exists())
+        self.assertIn("Test-Timeout", self.db.execute("select reason from queue_graphics_hold").fetchone()[0])
+        self.assertFalse(service.next_job(self.db, self.state, self.engine, config=self.config))
+        config["windows_cpu_only"] = True
+        self.config.write_text(json.dumps(config))
+        start_queue(self.db)
+        self.assertTrue(service.next_job(self.db, self.state, self.engine, config=self.config))
+        self.assertEqual(self.engine.call_args.kwargs["hardware"], "cpu")
+        saved = json.loads(self.row(one)["settings"])
+        self.assertEqual((saved["hardware"], saved["execution_hardware"]), ("cuda", "cpu"))
+        self.assertIsNone(self.db.execute("select reason from queue_graphics_hold").fetchone())
+        self.assertEqual(source.read_bytes(), b"synthetic media")
+        self.assertTrue(source.with_suffix(".txt").is_file())
+
+    @unittest.skipUnless(WINDOWS, "Windows GPU-Timeout")
+    def test_crash_recovery_with_display_event_prevents_cuda_restart(self):
+        _, identifier = self.add()
+        with self.db:
+            self.db.execute("""UPDATE jobs SET state='transcribing',started=?,
+                settings=json_set(settings,'$.hardware','cuda') WHERE id=?""", (time.time()-5, identifier))
+        with patch.object(service, "graphics_timeout_since", return_value="GPU-Timeout"):
+            service.recover(self.db, self.state)
+        self.assertEqual(self.row(identifier)["state"], "ready")
+        self.assertTrue(queue_paused(self.db))
+        self.assertFalse(service.next_job(self.db, self.state, self.engine, config=self.config))
 
     def test_stop_interrupts_current_and_preserves_queue_then_play_restarts_in_order(self):
         source, one=self.add();_,two=self.add('Second.wav',b'second')

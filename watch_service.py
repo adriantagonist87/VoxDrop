@@ -31,6 +31,7 @@ from platform_io import (
     open_regular,
     process_options,
     file_is_being_written,
+    graphics_timeout_since,
 )
 from smb_paths import (
     on_network_volume,
@@ -38,7 +39,7 @@ from smb_paths import (
     smb_mounts,
     validate_folder_path,
 )
-from transcription_worker import run_transcription
+from transcription_worker import GraphicsTimeout, run_transcription
 from runtime_logs import RollingLog
 from gpu_budget import validate_percent
 from queue_control import (
@@ -200,6 +201,7 @@ def read_settings(path):
         "model": DEFAULT_MODEL,
         "skip_silence": False,
         "gpu_budget_percent": 100,
+        "windows_cpu_only": False,
     }
     settings = {name: values.get(name, default) for name, default in defaults.items()}
     if "folders" in values:
@@ -262,7 +264,7 @@ def read_settings(path):
     ):
         raise ValueError("scope_dir muss ein absoluter lokaler Pfad sein.")
     settings["scope_dir"] = scope
-    for name in ("monitoring", "speakers", "require_smb", "skip_silence", "dover_lap"):
+    for name in ("monitoring", "speakers", "require_smb", "skip_silence", "dover_lap", "windows_cpu_only"):
         if type(settings[name]) is not bool:
             raise ValueError(f"{name} muss true oder false sein.")
     interval = settings["interval_seconds"]
@@ -1044,6 +1046,21 @@ def error_state(db, job_id, state, error):
         )
 
 
+def hold_after_graphics_timeout(db, job_id, evidence):
+    reason = f"Windows-Grafikfehler: {evidence}. Die Warteschlange wurde angehalten."
+    with db:
+        db.execute("BEGIN IMMEDIATE")
+        if cancellation_requested(db, job_id):
+            return False
+        db.execute("UPDATE queue_state SET paused=1 WHERE id=1")
+        db.execute("DELETE FROM immediate_jobs")
+        db.execute("INSERT OR REPLACE INTO queue_graphics_hold VALUES (1,?)", (reason,))
+        db.execute("DELETE FROM job_retries WHERE job_id=?", (job_id,))
+        db.execute("""UPDATE jobs SET state='ready',error=?,updated=?,
+            started=NULL,finished=NULL,phase=NULL,progress=NULL WHERE id=?""", (reason, time.time(), job_id))
+    return True
+
+
 def copy_identity(metadata):
     return f"{metadata.st_ino}:{metadata.st_birthtime.hex()}"
 
@@ -1407,8 +1424,16 @@ def next_job(
     now = time.time()
     with db:
         db.execute("BEGIN IMMEDIATE")
-        if config is not None and watched and watched not in enabled_watch_paths(read_settings(config)):
+        current = read_settings(config) if config is not None else {}
+        if watched and current and watched not in enabled_watch_paths(current):
             return False
+        if phase == "copying":
+            settings.pop("execution_hardware", None)
+            if WINDOWS and current.get("windows_cpu_only") and settings.get("hardware") == "cuda":
+                settings["execution_hardware"] = "cpu"
+            if (WINDOWS and settings.get("execution_hardware", settings.get("hardware")) == "cuda"
+                    and db.execute("SELECT 1 FROM queue_graphics_hold").fetchone()):
+                return False
         claimed = db.execute(
             f"""UPDATE jobs SET state=?, attempt=attempt+1, started=?, updated=?, finished=NULL,
             error=NULL, settings=? WHERE id=? AND state='ready' AND settings=?
@@ -1511,7 +1536,7 @@ def next_job(
                 language=language,
                 speakers=settings["speakers"],
                 speaker_count=settings["speaker_count"],
-                hardware=settings.get("hardware", "cpu"),
+                hardware=settings.get("execution_hardware", settings.get("hardware", "cpu")),
                 model=settings.get("model", WHISPER_MODEL),
                 skip_silence=settings.get("skip_silence", False),
                 dover_lap=settings.get("dover_lap", False),
@@ -1601,6 +1626,9 @@ def next_job(
             transcript.unlink(missing_ok=True)
     except JobCancelled:
         finish_cancelled_job(db, state, work, job_id)
+    except GraphicsTimeout as error:
+        if not hold_after_graphics_timeout(db, job_id, str(error)):
+            finish_cancelled_job(db, state, work, job_id)
     except MediaBusy as error:
         error_state(db,job_id,'failed',str(error))
         schedule_retry(5)
@@ -1663,6 +1691,12 @@ def recover(db, state, *, verify_exports=True):
         for leftover in work.glob("transcription-*"):
             if leftover.is_dir() and not leftover.is_symlink():
                 shutil.rmtree(leftover)
+        if WINDOWS and job["state"] == "transcribing":
+            settings = json.loads(job["settings"])
+            if settings.get("execution_hardware", settings.get("hardware")) == "cuda":
+                if evidence := graphics_timeout_since(job["started"]):
+                    if hold_after_graphics_timeout(db, job["id"], evidence):
+                        continue
         if verify_exports and job["publication_started"] and job["text_hash"]:
             try:
                 settings = json.loads(job["settings"])
@@ -1801,7 +1835,7 @@ def clear_history(db, state):
             for table in ('job_retries','events','transcription_measurements','speaker_diarization',
                           'audio_durations','copy_claims','copy_exports','known_results','queue_positions',
                           'cancel_requests','preemptions','immediate_jobs','drop_batches','folder_status',
-                          'folder_refresh','connection','service','jobs'):
+                          'folder_refresh','connection','service','queue_graphics_hold','jobs'):
                 db.execute(f'DELETE FROM {table}')
             # Retain monotonic job IDs and the user's pause, never old file/search records.
             db.execute('UPDATE storage_state SET generation=generation+1 WHERE id=1')
@@ -2467,6 +2501,7 @@ def main(argv=None):
                 connection = db.execute(
                     "SELECT available,error FROM connection"
                 ).fetchone()
+                graphics_hold = db.execute("SELECT reason FROM queue_graphics_hold WHERE id=1").fetchone()
                 content_matches = False
                 if args.content_results:
                     content = json.loads(args.content_results.read_text(encoding='utf-8'))
@@ -2509,6 +2544,7 @@ def main(argv=None):
                             "autostart": login_agent.agent_path().is_file(),
                             "waiting": waiting,
                             "queue_paused": queue_paused(db),
+                            "graphics_hold": graphics_hold[0] if graphics_hold else "",
                             "immediate_count": immediate_count(db),
                             "queue": [dict(row) for row in queue_jobs(db)],
                             "current": dict(current) if current else None,

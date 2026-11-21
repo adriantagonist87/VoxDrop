@@ -15,7 +15,7 @@ VoxDrop wird für macOS und Windows parallel mit demselben Funktionsumfang entwi
 
 Für die Ersteinrichtung brauchst du Internet und einen beschreibbaren Programmordner. Unter **Einstellungen → Transkription → Rechengerät** kannst du auch **CPU** wählen.
 
-**[Für macOS herunterladen](https://github.com/adriantagonist87/VoxDrop/releases/download/v1.5.0-macos/VoxDrop-1.5.0-macOS-arm64.dmg)** · **[Für Windows herunterladen](https://github.com/adriantagonist87/VoxDrop/releases/download/v1.4.1/VoxDrop-1.4.1-Windows-x64.zip)** · [Alle Versionen](https://github.com/adriantagonist87/VoxDrop/releases)
+**[Für macOS herunterladen](https://github.com/adriantagonist87/VoxDrop/releases/download/v1.5.0-macos/VoxDrop-1.5.0-macOS-arm64.dmg)** · **[Für Windows herunterladen](https://github.com/adriantagonist87/VoxDrop/releases/download/v1.5.0-windows/VoxDrop-1.5.0-Windows-x64.zip)** · [Alle Versionen](https://github.com/adriantagonist87/VoxDrop/releases)
 
 ## Was VoxDrop kann
 
@@ -85,7 +85,7 @@ Die TGA-Schulungen landen mit ihren TXT-Dateien im Zielunterordner. Bei den Supp
 
 ### Windows
 
-1. Lade die [ZIP für Windows](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.4.1) herunter und entpacke sie vollständig in einen lokalen Ordner, in den du schreiben kannst.
+1. Lade die [ZIP für Windows](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.5.0-windows) herunter und entpacke sie vollständig in einen lokalen Ordner, in den du schreiben kannst.
 2. Öffne **`VoxDrop.exe`** im entpackten Ordner. Beim ersten Start richtet VoxDrop seine Laufzeit automatisch im Unterordner **Laufzeit** ein.
 3. Öffne **Einstellungen → Transkription → Modelle herunterladen**. Die Modelle landen im Ordner **Modelle** neben der EXE.
 
