@@ -21,7 +21,7 @@ def main():
     state=profile/'service';config=profile/'config.json';dbfile=state/'jobs.sqlite3'
     resources=args.app.resolve()/'Contents/Resources';python=resources/'Python/bin/python3.12';engine=resources/'Engine/watch_service.py'
     config.write_text(json.dumps(dict(folders=[str(incoming)],monitoring=True,interval_seconds=1,
-        model='qwen3-asr-1.7b',hardware='metal',language='de',speakers=False,gpu_budget_percent=10)))
+        model='qwen3-asr-1.7b',hardware='metal',language='de',speakers=False,gpu_budget_percent=50)))
     env={**os.environ,'VOXDROP_PROFILE':str(profile),'VOXDROP_MODEL_DATA':str(args.models.resolve())}
     guis=[];report=dict(passed=False)
     def wait(predicate,label,timeout=30):
@@ -90,7 +90,11 @@ def main():
         # supervisor/pipe ownership must still release inference independently.
         with sqlite3.connect(dbfile) as blocked:
             blocked.execute('BEGIN IMMEDIATE');started=time.monotonic();gui.kill();gui.wait(5)
-            wait(lambda:all(gone(p) for p in tracked),'GUI loss cleans tree despite SQLite writer lock',15)
+            try:
+                wait(lambda:all(gone(p) for p in tracked),'GUI loss cleans tree despite SQLite writer lock',15)
+            except AssertionError:
+                report['alive_after_owner_loss']=[dict(pid=p.pid,args=p.cmdline()) for p in tracked if not gone(p)]
+                raise
             report['owner_loss_stop_seconds']=round(time.monotonic()-started,3)
             blocked.rollback()
         report['gui_loss_with_locked_database_left_no_orphans']=True

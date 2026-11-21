@@ -87,3 +87,44 @@ class AppLifecycleTests(unittest.TestCase):
         self.assertFalse(worker.is_alive());self.assertEqual(len(outcome),1)
         _,alive=psutil.wait_procs(children,timeout=3);self.assertFalse(alive)
         with self.assertRaisesRegex(RuntimeError,'beendet'):registry.run([sys.executable,'-c','pass'])
+
+    @unittest.skipIf(sys.platform=='win32','Unix detached service handoff')
+    def test_start_command_dies_with_owner_before_daemon_handoff(self):
+        ready=self.root/'starter.pid'
+        leaf="import os,sys,time; open(sys.argv[1],'w').write(str(os.getpid())); time.sleep(60)"
+        owner=("from desktop.command_process import CommandProcesses; import sys; "
+               "CommandProcesses().run([sys.executable,'-BEs','-c',"+repr(leaf)+",sys.argv[1]],detached_start=True)")
+        process=subprocess.Popen([sys.executable,'-BEs','-c',owner,str(ready)])
+        child=None
+        try:
+            deadline=time.monotonic()+10
+            while not ready.exists() and time.monotonic()<deadline:time.sleep(.02)
+            self.assertTrue(ready.exists())
+            child=psutil.Process(int(ready.read_text()))
+            process.kill();process.wait(5)
+            _,alive=psutil.wait_procs([child],timeout=5)
+            self.assertFalse(alive,'Blocked start survived its GUI owner')
+        finally:
+            if process.poll() is None:process.kill();process.wait(5)
+            if child:
+                try:child.kill();child.wait(5)
+                except psutil.Error:pass
+
+    @unittest.skipIf(sys.platform=='win32','Unix detached service handoff')
+    def test_successful_start_handoff_keeps_new_daemon_session_alive(self):
+        ready=self.root/'daemon.pid'
+        leaf="import os,sys,time; open(sys.argv[1],'w').write(str(os.getpid())); time.sleep(60)"
+        starter="import subprocess,sys; subprocess.Popen([sys.executable,'-BEs','-c',"+repr(leaf)+",sys.argv[1]],start_new_session=True)"
+        child=None
+        try:
+            registry=CommandProcesses()
+            result=registry.run([sys.executable,'-BEs','-c',starter,str(ready)],detached_start=True)
+            self.assertEqual(result.returncode,0)
+            deadline=time.monotonic()+10
+            while not ready.exists() and time.monotonic()<deadline:time.sleep(.02)
+            self.assertTrue(ready.exists())
+            child=psutil.Process(int(ready.read_text()));self.assertTrue(child.is_running())
+        finally:
+            if child:
+                try:child.kill();child.wait(5)
+                except psutil.Error:pass

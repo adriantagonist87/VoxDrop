@@ -3,7 +3,7 @@ from contextlib import contextmanager
 import subprocess
 from threading import Lock
 
-from platform_io import child_process
+from platform_io import WINDOWS, child_process
 
 
 class CommandProcesses:
@@ -18,7 +18,9 @@ class CommandProcesses:
         @contextmanager
         def unmanaged():
             with subprocess.Popen(arguments,**options) as process:yield process
-        context=unmanaged() if detached_start else child_process(arguments,cancellable=True,**options)
+        # Unix daemons explicitly create a new session during handoff. The
+        # short start command still needs pipe ownership while SQLite can block.
+        context=unmanaged() if detached_start and WINDOWS else child_process(arguments,cancellable=True,**options)
         with self.lock:
             if self.stopping and not allow_stop:
                 raise RuntimeError('VoxDrop wird beendet.')
