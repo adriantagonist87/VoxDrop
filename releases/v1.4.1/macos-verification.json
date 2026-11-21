@@ -1,0 +1,55 @@
+{
+  "passed": true,
+  "version": "1.4.1",
+  "build": 26,
+  "code_commit": "f1b9e69c553b935a5cb940434b2c2cb55ea9160d",
+  "release_source_commit": "80e49b12e341db5285088c9b32f64788b52372de",
+  "archive_sha256": "1b64574c8349c662b912cf81d872e9fd6d8925393102c4ec672224a7036f2add",
+  "archive_bytes": 618851122,
+  "public_download": {
+    "verified": true,
+    "authenticated": false,
+    "url": "https://github.com/adriantagonist87/VoxDrop/releases/download/v1.4.1-macos/VoxDrop-1.4.1-macOS-arm64.dmg",
+    "verified_on": "2026-11-21"
+  },
+  "native_regressions": {
+    "cases": 214,
+    "passed": 207,
+    "windows_skips": 7,
+    "seconds": 52.601
+  },
+  "native_loaded_model_controls": {
+    "passed": true,
+    "qt_platform": "cocoa",
+    "native_window_modes": true,
+    "stop_seconds": 0.734,
+    "queue_preserved_on_stop": true,
+    "recursive_drop_metal_export_and_content_reuse": true,
+    "x_hides_and_tray_reopens": true,
+    "real_transcript_search": true,
+    "speaker_fusion": [
+      [
+        "dover-lap",
+        3
+      ]
+    ],
+    "native_quit_stopped_profile_tree": true
+  },
+  "dmg_verification": {
+    "passed": true,
+    "build": 26,
+    "program_files": 43,
+    "signature_valid": true,
+    "installed_bundle_identity": true,
+    "source_archives": 2
+  },
+  "folder_controls_rescan_and_reconciliation": true,
+  "smb_drop_and_protected_retranscription": true,
+  "backends_byte_identical_to_140": true,
+  "inherited_model_validation": {
+    "metal_language_cases": 12,
+    "cpu_language_cases": 2
+  },
+  "installed_profile_and_models_retained": true,
+  "operating_system_reboot_test": false
+}

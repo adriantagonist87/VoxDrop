@@ -9,7 +9,6 @@ import transcription_worker
 from platform_io import WINDOWS
 
 
-@unittest.skipUnless(WINDOWS, "Windows transcription temporary storage")
 class TranscriptionTemporaryTests(unittest.TestCase):
     def test_crashed_worker_cannot_leave_audio_outside_its_job_directory(self):
         with tempfile.TemporaryDirectory() as temporary:

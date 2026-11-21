@@ -334,7 +334,6 @@ class WatchServiceTests(unittest.TestCase):
         self.assertEqual(self.job()["state"], "done")
         self.assertFalse(next_job(self.db, self.state, self.engine))
 
-    @unittest.skipUnless(WINDOWS, "Windows automatic recovery")
     def test_recovery_automatically_resumes_interrupted_transcription(self):
         self.queue()
         with self.db:
@@ -347,7 +346,6 @@ class WatchServiceTests(unittest.TestCase):
         self.assertEqual(self.media.read_bytes(), b"synthetic media bytes")
         self.engine.assert_called_once()
 
-    @unittest.skipUnless(WINDOWS, "Windows automatic recovery")
     def test_recovery_resumes_cached_export_without_recognizing_again(self):
         self.queue()
         with patch("watch_service.publish_job", side_effect=OSError("interrupted export")):

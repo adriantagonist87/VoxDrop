@@ -1,5 +1,9 @@
 # GPU-Arbeitsbudget unter Windows
 
+## Ergänzung: Metal auf macOS ab 1.4
+
+Seit der Mac-Portierung vom 21.11.2026 ist derselbe Regler auch für die Apple-GPU aktiv. Temporäre MLX-Instanztypen evaluieren Encoder-/Decoderblöcke vor Synchronisation und Pause; CTranslate2-Metal gibt seine synchronen Aufrufe unverändert weiter. Beide pyannote-Torch-Modelle verwenden MPS-Synchronisation und Instanzhooks. CPU bleibt ohne GPU-Pacing. Livekonfiguration, keine Modell-/Präzisionsänderung und kein RAM-/exaktes Systemlastlimit gelten auf beiden Plattformen. Zwölf tatsächliche Metal-Sprachläufe und Bytegleichheit der jeweiligen 100-/50-%-ASR-Ergebnisse geprüft; [genauer Mac-Nachweis und Grenzen](MAC_ABNAHME_2026-11-21.md). Die bisherige Mac-Übergabe unten bleibt als historische Beschreibung erhalten.
+
 Der Regler links unter dem Rechengerät wählt 10–100 %, Standard 100 %. Änderungen werden nach kurzer Entprellung eigenständig gespeichert. Andere noch nicht gespeicherte Einstellungen werden dabei nicht übernommen. Das Budget gilt profilweit, einschließlich bereits eingereihter und laufender Aufträge, ab dem nächsten unterstützten Rechenschritt. Der Auftrag und seine ursprünglichen Erkennungseinstellungen werden dafür nicht neu gestartet.
 
 Das ist ein zeitliches Arbeitsbudget für VoxDrop, kein exakter Grenzwert der systemweiten GPU-Anzeige. Bei 50 % fügt VoxDrop nach abgeschlossenen Modellschritten etwa ebenso viel freie Zeit ein wie zuvor für diese Schritte benötigt wurde. Die Verarbeitung dauert länger. Andere Anwendungen bekommen Rechenzeit, ohne Modellpräzision, Audioabschnitte oder Erkennungsparameter zu verändern. Kurze Lastspitzen bleiben möglich; der Grafikspeicherbedarf wird nicht halbiert.

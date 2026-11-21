@@ -1,0 +1,59 @@
+{
+  "passed": true,
+  "version": "1.4.0",
+  "build": 25,
+  "code_commit": "c6ef0b7433727eea357cf85798585ab326edb2f7",
+  "release_source_commit": "95b9838df62badb351c49e3366538622beff1467",
+  "archive_sha256": "78a957a4f735a530a2fbf3062fd10959319dea32c2de7fedd5b787e73c2d0fba",
+  "archive_bytes": 617730438,
+  "public_download": {
+    "verified": true,
+    "authenticated": false,
+    "url": "https://github.com/adriantagonist87/VoxDrop/releases/download/v1.4.0-macos/VoxDrop-1.4.0-macOS-arm64.dmg",
+    "verified_on": "2026-11-21"
+  },
+  "native_regressions": {
+    "cases": 209,
+    "passed": 202,
+    "windows_skips": 7,
+    "seconds": 52.975
+  },
+  "metal_language_cases": 12,
+  "cpu_language_cases": 2,
+  "native_loaded_model_controls": {
+    "passed": true,
+    "qt_platform": "cocoa",
+    "native_window_modes": true,
+    "stop_seconds": 0.892,
+    "queue_preserved_on_stop": true,
+    "recursive_drop_metal_export_and_content_reuse": true,
+    "x_hides_and_tray_reopens": true,
+    "real_transcript_search": true,
+    "speaker_fusion": [
+      [
+        "dover-lap",
+        3
+      ]
+    ],
+    "native_quit_stopped_profile_tree": true
+  },
+  "native_loaded_model_recovery": {
+    "passed": true,
+    "native_entry_and_supervisor_recovery": true,
+    "service_crash_cleaned_audio_and_resumed_job": true,
+    "owner_loss_stop_seconds": 6.167,
+    "gui_loss_with_locked_database_left_no_orphans": true,
+    "app_restart_resumed_queue": true
+  },
+  "dmg_verification": {
+    "passed": true,
+    "build": 25,
+    "program_files": 43,
+    "signature_valid": true,
+    "installed_bundle_identity": true,
+    "source_archives": 2,
+    "contains_models": false
+  },
+  "installed_profile_and_models_retained": true,
+  "operating_system_reboot_test": false
+}

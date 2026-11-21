@@ -6,6 +6,7 @@ import os
 import plistlib
 import shutil
 import signal
+import sqlite3
 import subprocess
 import tempfile
 import time
@@ -79,9 +80,28 @@ def migrate_models(profile, target):
 
 
 def start_service(app, profile, data):
-    command = worker_command(app, profile, data)
-    command[-2] = "start"
-    execute(*command)
+    # Ownership belongs to the native app, including after an update/rollback.
+    (profile / 'service').mkdir(parents=True, exist_ok=True)
+    with (profile / 'service/desktop-start.log').open('ab') as log:
+        subprocess.Popen([str(app / 'Contents/MacOS/VoxDrop'), '--background'],
+            env={**os.environ, 'VOXDROP_PROFILE':str(profile), 'VOXDROP_MODEL_DATA':str(data)},
+            stdin=subprocess.DEVNULL, stdout=log, stderr=log, start_new_session=True)
+
+
+def wait_for_idle(profile):
+    path = profile / 'service/jobs.sqlite3'
+    if not path.is_file():
+        return
+    while True:
+        with sqlite3.connect(path.as_uri() + '?mode=ro', uri=True) as db:
+            columns = {row[1] for row in db.execute('PRAGMA table_info(jobs)')}
+            active = 'state' in columns and db.execute(
+                "SELECT 1 FROM jobs WHERE state IN ('copying','transcribing','exporting') LIMIT 1"
+            ).fetchone()
+        if not active:
+            return
+        print('VoxDrop wartet auf den Abschluss des aktuellen Auftrags …', flush=True)
+        time.sleep(2)
 
 
 def install(source, applications, profile):
@@ -101,10 +121,11 @@ def install(source, applications, profile):
     if destination.is_symlink() or data.is_symlink() or profile.is_symlink():
         raise ValueError("Der Installations- oder Datenordner ist ein unerwarteter Symlink.")
     commands = {
-        " ".join(worker_command(candidate, profile, model_data, utf8=utf8))
+        " ".join(worker_command(candidate, profile, model_data, utf8=utf8)).replace(' run ', f' {action} ')
         for candidate in candidates
         for model_data in (profile / "data", data)
         for utf8 in (True, False)
+        for action in ('run', 'supervise')
     }
     if agent_bytes:
         existing = plistlib.loads(agent_bytes)
@@ -134,12 +155,19 @@ def install(source, applications, profile):
         before = set(processes().values())
         closed = bool(before.intersection(gui_commands))
         restart = bool(before.intersection(commands))
+        if restart:
+            wait_for_idle(profile)
         if agent_bytes:
             subprocess.run(
                 ["/bin/launchctl", "bootout", f"gui/{os.getuid()}/local.voxdrop.worker"],
                 capture_output=True, check=False,
             )
         stop_processes(gui_commands)
+        for candidate in candidates:
+            resources = candidate / 'Contents/Resources'
+            if (resources / 'Engine/app_lifecycle.py').is_file():
+                execute(resources / 'Python/bin/python3.12', '-BEs', resources / 'Engine/watch_service.py',
+                        '--state-dir', profile / 'service', '--model-data', data, 'stop')
         stop_processes(commands)
         if (profile / "service").is_dir():
             lock = (profile / "service/service.lock").open("a")
@@ -166,7 +194,7 @@ def install(source, applications, profile):
         if lock:
             lock.close()
             lock = None
-        if restart:
+        if restart or closed:
             start_service(app, profile, data)
         succeeded = True
         if profile == native_profile:
@@ -193,11 +221,9 @@ def install(source, applications, profile):
             shutil.move(str(data), str(profile / "data"))
         if agent_bytes:
             agent.write_bytes(agent_bytes)
-        if restart:
+        if restart or closed:
             previous = next(candidate for candidate in candidates if candidate.exists())
             start_service(previous, profile, profile / "data")
-        if closed:
-            execute("/usr/bin/open", legacy if legacy.exists() else app)
         raise
     finally:
         if lock:
