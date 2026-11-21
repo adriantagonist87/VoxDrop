@@ -1878,13 +1878,16 @@ class Controller(QObject):
                 raise RuntimeError('Die Detailsuche wird noch beendet. Bitte erneut versuchen.')
             COMMANDS.wait_idle()
             profile_transfer.check(self.transfer_cancel)
-            command('stop')
+            from watch_service import running
+            service_was_running = running(PROFILE / 'service')
+            if service_was_running:
+                command('stop')
             try:
                 return profile_transfer.restore_backup(PROFILE, MODEL_DATA, archive, options,
                     mappings=mappings, media_destination=media, hardware=GPU, cancel=self.transfer_cancel,
                     progress=self.transferProgress.emit)
             finally:
-                if was_running and CONFIG.is_file() and not self.quitting:
+                if (was_running or service_was_running) and CONFIG.is_file() and not self.quitting:
                     command('start', CONFIG)
         def completed(result):
             self.preferences.sync()
