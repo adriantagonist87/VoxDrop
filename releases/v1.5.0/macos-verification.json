@@ -1,0 +1,74 @@
+{
+  "passed": true,
+  "version": "1.5.0",
+  "build": 27,
+  "code_commit": "060ce5b7a1f597ec55d28255dcd07a296e6da73f",
+  "archive_sha256": "60d8760c174871248396ba9458475266962c7fe8303418e929d84d9dea8cce46",
+  "archive_bytes": 617722054,
+  "public_download": {
+    "verified": true,
+    "authenticated": false,
+    "url": "https://github.com/adriantagonist87/VoxDrop/releases/download/v1.5.0-macos/VoxDrop-1.5.0-macOS-arm64.dmg",
+    "verified_on": "2026-11-21"
+  },
+  "native_regressions": {
+    "cases": 228,
+    "passed": 221,
+    "windows_skips": 7,
+    "seconds": 62.18,
+    "test_commit": "060ce5b7a1f597ec55d28255dcd07a296e6da73f"
+  },
+  "native_normal_entry_migration": {
+    "test_commit": "06244b77a57bb59a27816d049d8814ea28fb1d16",
+    "passed": true,
+    "normal_swift_launcher": true,
+    "native_all_components_export": true,
+    "native_preview_and_full_import": true,
+    "restored_job_count": 1,
+    "media_and_txt_hashes_equal": true,
+    "originals_preserved": true,
+    "model_fixture_restored": true,
+    "prior_profile_backup_created": true,
+    "prior_models_retained": true,
+    "monitoring_and_queue_paused": true,
+    "test_app_stopped": true
+  },
+  "native_package_layout": {
+    "scale": "1.5",
+    "queue": 8000,
+    "history": 20000,
+    "qml_warnings": 0,
+    "rss_mib": 315.7
+  },
+  "installed": {
+    "passed": true,
+    "version": "1.5.0",
+    "build": "27",
+    "code_commit": "060ce5b7a1f597ec55d28255dcd07a296e6da73f",
+    "program_files": 44,
+    "models_unchanged": 108,
+    "config_unchanged": true,
+    "previous_jobs_preserved": 1,
+    "running": true,
+    "available_folders": 1,
+    "folder_count": 1,
+    "autostart_preserved": true
+  },
+  "dmg": {
+    "passed": true,
+    "version": "1.5.0",
+    "build": 27,
+    "program_files": 44,
+    "signature_valid": true,
+    "installed_bundle_identity": true,
+    "source_archives": 2,
+    "engine_files_identical_to_141": 20
+  },
+  "windows_ci": {
+    "passed": true,
+    "test_commit": "2803671c95c59d8757cb0c641e2c7451adebdde7",
+    "url": "https://github.com/adriantagonist87/VoxDrop/actions/runs/44934896653"
+  },
+  "windows_new_native_package_verified": false,
+  "operating_system_reboot_test": false
+}
