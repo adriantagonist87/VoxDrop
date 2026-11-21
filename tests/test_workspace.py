@@ -123,7 +123,7 @@ class WorkspaceTests(unittest.TestCase):
         self.assertFalse(self.controller.draft['monitoring'])
         self.assertIn('Import abgeschlossen',self.controller.transfer_status)
         # Keep the test's automatically created rollback outside the native profile.
-        self.assertIn(str(profile.parent),self.controller.transfer_status)
+        self.assertIn(str(profile.parent.resolve()),self.controller.transfer_status)
 
     def test_minimum_window_keeps_five_whole_queue_rows_and_switches_to_wide_history(self):
         self.queue_fixture(60)
