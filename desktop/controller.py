@@ -1878,8 +1878,8 @@ class Controller(QObject):
                 raise RuntimeError('Die Detailsuche wird noch beendet. Bitte erneut versuchen.')
             COMMANDS.wait_idle()
             profile_transfer.check(self.transfer_cancel)
-            from watch_service import running
-            service_was_running = running(PROFILE / 'service')
+            from watch_service import is_running
+            service_was_running = is_running(PROFILE / 'service')
             if service_was_running:
                 command('stop')
             try:
