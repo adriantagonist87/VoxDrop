@@ -1,0 +1,246 @@
+{
+  "platform": "macOS-arm64",
+  "version": "1.4.1",
+  "build": "26",
+  "code_commit": "f1b9e69c553b935a5cb940434b2c2cb55ea9160d",
+  "dirty": false,
+  "atrain_commit": "ea8a7057857220b4299c0ba0b2aaf6def2f35b87",
+  "files": [
+    {
+      "path": "AppIcon.icns",
+      "size": 1876651,
+      "sha256": "7d02dce9e0324d40f7f03f9d032878e0fb4aa40209f94f98237d44df7008cad9"
+    },
+    {
+      "path": "Desktop/GPL-3.0-only.txt",
+      "size": 35147,
+      "sha256": "8ceb4b9ee5adedde47b31e975c1d90c73ad27b6b165a1dcd80c7c545eb65b903"
+    },
+    {
+      "path": "Desktop/LGPL-3.0-only.txt",
+      "size": 7651,
+      "sha256": "da7eabb7bafdf7d3ae5e9f223aa5bdc1eece45ac569dc21b3b037520b4464768"
+    },
+    {
+      "path": "Desktop/Qt-Lizenzen.md",
+      "size": 1097,
+      "sha256": "ee421b1dceb1fb4e127fba6a03eb385d7931f752be691832f69aef976272b8ea"
+    },
+    {
+      "path": "Desktop/assets/Inter-LICENSE.txt",
+      "size": 4380,
+      "sha256": "262481e844521b326f5ecd053e59b98c8b2da78c8ee1bdbb6e8174305e54935a"
+    },
+    {
+      "path": "Desktop/assets/InterVariable.ttf",
+      "size": 879708,
+      "sha256": "4989b125924991b90d05b2d16e0e388c48f7d5bb8b30539bbf9c755278d0ccaf"
+    },
+    {
+      "path": "Desktop/command_process.py",
+      "size": 1819,
+      "sha256": "7e4c86c4eb42ea134bf9fee85a381eaa2844ed56f9a7b230bd3bfd03de7fec1d"
+    },
+    {
+      "path": "Desktop/controller.py",
+      "size": 69118,
+      "sha256": "423908bcb03e3398604c648b81681b0f32751c1d59af9b5730e9d6378f66d351"
+    },
+    {
+      "path": "Desktop/desktop.py",
+      "size": 4215,
+      "sha256": "951adb9f89d9991a142a0d9000793f42a4c999659b64c88cd83a2b30b8bdb611"
+    },
+    {
+      "path": "Desktop/file_actions.py",
+      "size": 2083,
+      "sha256": "4f839d283936567834a3b3bce9a48f0259136f85db05c298c5d62713d85d41cb"
+    },
+    {
+      "path": "Desktop/model_storage.py",
+      "size": 814,
+      "sha256": "480f7b6decdb5c26d77a3539ecd5a358b5f35329fb98d84c0177eafdd73ef94a"
+    },
+    {
+      "path": "Desktop/network_wait.py",
+      "size": 767,
+      "sha256": "1e12a69dc468abcd6f397447841f53a7e533a83459187648fec24bea2e3b86a1"
+    },
+    {
+      "path": "Desktop/qml/DropConflictDialog.qml",
+      "size": 5792,
+      "sha256": "4042d06b8b02f4de7a336fde6bc710467b230f718413ef8640e6ce3826093479"
+    },
+    {
+      "path": "Desktop/qml/Main.qml",
+      "size": 63215,
+      "sha256": "066d22764e7a063263e899afa9a8aa733b18e6562f4bd5c329251e00283e0f9d"
+    },
+    {
+      "path": "Desktop/qml/PlaybackButton.qml",
+      "size": 2922,
+      "sha256": "9952d722dc2b5fbf34ed4537c9dd450a604505945c175c07ea012e7b5bf3dc28"
+    },
+    {
+      "path": "Desktop/qml/QueuePane.qml",
+      "size": 15262,
+      "sha256": "9ad27e4c61cf794ae6805d8264cfaf6a5b6c3ff1ad21d8d93b6f733be739713f"
+    },
+    {
+      "path": "Desktop/qml/SearchToggle.qml",
+      "size": 776,
+      "sha256": "d8b7113ef100e99ca4ef08509bd63a1417c6031e51aa5a9e6c759276c114b656"
+    },
+    {
+      "path": "Desktop/requirements-macos.txt",
+      "size": 203,
+      "sha256": "aa5b65c901ebaa12941ca59c8419c3e475139a3ff2ca6197391fe3e061635a5d"
+    },
+    {
+      "path": "Desktop/rows_model.py",
+      "size": 2551,
+      "sha256": "49b9c9a26a7d399ae05b8afe0c956e807c1ce650debb56753da4bda854fa82af"
+    },
+    {
+      "path": "Desktop/transcript_search.py",
+      "size": 12362,
+      "sha256": "faa06eb5e1955a0e215455d237385a0de8523a29e4545c605821b913236ad350"
+    },
+    {
+      "path": "Desktop/window_state.py",
+      "size": 3746,
+      "sha256": "4e5b7271f42a96b71addf3911430c55a8a4ed7b5e63c8f64bb177554834abd1f"
+    },
+    {
+      "path": "Engine/aTrain-LICENSE.txt",
+      "size": 34523,
+      "sha256": "8486a10c4393cee1c25392769ddd3b2d6c242d6ec7928e1414efff7dfb2f07ef"
+    },
+    {
+      "path": "Engine/airdrop.example.json",
+      "size": 312,
+      "sha256": "479b78e34f975c4bd8c5084c16290aea3802e3b856f82095e4225beedfd08463"
+    },
+    {
+      "path": "Engine/app_lifecycle.py",
+      "size": 6881,
+      "sha256": "88ecec367a37ca1b0f2b28239b861069b4a2744b9e245ad07e4c11d3163e5082"
+    },
+    {
+      "path": "Engine/app_upgrade.py",
+      "size": 6751,
+      "sha256": "accaa0f81cb8534c73749b56ae3a215c28a04d0fd568c7e6a844c32b4b4b27e1"
+    },
+    {
+      "path": "Engine/gpu_budget.py",
+      "size": 6758,
+      "sha256": "94a5261b7ba1cc1473fe7ef07fac27e0a4007f7863b5a1393fb5de439a06cec7"
+    },
+    {
+      "path": "Engine/history_store.py",
+      "size": 1629,
+      "sha256": "20391f53e0bb9d1a03ec1b1e6f86f2af6d83c8cac85528cbbd2bfcce5d2f0652"
+    },
+    {
+      "path": "Engine/login_agent.py",
+      "size": 2161,
+      "sha256": "301a755369c28bd7f6bff8bf9a77fc0f464385669f8205739429d2b765fb7ebe"
+    },
+    {
+      "path": "Engine/media_history.py",
+      "size": 1125,
+      "sha256": "456318bdcf16eb257388f97e639f15a25f12a28918898449aa0846dba3d56c39"
+    },
+    {
+      "path": "Engine/platform_io.py",
+      "size": 14709,
+      "sha256": "25bcdab2d7a432c20addc1cb36d40eddb65566354e15af30adf50f094f5f81d0"
+    },
+    {
+      "path": "Engine/posix_guard.py",
+      "size": 1231,
+      "sha256": "c4e53afc32e6e1412d760de9eab0f5f074c9057f291533e7ae05eee59fac79e4"
+    },
+    {
+      "path": "Engine/queue_control.py",
+      "size": 13516,
+      "sha256": "6ccc971983ba065f85e90a06d0f97ed116bb6da491ecec1c267213b6ccc34873"
+    },
+    {
+      "path": "Engine/qwen-models.json",
+      "size": 2062,
+      "sha256": "6a8dafd83bb21bbca4484697b419edce97552c5bfbab615952ed3461be16be24"
+    },
+    {
+      "path": "Engine/qwen_backend.py",
+      "size": 13069,
+      "sha256": "09e0d76f884dbb1fc25acec11392f5bfe33f75a6c9178176fe8a484810bf0ad6"
+    },
+    {
+      "path": "Engine/runtime_logs.py",
+      "size": 1167,
+      "sha256": "93d93489a574a6be9a1229e85525fafde5ee50f8de04484ef68247bb642312ed"
+    },
+    {
+      "path": "Engine/silence.py",
+      "size": 1875,
+      "sha256": "a27794472e5b1c44e7e7befeefb1240230ec5de55c4ca14d34392fb906a7db23"
+    },
+    {
+      "path": "Engine/smb_paths.py",
+      "size": 4058,
+      "sha256": "b624ca639ad6dcbd036617c26c4d491bb24ce3dd26b9106c273a88cddd0c769b"
+    },
+    {
+      "path": "Engine/speaker_diarization.py",
+      "size": 6615,
+      "sha256": "ae40dca523c4779c661fc0f7c5130314fceadba3889288581db37ef6ea538b71"
+    },
+    {
+      "path": "Engine/transcription_worker.py",
+      "size": 5472,
+      "sha256": "267c7a9110cb8ea1acbab8e151220a583fdefadb1ca50a76c76eddda40db84ed"
+    },
+    {
+      "path": "Engine/voxdrop.py",
+      "size": 16335,
+      "sha256": "1525fe2e395408094ab7dab2ee96928c8c38c61a8a3c86358975f0ddbfd486cb"
+    },
+    {
+      "path": "Engine/watch_service.py",
+      "size": 111402,
+      "sha256": "99737516112cf2c8ef5547a024350e32357cea3df9c54e5fad69abf44b68d675"
+    },
+    {
+      "path": "LICENSE",
+      "size": 34523,
+      "sha256": "8486a10c4393cee1c25392769ddd3b2d6c242d6ec7928e1414efff7dfb2f07ef"
+    },
+    {
+      "path": "VoxDropLogo.png",
+      "size": 1517561,
+      "sha256": "bafd2bd8e243adb0a4020efdf7f037125dda9c1b0bd6db437aca4e84a88135ec"
+    }
+  ],
+  "release_tag": "v1.4.1-macos",
+  "archive": "VoxDrop-1.4.1-macOS-arm64.dmg",
+  "runtime_pins": {
+    "python": "3.12.13",
+    "qt": "6.10.2",
+    "torch": "2.9.1",
+    "ctranslate2": "4.9.0",
+    "mlx": "0.32.4",
+    "mlx-audio": "0.6.5"
+  },
+  "verification": {
+    "native_cases": 214,
+    "native_passed": 207,
+    "native_platform_skips": 7,
+    "native_test_commit": "f1b9e69c553b935a5cb940434b2c2cb55ea9160d",
+    "native_seconds": 52.601,
+    "folder_controls_and_reconciliation": true,
+    "native_loaded_model_stop_restart": true,
+    "smb_synthetic_drop_and_retranscription": true,
+    "backends_byte_identical_to_140": true
+  }
+}

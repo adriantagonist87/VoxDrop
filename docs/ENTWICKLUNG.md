@@ -1,5 +1,9 @@
 # Entwicklung auf macOS und Windows
 
+## Ergänzung Mac 1.4.1
+
+Die während der Mac-Arbeit neu veröffentlichte Windows-Ordnersteuerung ist auch im Mac-Build 26 enthalten. `folder_options`, `watch_deferred`, `rescan-folders` und `reconcile-folders` verwenden dieselbe gemeinsame Implementierung. 214 native Mac-Regressionen sowie Paket-, SMB- und Layoutprüfungen bestanden; Modelle und Laufzeit sind unverändert. Maßgeblicher Stand: [Mac-Abnahme](MAC_ABNAHME_2026-11-21.md).
+
 ## Mac-Portierung vom 21.11.2026
 
 1.4.0 Build 25 ist auf dem Mac mini produktiv installiert. Programmdateien/Signatur, unveränderte Modelle/Einstellungen und der aktive appgebundene Dienst wurden geprüft. Der aktuelle vollständige native Testlauf umfasst 209 Fälle mit sieben reinen Windows-Skips; zwölf Metal-Sprachläufe, Paketsteuerung, SMB und harte Ausfälle ergänzen ihn. [Exakte SHAs, Werkzeuge und Grenzen](MAC_ABNAHME_2026-11-21.md).

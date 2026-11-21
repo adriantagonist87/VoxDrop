@@ -7,7 +7,7 @@ VoxDrop ist eine kostenlose App für macOS und Windows auf Basis von aTrain. Sie
 | System | Download | Stand |
 | --- | --- | --- |
 | **Windows 11 x64 / NVIDIA CUDA** | **[Windows-ZIP herunterladen](https://github.com/adriantagonist87/VoxDrop/releases/download/v1.4.1/VoxDrop-1.4.1-Windows-x64.zip)** · [Release und Prüfsumme](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.4.1) | Neue Arbeitsübersicht; Programmdateien und SHA-256 im [Release-Manifest](releases/v1.4.1/windows-release.json). |
-| **macOS / Apple Silicon** | **[Mac-DMG herunterladen](https://github.com/adriantagonist87/VoxDrop/releases/download/v1.4.0-macos/VoxDrop-1.4.0-macOS-arm64.dmg)** · [Mac-Release und Prüfsumme](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.4.0-macos) | 1.4.0 Build 25 mit derselben Arbeitsübersicht, Queue und Suche; Metal-GPU-Budget und sequenzielle Modelle. [Native Abnahme](docs/MAC_ABNAHME_2026-11-21.md). |
+| **macOS / Apple Silicon** | **[Mac-DMG herunterladen](https://github.com/adriantagonist87/VoxDrop/releases/download/v1.4.1-macos/VoxDrop-1.4.1-macOS-arm64.dmg)** · [Mac-Release und Prüfsumme](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.4.1-macos) | 1.4.1 Build 26 mit derselben Arbeitsübersicht, Queue, Suche und Ordnersteuerung; Metal-GPU-Budget und sequenzielle Modelle. [Native Abnahme](docs/MAC_ABNAHME_2026-11-21.md). |
 
 ## Windows einrichten
 
@@ -47,7 +47,7 @@ Die DMG öffnen, den gesamten Ordner **VoxDrop** nach **Programme** ziehen und d
 
 Über **Modelle herunterladen** werden die gewünschten Modelle und ihr Download-Cache im Programmordner unter **VoxDrop/Modelle** eingerichtet. Zum Entfernen der App samt Modellen den gesamten Ordner **VoxDrop** löschen. Bei Updates die neue **VoxDrop.app** in den vorhandenen VoxDrop-Ordner kopieren. Einstellungen und Verlauf liegen im Benutzerordner unter **Library/Application Support/VoxDrop**.
 
-Mac 1.4 verwendet dieselbe Arbeitsübersicht und dieselben Queue-/Such-/Dateischutzfunktionen wie Windows. ASR, Wortausrichtung und Sprecherpipeline werden nacheinander geladen; der GPU-Regler steuert auch Metal. Die native Abnahme umfasst Cocoa, echte deutsche/englische Modellläufe, SMB, Abbruch, Wiederanlauf und vollständiges Beenden. [Mac-Abnahme und verbleibende Prüfgrenzen](docs/MAC_ABNAHME_2026-11-21.md).
+Mac 1.4.1 verwendet dieselbe Arbeitsübersicht und dieselben Queue-/Such-/Dateischutzfunktionen wie Windows. ASR, Wortausrichtung und Sprecherpipeline werden nacheinander geladen; der GPU-Regler steuert auch Metal. Die native Abnahme umfasst Cocoa, echte deutsche/englische Modellläufe, SMB, Abbruch, Wiederanlauf und vollständiges Beenden. [Mac-Abnahme und verbleibende Prüfgrenzen](docs/MAC_ABNAHME_2026-11-21.md).
 
 [Arbeitsregeln](AGENTS.md) · [Projektstatus](docs/PROJEKTSTATUS.md) · [Entwicklung](docs/ENTWICKLUNG.md) · [Windows-Übergabe](docs/UEBERGABE_WINDOWS.md) · [Release-Identität und Branchschutz](docs/GITHUB_ABSCHLUSS_2026-11-18.md)
 

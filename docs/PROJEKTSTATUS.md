@@ -1,5 +1,9 @@
 # Projektstatus VoxDrop
 
+## Aktuell: Mac 1.4.1 Build 26
+
+Während der Mac-Abnahme wurde Windows 1.4.1 über PR #7 auf `main` integriert. Auch dessen Ordnerpause, Ausgabe je Pfad, sofortiges Neueinlesen und Zurückstellen verwaister automatischer Aufträge sind übernommen. Windows-Basis `3033503929f9e59592636d975cf03ef043a4f721`, gemeinsam geprüfter Mac-Code `f1b9e69c553b935a5cb940434b2c2cb55ea9160d`. Native Cocoa-Suite: 214 Fälle in 52,601 s, 207 bestanden/sieben reine Windows-Skips. Vollständige native Paketsteuerung mit geladenem Qwen, Stopp/Wiederaufnahme, drei DOVER-Durchgängen, Suche und Quit, SMB-Neutranskription sowie 8.000/20.000-Zeilen-Layout bei 125 % erneut bestanden. Kein Modell-/Laufzeitwechsel; ASR-, Budget-, Sprecher-, Stille- und Worker-Backends sind bytegleich zum abgenommenen Build 25. Die frühere 1.4.0-Mac-Veröffentlichung bleibt als eingefrorener Zwischenstand erhalten. [Manifest 1.4.1](../releases/v1.4.1/macos-release.json).
+
 ## Mac-Portierung am 21. November 2026
 
 Der gemeinsame Windows-Stand 1.4 läuft jetzt auch produktiv auf diesem Mac mini als **1.4.0 Build 25**. Neue Oberfläche/Queue/Suche übernommen; zusätzlich sequenzielle Qwen-MLX-Modellphasen, Metal-/MPS-GPU-Budget, Unix-Prozesswächter, Mac-Supervisor/Wiederaufnahme, offene lokale Aufnahmen und Cmd-Q angebunden. Ein echter Cocoa-Vollbild-/Minimierungsfehler wurde reproduziert und korrigiert. Final 209 native Regressionen (202 bestanden/sieben Windows-Skips), zwölf echte Metal-Sprachläufe, große native QML-Listen bei 100/125/150 %, SMB, echte QML-Steuerung und Ausfall/Wiederaufnahme bestanden. Programmcode `c6ef0b7433727eea357cf85798585ab326edb2f7`; native Testsuite samt Cocoa-Regressionsfolge bei `c6ef0b7433727eea357cf85798585ab326edb2f7`. Der zugehörige aktuelle Windows-Check ist [erfolgreich](https://github.com/adriantagonist87/VoxDrop/actions/runs/44927646527).
@@ -246,7 +250,7 @@ GitHub-Übergabe: [Windows-Branch](https://github.com/adriantagonist87/VoxDrop/t
 | Gegenstand | Stand |
 | --- | --- |
 | Öffentliches Repository | `adriantagonist87/VoxDrop`, Hauptbranch `main` |
-| Freigegebene Plattformstände | Windows `v1.4.0`; macOS `v1.4.0-macos`, App 1.4.0 Build 25 |
+| Freigegebene Plattformstände | Windows `v1.4.1`; macOS `v1.4.1-macos`, App 1.4.1 Build 26 |
 | Getesteter Mac-Implementierungscommit | `c6ef0b7433727eea357cf85798585ab326edb2f7` |
 | Gemeinsame Entwicklungsbasis | `main` mit App-Code, Arbeitsregeln und gemeinsamer Dokumentation |
 | Betriebsmodell | Eigenständige lokale macOS- und Windows-Apps, auch in verschiedenen Netzwerken |

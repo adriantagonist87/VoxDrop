@@ -1,5 +1,9 @@
 # macOS auf dem gemeinsamen Stand 1.4
 
+## Aktuell: Mac 1.4.1 Build 26
+
+Während der Mac-Abnahme wurde Windows 1.4.1 über PR #7 auf `main` integriert. Auch dessen Ordnerpause, Ausgabe je Pfad, sofortiges Neueinlesen und Zurückstellen verwaister automatischer Aufträge sind übernommen. Windows-Basis `3033503929f9e59592636d975cf03ef043a4f721`, gemeinsam geprüfter Mac-Code `f1b9e69c553b935a5cb940434b2c2cb55ea9160d`. Native Cocoa-Suite: 214 Fälle in 52,601 s, 207 bestanden/sieben reine Windows-Skips. Vollständige native Paketsteuerung mit geladenem Qwen, Stopp/Wiederaufnahme, drei DOVER-Durchgängen, Suche und Quit, SMB-Neutranskription sowie 8.000/20.000-Zeilen-Layout bei 125 % erneut bestanden. Kein Modell-/Laufzeitwechsel; ASR-, Budget-, Sprecher-, Stille- und Worker-Backends sind bytegleich zum abgenommenen Build 25. Die frühere 1.4.0-Mac-Veröffentlichung bleibt als eingefrorener Zwischenstand erhalten. [Manifest 1.4.1](../releases/v1.4.1/macos-release.json).
+
 Ausgangsbasis: `2e493e973c9f24ed3b46e44c45f31f7801398217` aus `origin/main`, Windows-Paketcode `48ff35f43f07c07b4b7abd0b22561c9096fbe1cc`. Auftrag vom 21.11.2026: sämtliche aktuellen Windows-Funktionen und die neue Oberfläche auf dem Mac mini produktiv bereitstellen. Die vorhandene Mac-Installation war 1.3.1 / Build 23; Konfiguration, Verlauf, Modelle und Anmeldestart werden erhalten.
 
 ## Mac-Anpassungen
@@ -60,7 +64,7 @@ res="$PWD/.runtime/package/VoxDrop.app/Contents/Resources"
 
 Das Modellprüfskript verlangt `de.wav`, `en.wav` und `references.json` mit `language`, `required` und `second_start_seconds`. Die Aufnahmen enthalten ausschließlich künstliche Sprache. Private Pfade, Datenbanken, Rohlogs und Medien bleiben unter `.runtime/` und außerhalb von GitHub.
 
-## Produktivupdate und Release
+## Erstes Produktivupdate und Release 1.4.0
 
 Die signierte App 1.4.0 Build 25 ist am bisherigen Mac-Installationsort produktiv installiert und sichtbar geöffnet. Vorher wurden App, konsistenter SQLite-Verlauf, Einstellungen und Anmelderegistrierung außerhalb des Repositorys gesichert. Nachher: Konfiguration bytegleich; alle vier vorherigen Aufträge in ID, Quelle, Dateiversion und Zustand erhalten; sämtliche 106 Modell-/Cachedateien in Hash, Inode, Größe und Änderungszeit unverändert; SQLite/Fremdschlüssel ok; Bundle-Signatur und alle 43 Manifestdateien gültig. Die bestehende Anmelderegistrierung startet weiterhin den nativen App-Launcher mit `--background`, RunAtLoad und ohne KeepAlive.
 
