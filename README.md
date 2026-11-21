@@ -93,12 +93,13 @@ Sobald die Modelle eingerichtet sind, zieh eine Aufnahme ins Fenster und starte 
 
 ## Gemessene Laufzeit und Speichernutzung
 
-**Zwischenstand: 5 von 16 Varianten abgeschlossen.** Neue Messwerte erscheinen nach jedem Lauf.
+**Zwischenstand: 6 von 16 Varianten abgeschlossen.** Neue Messwerte erscheinen nach jedem Lauf.
 
 Messreihe mit **16 Kombinationen** auf derselben realen MP4-Aufnahme (20:59 min Audio) auf einem **Mac mini M5 Pro mit 64 GB**. VoxDrop 1.5.0 nutzt Metal mit Qwen3-ASR 1.7B und Whisper Large v3 Turbo. Jede Variante beginnt mit einem frischen Auftragsprozess. Die Sprechererkennung ist immer aktiv, mit einem Durchgang ohne DOVER-Lap und drei mit DOVER-Lap. Die Option „Lange Stille überspringen“ blieb aus.
 
 | Modell | GPU-Budget | DOVER-Lap | Sprache | Gesamt | Sprecherphase | RAM-Spitze | Ø GPU |
 | --- | ---: | --- | --- | ---: | ---: | ---: | ---: |
+| Whisper | 50 % | Aus | Automatisch | 4:21 min | 1:35 min | 5,97 GiB | 58,3 % |
 | Whisper | 50 % | An | Deutsch | 5:23 min | 2:34 min | 5,96 GiB | 64,7 % |
 | Qwen | 100 % | Aus | Automatisch | 2:07 min | 1:11 min | 5,65 GiB | 68,5 % |
 | Qwen | 100 % | Aus | Deutsch | 1:36 min | 0:47 min | 5,64 GiB | 85,8 % |
