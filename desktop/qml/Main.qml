@@ -13,6 +13,12 @@ ApplicationWindow {
     property bool settingsOpen: false
     property int settingsTab: 0
     property int workTab: 0
+    readonly property var transferParts: [
+        {key: "settings", label: "Einstellungen und Fensterlayout"},
+        {key: "databases", label: "Alle Datenbanken, Verlauf, Bestand, Suchindex und Warteschlange"},
+        {key: "models", label: "Modelle einschließlich Download-Cache (mehrere GB)"},
+        {key: "media", label: "Aufnahmen und TXT aus überwachten Ordnern und Verlauf"}
+    ]
     readonly property bool focusView: width < 1200 || api.workspaceView === "focus"
     onSettingsTabChanged: Qt.callLater(function() { settingsScroll.contentItem.contentY = 0 })
     function openSettings(tab) { settingsTab = tab; settingsOpen = true }
@@ -594,6 +600,7 @@ ApplicationWindow {
                         AppActionButton { objectName: "transcriptionSettingsTab"; text: "Transkription"; checked: window.settingsTab === 0; onClicked: window.settingsTab = 0 }
                         AppActionButton { objectName: "folderSettingsTab"; text: "Ordner & Überwachung"; checked: window.settingsTab === 1; onClicked: window.settingsTab = 1 }
                         AppActionButton { objectName: "appSettingsTab"; text: "App & Daten"; checked: window.settingsTab === 2; onClicked: window.settingsTab = 2 }
+                        AppActionButton { objectName: "transferSettingsTab"; text: "Import & Export"; checked: window.settingsTab === 3; onClicked: window.settingsTab = 3 }
                     }
                     ScrollView {
                         id: settingsScroll; objectName: "settingsScroll"
@@ -817,15 +824,14 @@ ApplicationWindow {
                                     text: "Unterordner mit einbeziehen"
                                     Layout.fillWidth: true
                                     checked: settings.include_subfolders
-                                    onToggled: api.setSetting("include_subfolders", checked)
+                                    onCheckedChanged: api.setSetting("include_subfolders", checked)
                                 }
                                 Toggle {
                                     objectName: "createOutputSubfolder"
-                                    text: "Globale Vorgabe: Unterordner für fertige Transkripte erstellen"
+                                    text: "Unterordner für fertige Transkripte erstellen"
                                     Layout.fillWidth: true
-                                    enabled: !settings.include_subfolders
                                     checked: settings.create_output_subfolder
-                                    onToggled: api.setSetting("create_output_subfolder", checked)
+                                    onCheckedChanged: api.setSetting("create_output_subfolder", checked)
                                 }
                                 Field {
                                     objectName: "outputSubfolderName"
@@ -875,6 +881,85 @@ ApplicationWindow {
                                     AppActionButton { text: "Protokoll öffnen"; onClicked: api.openLog() }
                                     AppActionButton { text: "Einrichtung erneut prüfen"; enabled: !viewState.busy; onClicked: api.retryPreparation() }
                                 }
+                            }
+                            ColumnLayout {
+                                Layout.fillWidth: true; visible: window.settingsTab === 3; spacing: 12
+                                Heading { text: "Sicherung für Gerätewechsel"; font.pixelSize: 15 }
+                                Muted { Layout.fillWidth: true; text: "Eine lokale ZIP-Datei mit den gewählten Bestandteilen. Datenbanken werden konsistent gesichert, auch während der Verarbeitung. Programm und Python-Laufzeit werden auf dem neuen Gerät separat installiert." }
+                                Repeater {
+                                    model: window.transferParts
+                                    delegate: Toggle {
+                                        required property var modelData
+                                        objectName: "exportOption_" + modelData.key
+                                        Layout.fillWidth: true
+                                        text: modelData.label
+                                        checked: api.transfer.exportOptions[modelData.key]
+                                        enabled: !viewState.busy
+                                        onCheckedChanged: api.setTransferOption("export", modelData.key, checked)
+                                    }
+                                }
+                                Muted { Layout.fillWidth: true; text: "Gesichert werden gespeicherte Einstellungen. Netzwerk-Zugangsdaten und die Anmeldestart-Registrierung gehören zum jeweiligen Gerät. Medien werden nur mit der entsprechenden Checkbox kopiert; Originale bleiben erhalten." }
+                                AppActionButton {
+                                    objectName: "exportBackupButton"; text: "Ausgewählte Daten exportieren …"; primary: true
+                                    enabled: viewState.ready && !viewState.busy && Object.values(api.transfer.exportOptions).some(Boolean) && (!api.transfer.exportOptions.settings || !viewState.settingsDirty)
+                                    onClicked: api.exportBackup()
+                                }
+                                Rectangle { Layout.fillWidth: true; height: 1; color: line }
+                                Heading { text: "Sicherung importieren"; font.pixelSize: 15 }
+                                Muted { Layout.fillWidth: true; text: "Die ausgewählten App-Daten ersetzen den lokalen Stand. Vorher wird automatisch eine Sicherung angelegt. Überwachung und Verarbeitung bleiben nach dem Import pausiert, bis Sie Ordner geprüft und bewusst gestartet haben." }
+                                AppActionButton { objectName: "chooseImportBackupButton"; text: "Sicherung auswählen …"; enabled: viewState.ready && !viewState.busy; onClicked: api.chooseImportBackup() }
+                                ColumnLayout {
+                                    Layout.fillWidth: true; spacing: 10; visible: api.transfer.preview.fileCount !== undefined
+                                    Copy { Layout.fillWidth: true; text: "Sicherung vom " + (api.transfer.preview.created || "") + " · " + (api.transfer.preview.jobs || 0) + " Aufträge · " + (api.transfer.preview.fileCount || 0) + " Dateien · " + ((api.transfer.preview.bytes || 0) / 1073741824).toFixed(2) + " GiB" }
+                                    Repeater {
+                                        model: window.transferParts
+                                        delegate: Toggle {
+                                            required property var modelData
+                                            objectName: "importOption_" + modelData.key
+                                            Layout.fillWidth: true; text: modelData.label
+                                            checked: api.transfer.importOptions[modelData.key]
+                                            enabled: !viewState.busy && Boolean((api.transfer.preview.available || ({}))[modelData.key]) && (modelData.key !== "models" || api.transfer.preview.platform === api.nativePlatform)
+                                            onCheckedChanged: api.setTransferOption("import", modelData.key, checked)
+                                        }
+                                    }
+                                    Muted { Layout.fillWidth: true; visible: api.transfer.preview.platform !== api.nativePlatform; text: "Beim Wechsel zwischen Windows und macOS werden Rechengerät und Pfade angepasst. Modelle sind plattformspezifisch und werden auf dem Zielgerät neu eingerichtet." }
+                                    ColumnLayout {
+                                        Layout.fillWidth: true; visible: api.transfer.importOptions.media
+                                        Copy { Layout.fillWidth: true; text: "Aufnahmen und TXT werden in einen neuen Unterordner kopiert. Pfade in Einstellungen und Verlauf werden automatisch zugeordnet." }
+                                        RowLayout {
+                                            Layout.fillWidth: true
+                                            Copy { Layout.fillWidth: true; text: api.transfer.mediaDirectory; wrapMode: Text.WrapAnywhere }
+                                            AppActionButton { text: "Ziel wählen …"; enabled: !viewState.busy; onClicked: api.pickImportMediaDirectory() }
+                                        }
+                                    }
+                                    ColumnLayout {
+                                        Layout.fillWidth: true; visible: !api.transfer.importOptions.media; spacing: 10
+                                        Copy { Layout.fillWidth: true; text: "Ordner auf diesem Gerät zuordnen. Bei unveränderten Pfaden ist keine Anpassung nötig." }
+                                        Repeater {
+                                            model: api.transfer.mappings
+                                            delegate: ColumnLayout {
+                                                required property var modelData
+                                                required property int index
+                                                Layout.fillWidth: true
+                                                Muted { Layout.fillWidth: true; text: modelData.source; wrapMode: Text.WrapAnywhere }
+                                                RowLayout {
+                                                    Layout.fillWidth: true
+                                                    Field { objectName: "importMapping" + index; Layout.fillWidth: true; text: modelData.target; placeholderText: "Zielordner auf diesem Gerät"; onEditingFinished: api.setImportMapping(index, text) }
+                                                    AppActionButton { text: "…"; enabled: !viewState.busy; Accessible.name: "Zielordner zuordnen"; onClicked: api.pickImportMapping(index) }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    AppActionButton {
+                                        objectName: "importBackupButton"; text: "Ausgewählte Daten importieren …"; primary: true
+                                        enabled: viewState.ready && !viewState.busy && !viewState.current.name && !viewState.settingsDirty && Object.values(api.transfer.importOptions).some(Boolean)
+                                        onClicked: confirmImport.open()
+                                    }
+                                    Muted { Layout.fillWidth: true; visible: Boolean(viewState.current.name); text: "Vor dem Import den aktiven Auftrag abschließen lassen oder mit Stopp kontrolliert anhalten." }
+                                }
+                                TaskProgress { Layout.fillWidth: true; indeterminate: true; visible: api.transfer.running }
+                                Copy { objectName: "transferStatus"; Layout.fillWidth: true; text: api.transfer.status; visible: text.length > 0; wrapMode: Text.WrapAnywhere }
+                                AppActionButton { text: "Übertragung abbrechen"; visible: api.transfer.running; onClicked: api.cancelTransfer() }
                             }
                         }
                     }
@@ -1010,5 +1095,17 @@ ApplicationWindow {
         contentItem: Copy {
             text: "Alle Aufträge, die Warteschlange, der Dateibestand, gespeicherte Abbrüche und der Suchindex werden aus der lokalen Datenbank entfernt – unabhängig vom aktuellen Filter.\n\nAufnahmen und TXT-Dateien bleiben auf ihren Laufwerken erhalten. Bei aktiver Ordnerüberwachung werden die Ordner beim nächsten Intervall vollständig neu eingelesen. Vorhandene Transkripte erscheinen wieder im Bestand; Dateien ohne TXT werden neu eingereiht. Ordner- und Pauseneinstellungen bleiben erhalten."
         }
+    }
+    Dialog {
+        id: confirmImport; objectName: "confirmImport"; modal: true
+        title: "Sicherung wiederherstellen?"; anchors.centerIn: Overlay.overlay
+        width: Math.min(540, window.width - 48)
+        background: Rectangle { color: surface; radius: 9; border.color: line }
+        contentItem: Copy { text: "Die ausgewählten Einstellungen und Datenbanken ersetzen den bisherigen lokalen Stand. VoxDrop legt vorher eine Sicherung an.\n\nImportierte Aufnahmen und TXT erhalten einen neuen Ordner. Bestehende Originale werden nicht überschrieben. Modelle werden bei Auswahl ersetzt; der bisherige Modellspeicher bleibt als Rücksicherung erhalten.\n\nVerarbeitung und Überwachung werden angehalten und bleiben nach dem Import pausiert." }
+        footer: DialogButtonBox {
+            AppActionButton { text: "Abbrechen"; DialogButtonBox.buttonRole: DialogButtonBox.RejectRole }
+            AppActionButton { objectName: "confirmImportButton"; text: "Sicherung importieren"; primary: true; DialogButtonBox.buttonRole: DialogButtonBox.AcceptRole }
+        }
+        onAccepted: api.importBackup()
     }
 }

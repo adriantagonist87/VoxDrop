@@ -77,7 +77,7 @@ class DesktopWindowTests(unittest.TestCase):
         self.window.hide(); self.presenter.show(); QTest.qWait(300)
         self.assertEqual(self.window.windowState(), Qt.WindowState.WindowNoState)
 
-    def test_network_wait_offers_cancel_and_recursive_mode_locks_archive_option(self):
+    def test_network_wait_offers_cancel_and_folder_modes_are_symmetric(self):
         self.presenter.show()
         self.controller.downloading = True
         self.controller.network_permission_changed(True)
@@ -86,7 +86,10 @@ class DesktopWindowTests(unittest.TestCase):
         cancel = self.window.findChild(QObject, "cancelNetworkWait")
         self.assertTrue(cancel.property("visible"))
         self.assertTrue(cancel.property("enabled"))
-        self.assertFalse(self.window.findChild(QObject, "createOutputSubfolder").property("enabled"))
+        self.assertTrue(self.window.findChild(QObject, "createOutputSubfolder").property("enabled"))
+        self.controller.setSetting('create_output_subfolder', True)
+        self.assertFalse(self.controller.draft['include_subfolders'])
+        self.assertTrue(self.controller.draft['create_output_subfolder'])
         self.controller.cancelNetworkWait()
         self.assertTrue(self.controller.network_cancel.is_set())
         self.controller.network_permission_changed(False)

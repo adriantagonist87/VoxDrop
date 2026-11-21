@@ -1,6 +1,8 @@
 """Exercise the shared workspace with real QML events and isolated configuration."""
 import json
 import unittest
+from pathlib import Path
+from time import monotonic
 from unittest.mock import patch
 
 from PySide6.QtCore import QObject, QPointF, QMetaObject, Qt
@@ -41,6 +43,87 @@ class WorkspaceTests(unittest.TestCase):
         self.controller.paths = []
         self.controller.changed.emit()
         return settings
+
+    def test_import_export_page_has_independent_checkboxes_and_confirmation(self):
+        self.queue_fixture(); self.seed_config()
+        self.window.resize(1010, 630)
+        QTest.qWait(80)
+        self.click('settingsButton'); self.click('transferSettingsTab')
+        self.assertEqual(self.window.property('settingsTab'), 3)
+        self.assertFalse(self.controller.export_options['models'])
+        self.click('exportOption_models')
+        self.assertTrue(self.controller.export_options['models'])
+        from PySide6.QtGui import QAccessible, QAccessibleActionInterface
+        accessible=QAccessible.queryAccessibleInterface(self.visual('exportOption_models'))
+        self.assertIsNotNone(accessible)
+        accessible.actionInterface().doAction(QAccessibleActionInterface.toggleAction())
+        QTest.qWait(30)
+        self.assertFalse(self.controller.export_options['models'])
+        self.assertFalse(self.controller.export_options['media'])
+        self.controller.import_preview = dict(fileCount=3, jobs=4, bytes=1024,
+            created='2026-11-21', platform=self.controller_module.sys.platform,
+            available=dict(settings=True, databases=True, media=False, models=False))
+        self.controller.changed.emit(); QTest.qWait(50)
+        scroll=self.window.findChild(QObject, 'settingsScroll').property('contentItem')
+        scroll.setProperty('contentY', max(0, scroll.property('contentHeight')-scroll.property('height')))
+        QTest.qWait(60)
+        self.click('importBackupButton')
+        dialog=self.window.findChild(QObject,'confirmImport')
+        self.assertTrue(dialog.property('visible'))
+        self.assertLessEqual(dialog.property('height'),self.window.height()-35)
+        QMetaObject.invokeMethod(dialog,'close')
+
+    def test_folder_checkboxes_allow_switching_directly_in_both_directions(self):
+        self.queue_fixture();self.seed_config()
+        self.click('settingsButton');self.click('folderSettingsTab')
+        for name, selected, other in (
+            ('createOutputSubfolder','create_output_subfolder','include_subfolders'),
+            ('includeSubfolders','include_subfolders','create_output_subfolder'),
+            ('createOutputSubfolder','create_output_subfolder','include_subfolders')):
+            self.click(name)
+            self.assertTrue(self.controller.draft[selected])
+            self.assertFalse(self.controller.draft[other])
+        self.assertEqual(self.visual('createOutputSubfolder').property('text'),'Unterordner für fertige Transkripte erstellen')
+        self.click('createOutputSubfolder')
+        self.assertFalse(self.controller.draft['create_output_subfolder'])
+        self.assertFalse(self.controller.draft['include_subfolders'])
+        from PySide6.QtGui import QAccessible, QAccessibleActionInterface
+        for name, selected, other in (('includeSubfolders','include_subfolders','create_output_subfolder'),
+                                      ('createOutputSubfolder','create_output_subfolder','include_subfolders')):
+            interface=QAccessible.queryAccessibleInterface(self.visual(name))
+            interface.actionInterface().doAction(QAccessibleActionInterface.toggleAction())
+            QTest.qWait(30)
+            self.assertTrue(self.controller.draft[selected]);self.assertFalse(self.controller.draft[other])
+
+    def test_gui_export_preview_and_reimport_real_isolated_database(self):
+        import watch_service as backend
+        profile=self.controller_module.PROFILE/'profile';profile.mkdir()
+        self.enterContext(patch.object(self.controller_module,'PROFILE',profile))
+        self.config_file=profile/'config.json'
+        self.enterContext(patch.object(self.controller_module,'CONFIG',self.config_file))
+        self.seed_config()
+        backend.initialise(profile/'service')
+        archive=profile/'Roundtrip.voxdrop.zip'
+        def wait():
+            deadline=monotonic()+30
+            while self.controller.busy and monotonic()<deadline:QTest.qWait(20)
+            self.assertFalse(self.controller.busy, self.controller.transfer_status)
+            self.assertFalse(self.controller.message_error,self.controller.message)
+        with patch.object(self.controller_module.QFileDialog,'getSaveFileName',return_value=(str(archive),'')):
+            self.controller.exportBackup(); wait()
+        self.assertTrue(archive.is_file())
+        settings=self.seed_config();settings['language']='en'
+        self.config_file.write_text(json.dumps(settings),encoding='utf-8')
+        self.controller.draft=dict(settings);self.controller.saved_config=dict(settings)
+        with patch.object(self.controller_module.QFileDialog,'getOpenFileName',return_value=(str(archive),'')):
+            self.controller.chooseImportBackup(); wait()
+        self.assertTrue(self.controller.import_preview['available']['databases'])
+        self.controller.importBackup(); wait()
+        self.assertEqual(self.controller.draft['language'],'de')
+        self.assertFalse(self.controller.draft['monitoring'])
+        self.assertIn('Import abgeschlossen',self.controller.transfer_status)
+        # Keep the test's automatically created rollback outside the native profile.
+        self.assertIn(str(profile.parent.resolve()),self.controller.transfer_status)
 
     def test_minimum_window_keeps_five_whole_queue_rows_and_switches_to_wide_history(self):
         self.queue_fixture(60)

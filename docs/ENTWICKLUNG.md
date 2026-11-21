@@ -1,5 +1,17 @@
 # Entwicklung auf macOS und Windows
 
+## Profilübertragung und symmetrische Ordnerauswahl (1.5)
+
+`desktop/profile_transfer.py` implementiert das versionierte `.voxdrop.zip`-Format ohne zusätzliche Abhängigkeiten. Die Desktop-Paketlisten nehmen das Modul über den vorhandenen Verzeichniskopiervorgang auf. `manifest.json` enthält Bestandteile, Quellplattform, Ordnerwurzeln und Größen/SHA-256; `blobs/<sha256>` enthält jeden unterschiedlichen Dateiinhalt einmal. SQLite-Snapshots schließen bestätigte WAL-Änderungen ein. Export erfordert keinen Dienstabbruch. Logs, Laufzeitsperren, Arbeitskopien und Anmeldetokens bleiben außen vor; alle regulären `service/*.sqlite3` werden angeboten.
+
+Ein Import in ein frisches oder bereits gestopptes Profil prüft zuerst die vorhandenen Dienstsperren und überspringt den unnötigen Start eines separaten Stop-CLI-Prozesses. Die verbindliche Dienst-/Suchsperre vor dem Ersetzen bleibt bestehen. Der GUI-Roundtriptest läuft damit auch in der isolierten Windows-CI ohne kalte Prozessenumeration.
+
+Import: Vorschau und Auswahl → Detailsuche/CLI-Aktionen auslaufen lassen → eigene Dienste stoppen → getrennt vorbereiten und prüfen → vorheriges App-Profil als importierbare ZIP sichern → kontrollierte Dateiersetzung unter Dienst-/Suchsperren. Das atomar geschriebene `.migration-journal.json` ermöglicht Rollback und wird beim nächsten App-Start vor dem Dienststart ausgewertet. Importierte Besitzer-PIDs und flüchtige Token/Drop-/Sofortauswahlen werden entfernt; Queue und Überwachung bleiben zunächst pausiert. Gewählte Medien erhalten ein neues Ziel mit automatischer Präfixzuordnung einschließlich DB-/Indexpfaden und Dateizeitauflösung; ungewählte Einstellungen/Datenbanken werden nicht umgeleitet. Plattformspezifische Modelle werden nur auf derselben Plattform übernommen; Zielgeräte-Tokens bleiben erhalten. [Vollständige Bedienung und Grenzen](IMPORT_EXPORT.md).
+
+Checkboxen für die Sicherungsbestandteile verwenden `onCheckedChanged` mit idempotenten Settern, damit native Qt-Accessibility-Aktionen dieselbe Auswahl speichern wie Maus-/Tastaturbedienung. Nach dem ZIP-Abschluss wird zum Synchronisieren ein beschreibbarer Dateideskriptor geöffnet; Windows lehnt `fsync` auf einem reinen Lesedeskriptor ab. Die nativen und CI-Roundtriptests prüfen diese Pfade.
+
+Die beiden globalen Unterordneroptionen sind gegenseitig ausschließend, aber gleichartig anwählbar. `Controller.setSetting` schaltet beim Aktivieren jeweils die andere aus; QML sperrt keine der beiden Checkboxen. Abweichende Ausgabeoptionen eines einzelnen Pfads bleiben erhalten. Neue Regressionen prüfen echte Klicks in beide Richtungen.
+
 ## Ergänzung Mac 1.4.1
 
 Die während der Mac-Arbeit neu veröffentlichte Windows-Ordnersteuerung ist auch im Mac-Build 26 enthalten. `folder_options`, `watch_deferred`, `rescan-folders` und `reconcile-folders` verwenden dieselbe gemeinsame Implementierung. 214 native Mac-Regressionen sowie Paket-, SMB- und Layoutprüfungen bestanden; Modelle und Laufzeit sind unverändert. Maßgeblicher Stand: [Mac-Abnahme](MAC_ABNAHME_2026-11-21.md).

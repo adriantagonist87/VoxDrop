@@ -1,5 +1,17 @@
 # Projektstatus VoxDrop
 
+## Import und Export für Gerätewechsel · Mac 1.5.0 Build 27
+
+Neue gemeinsame Einstellungsgruppe „Import & Export“ mit unabhängigen Checkboxen für gespeicherte Einstellungen/Layout, sämtliche lokalen SQLite-Datenbanken mit vollständigem Verlauf/Bestand/Queue/Suchindex, Modelle/Hub-Cache sowie Aufnahmen/TXT aus überwachten Ordnern und Verlauf. Konsistente WAL-Snapshots, blockweise ZIP64-/SHA-256-Verarbeitung, Inhaltsdeduplizierung, Importvorschau und Pfadzuordnung, automatische Medienzuordnung in einen frischen Zielordner, Rechengerät-Anpassung und zunächst pausierter Betrieb. Vorheriger App-Stand wird automatisch gesichert; Dateiersetzung ist journalisiert und rücknehmbar. Gerätezugänge/Anmelderegistrierung bleiben gerätespezifisch; Modellimport zwischen Windows und Mac ist gesperrt. [Bedienung, Umfang und Wiederherstellung](IMPORT_EXPORT.md).
+
+Nutzerpräzisierung zusätzlich umgesetzt: „Globale Vorgabe“ vor der Zielunterordner-Checkbox entfernt. Beide Unterordner-Checkboxen sind stets anwählbar und schalten beim Einschalten die jeweils andere aus. Einmalige Drops und der bestehende Dateischutz bleiben erhalten.
+
+Native Mac-Suite auf Cocoa: **228 Fälle in 62,180 s, 221 bestanden/sieben Windows-Skips**. Darunter vollständiger GUI-Export/Vorschau/Reimport mit isolierter echter Datenbank, symmetrische QML-Checkboxklicks, WAL-/FTS-/Zusatzdatenbanken, Unicode-Medien und Modellattrappen, wiederholter Import, Hashfehler, Sperren, Rollback und Wiederanlaufjournal. Nur künstliche Testdaten. ASR-/GPU-/Sprecherbackends und Laufzeitpins unverändert. Native Windows-Paketabnahme dieser neuen Funktion **UNGEPRÜFT unter Windows**; der PR benötigt den aktuellen Windows-CI-Check. Funktionscode `060ce5b7a1f597ec55d28255dcd07a296e6da73f`. Zusätzlich normaler Swift-App-Einstieg mit vollständiger Auswahl und Reimport aller vier Bestandteile auf `06244b77a57bb59a27816d049d8814ea28fb1d16` bestanden; dessen QML und Datenpipeline sind bytegleich, der finale Controller ergänzt die geprüfte Abfrage vor einem unnötigen Stop-Prozess. Finales Paket bei 150 % mit 8.000/20.000 Einträgen ohne QML-Warnungen geprüft. [Aktuelle Windows-CI erfolgreich](https://github.com/adriantagonist87/VoxDrop/actions/runs/44934896653), einschließlich GUI-Reimport; Windows-Kurzpfade werden im Test vor dem Vergleich normalisiert.
+
+**Produktiv installiert: 1.5.0 Build 27.** Alle 44 Programmdateien und die Signatur gültig; Konfiguration bytegleich, der zum Update vorhandene Verlauf vollständig erhalten, alle 108 bisherigen Modell-/Cachedateien in Hash/Inode/Größe/Änderungszeit unverändert, Anmeldestart erhalten, SMB-Überwachung 1/1 aktiv. Der zuvor durch den Nutzer erreichte produktive Datenstand wurde gesichert; keine Rückspielung älterer Verläufe. Neuer Import-/Export-Reiter sowie beide aktiven Unterordner-Checkboxen an der installierten App bestätigt. Alle 20 Engine-Dateien bytegleich zur 1.4.1-Abnahme.
+
+[Mac-Release 1.5.0](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.5.0-macos) mit DMG, Manifest und Prüfnachweis veröffentlicht. Vollständiger öffentlicher Download ohne Anmeldung erneut geprüft: SHA-256 `60d8760c174871248396ba9458475266962c7fe8303418e929d84d9dea8cce46`. Schreibgeschützte DMG und produktive App in Info.plist, Launcher, Signaturkatalog und 44 Programmdateien abgeglichen, zwei Quellarchive enthalten. [Manifest](../releases/v1.5.0/macos-release.json) · [Verifikation](../releases/v1.5.0/macos-verification.json). Windows-1.4.1-Assets bleiben erhalten; native Windows-1.5.0-Paketabnahme weiterhin offen. Kein neuer Betriebssystem-Neustart.
+
 ## Veröffentlichung und Installation 1.4.1 abgeschlossen
 
 Mac 1.4.1 Build 26 ist produktiv installiert und mit Signatur sowie allen 43 Paketdateien geprüft. Die 106 vorhandenen Modell-/Cachedateien, Konfiguration, vier bisherigen DB-Aufträge und Anmeldestart blieben erhalten; die vorhandene SMB-Überwachung läuft. Die neuen Ordnersteuerungen wurden zusätzlich an der tatsächlichen installierten Oberfläche bestätigt. Benutzerentwürfe bleiben unangetastet.
@@ -256,8 +268,8 @@ GitHub-Übergabe: [Windows-Branch](https://github.com/adriantagonist87/VoxDrop/t
 | Gegenstand | Stand |
 | --- | --- |
 | Öffentliches Repository | `adriantagonist87/VoxDrop`, Hauptbranch `main` |
-| Freigegebene Plattformstände | Windows `v1.4.1`; macOS `v1.4.1-macos`, App 1.4.1 Build 26 |
-| Getesteter Mac-Implementierungscommit | `f1b9e69c553b935a5cb940434b2c2cb55ea9160d` |
+| Freigegebene Plattformstände | Windows `v1.4.1`; macOS `v1.5.0-macos`, App 1.5.0 Build 27 |
+| Getesteter Mac-Implementierungscommit | `060ce5b7a1f597ec55d28255dcd07a296e6da73f` |
 | Gemeinsame Entwicklungsbasis | `main` mit App-Code, Arbeitsregeln und gemeinsamer Dokumentation |
 | Betriebsmodell | Eigenständige lokale macOS- und Windows-Apps, auch in verschiedenen Netzwerken |
 | Referenzbibliothek | aTrain `ea8a7057857220b4299c0ba0b2aaf6def2f35b87` |
@@ -274,7 +286,7 @@ Die ursprüngliche Mac-Historie von v1.2.0 mit Code-Commit `19c8084193ec96717d87
 
 | Umgebung | Letzter geprüfter öffentlicher Commit | Prüfung und Ergebnis |
 | --- | --- | --- |
-| macOS, Apple Silicon | `f1b9e69c553b935a5cb940434b2c2cb55ea9160d` | 1.4.1 Build 26 produktiv installiert; 214 native Regressionen, neue Ordnersteuerung, geladenes Qwen/Play-Stopp/Wiederaufnahme, DOVER, Suche, SMB und Paketidentität geprüft. Backends unverändert zum vollständig geprüften Build 25; Grenzen im Mac-Abnahmebericht. |
+| macOS, Apple Silicon | `060ce5b7a1f597ec55d28255dcd07a296e6da73f` | 1.5.0 Build 27 produktiv installiert. 228 native Fälle; vollständige Profilmigration, Hash-/SQLite-/Rollback-/Queueprüfung, native GUI/Accessibility und Paketlayout. Signatur, 44 Programmdateien, 108 vorhandene Modelle/Cachedateien, Konfiguration, Verlauf, Autostart und SMB geprüft. |
 | Windows 11 mit NVIDIA | `9748af27d5234490d4c24e1c9a2f535f598d7563` | Produktives Paket 1.4.1 mit Ordnersteuerung. 208 native Windows-Regressionen laut dortigem Prüfbericht; Mac-Port ergänzt aktuelle Windows-CI. Windows-Asset unverändert. |
 | Linux | **UNGEPRÜFT**, Zielport offen | Gemeinsame Qt-Oberfläche vorhanden. Backends, Plattformadapter, Einrichtung und Pakete sind auf macOS/Windows ausgerichtet. |
 
