@@ -8,6 +8,30 @@ Nutzerbefund unter Windows 1.4.1: nach längerer CUDA-Verarbeitung eingefrorenes
 
 Der Windows-CPU-Schutz greift auch bei bereits eingeplanten CUDA-Aufträgen. Während CUDA überwacht VoxDrop protokollierte Grafik-Timeouts und stoppt seinen Modellprozess kontrolliert. Die Queue bleibt anhaltbar und der Auftrag an seiner Position. Beim Wiederanlauf nach einem Abbruch kann ein protokollierter Timeout den erneuten automatischen GPU-Start verhindern. Eine CUDA-Dauerfreigabe erfordert einen beobachteten Mehrstundenlauf mit KVM.
 
+### Erneute Windows-Abnahme von 1.5.0
+
+Nativ unter Windows 11 Pro, Build 26200, mit Paketcode `5a1854ec650415d7f18ffea0da0163ec1f6b6334` geprüft. Export der produktiven Einstellungen und Reimport in ein separates Profil erhielten beide Pfade und das bytegleiche Fensterlayout. Die Überwachung war nach dem Import ausgeschaltet. Export und Reimport von Einstellungen und SQLite-Datenbank wurden außerdem per Klick mit künstlichen Aufträgen ausgeführt. Die App legte eine Rücksicherung an und ließ die Wiederherstellung pausiert.
+
+In derselben Prüfinstanz funktionierten echter CPU-Start/Stopp/Fortsetzen, TXT-Öffnung in der Windows-Standardanwendung, Explorer-Auswahl im Zielunterordner, gemischte Mehrfachauswahl mit Konfliktdialog, Priorisierung, Wildcardsuche, gestartete Volltextsuche, Ordnerpause/-entfernung, automatische Wiederbefüllung aktiver Ordner nach dem Leeren, individuelles Ausgabeziel und die Speicherung des 50-%-GPU-Budgets. „VoxDrop beenden“ schloss die Instanz mitsamt ihren Prozessen. Beim Entfernen eines Pfads bleiben ausdrücklich per Dateiauswahl priorisierte manuelle Aufträge erhalten. Seine automatisch erfassten wartenden Aufträge werden zurückgestellt.
+
+`scripts/ci-tests.py run` mit installierter Laufzeit ergab 231 Fälle, 219 bestanden und 12 übersprungen. Neun Skips betreffen andere Plattformen, drei fehlende Windows-Symlink-Berechtigungen. Darunter geprüft sind die Datenbankbereinigung mit Wiederaufbau, laufende Dateischreiber im OBS-Muster und Dateiumbenennung. Fünf zusätzliche Qt-Tests bestanden bei 125 % unter dem nativen Windows-Grafikpfad einschließlich Ziehen mit und ohne Filter, Fenster-X, Minimieren und Vollbild. Beim kurzen Ziehen mit dem Windows-Bedienwerkzeug änderte sich die Reihenfolge in der geöffneten App zweimal nicht. Die Menüreihenfolge wurde nativ bestätigt.
+
+Bedienungsbefunde für Windows 1.5.0. Das Warteschlangenmenü schneidet „Überwachte Ordner neu einlesen“ am Ende ab. Nach der Archivauswahl liegt die Vorschau unterhalb des sichtbaren Einstellungsbereichs und wird durch Scrollen erreichbar. Einzelne Standarddialoge verwenden englische Schaltflächen. Die geprüften Aktionen lassen sich ausführen.
+
+Auf einer realen Windows-SMB-Freigabe prüfte ein eigener synthetischer Unterordner rekursiven Einmalimport, lokale Arbeitskopie, TXT-Ausgabe bei einer Unicode-Quelldatei und getrennte Neutranskription. Quelle und erste TXT blieben unverändert. Der Dateitest setzte einen festen Ausgabetext ein und räumte seinen Netzordner danach auf.
+
+`scripts/check-workspace-ui.py --native --scale 1.25 --content` lief mit dem installierten Paket, 8.000 Warteschlangeneinträgen, 20.000 Verlaufseinträgen und 20.000 kurzen künstlichen TXT-Dateien. Die Wildcardsuche einschließlich Aktualisierung der Liste dauerte rund 72 ms. Die erste Inhaltsprüfung ergab in 10,2 Sekunden 206 Treffer ohne übersprungene Datei. Der Abbruchpfad bestand. Qt meldete keine Warnungen.
+
+Whisper und Qwen wurden mit dem installierten CPU-Worker je auf einer künstlichen deutschen und englischen Aufnahme mit 20 Sekunden Sprechpause geprüft. Mit aktivem Stilleüberspringen erschienen in allen vier Läufen die erwarteten Textanker sowie Zeitmarken nach der Pause auf der Uhrzeit der ursprünglichen Aufnahme.
+
+## Langbenchmark mit 16 Varianten auf der GeForce RTX 5060
+
+Am 21. und 22.11.2026 unter Windows 11 Pro, Build 26200, mit Ryzen 9 7900X, GeForce RTX 5060 und NVIDIA-Treiber 596.36 gemessen. Verwendet wurde `transcription_worker.run_transcription` aus dem installierten Windows-Paket 1.5.0 (Code `5a1854ec650415d7f18ffea0da0163ec1f6b6334`). Dieselbe Aufnahme wie in der Mac-Matrix wurde für jeden Lauf aus einer bytegeprüften lokalen Kopie dekodiert. In allen Varianten ergaben sich 1259,435 Sekunden Audio. Die produktive Warteschlange war vor und während des Benchmarks pausiert.
+
+Ein frischer Worker je Kombination, mit `hardware=cuda`, beiden Modellen, GPU-Budget 100/50 %, DOVER-Lap aus/an und Sprache `auto-detect`/`de`. Sprechererkennung war immer an, die Sprecherzahl automatisch und Stilleüberspringen aus. Alle acht DOVER-Lap-Varianten bestätigten drei Durchgänge. Der Timer erfasst Dekodierung, Spracherkennung und Sprecherzuordnung von der Worker-Ausführung bis zum fertigen TXT. Kopieren, Einrichtung und 35 Sekunden Pause zwischen den Aufträgen sind ausgeklammert. Prozessbaum-RAM wurde etwa alle 0,2 Sekunden erfasst, die gesamte GPU samt VRAM, Temperatur und Leistung etwa alle zwei Sekunden.
+
+**16 von 16 gültig.** Die Reihe dauerte 73:10 Minuten, davon 64:19 Minuten gemessene Verarbeitung. Höchste GPU-Stichproben waren 65 °C, 6,88 GiB VRAM und 136,77 W. Es wurden keine Windows-Ereignisse für Display 4101, NVIDIA 153 oder LiveKernelEvent 141/117 im Messzeitraum festgestellt. Die Reihe mit frischen Prozessen und Pausen belegt diesen konkreten Test. Die Dauerabnahme im kontinuierlichen Mehrstundenbetrieb am KVM steht aus. [Alle Messwerte](../README.md#windows-11-mit-geforce-rtx-5060)
+
 ## Langbenchmark mit 16 Varianten auf dem Mac mini
 
 Am 21.11.2026 auf dem Mac mini M5 Pro mit 64 GB und macOS 27.2 gemessen. Eine 1259,435 Sekunden lange MP4-Audiospur (AAC, 48 kHz, Stereo) wurde für alle Varianten aus derselben lokalen Kopie dekodiert. Verwendet wurde der gebündelte Transkriptionsworker `transcription_worker.run_transcription` aus VoxDrop 1.5.0 Build 27 (Code `060ce5b7a1f597ec55d28255dcd07a296e6da73f`) in einem separaten Programm- und Modellspeicher.

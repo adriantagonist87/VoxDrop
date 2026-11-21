@@ -4,6 +4,10 @@
 
 Mac-Funktionsabgleich auf Basis von `e9307cc301223a129de7dc48b172bfa89a74185c`. Import/Export und Ordneroptionen stehen jetzt auch im Windows-Paket. Nach dokumentierten Grafik-Timeouts ist **CPU-Schutz für alle wartenden und neuen Aufträge** der Betriebspfad für den betroffenen PC. Zur späteren CUDA-Dauerabnahme mehrere Stunden mit gleichem Rechner und KVM prüfen und Zeitpunkt, Windows-Ereigniscodes, Auftragsphase, Gerätewahl und GPU-/RAM-Messwerte erfassen. Ein kurzer Funktionslauf allein belegt diese Dauerstabilität nicht.
 
+Die [erneute Windows-Abnahme von 1.5.0](PROJEKTSTATUS.md#erneute-windows-abnahme-von-150) dokumentiert Klickprüfungen, den getrennten Einstellungs-Reimport und die offenen Bedienungsdetails. Beim Speichern einer Pfadentfernung werden aus der Überwachung entstandene wartende Aufträge zurückgestellt. Ein über die Dateiauswahl neu priorisierter Auftrag gilt als manueller Auftrag und bleibt in der Warteschlange.
+
+Der [RTX-5060-Vergleich](PROJEKTSTATUS.md#langbenchmark-mit-16-varianten-auf-der-geforce-rtx-5060) führte dieselben 16 Fälle wie der Mac mit einzelnen, frischen CUDA-Workern aus. In 73 Minuten mit kurzen Auftragswechseln wurde kein protokollierter Grafiktreiber-Timeout festgestellt. Der produktive CPU-Schutz war weiterhin aktiv. Für die Dauerfreigabe am KVM bleibt der kontinuierliche Mehrstundenlauf erforderlich.
+
 ## Ordnersteuerung und Scan
 
 Nach einem Update von 1.4.0 in **Warteschlange → Aktionen → Überwachte Ordner neu einlesen** bislang ausgeblendete, ungestartete Dateien der aktiven Ordner wieder erfassen. Entfernte und pausierte Pfade behalten ihre fertigen Ergebnisse; ihre wartenden automatischen Aufträge werden ausgeblendet. Die Ausgabe je Pfad wird in **Einstellungen → Ordner & Überwachung** gespeichert. Ein Zielunterordner verarbeitet die oberste Pfadebene und verschiebt Aufnahme und TXT zusammen.

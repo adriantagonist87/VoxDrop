@@ -93,6 +93,8 @@ Sobald die Modelle eingerichtet sind, zieh eine Aufnahme ins Fenster und starte 
 
 ## Gemessene Laufzeit und Speichernutzung
 
+### Mac mini M5 Pro
+
 Messreihe mit **16 Kombinationen** auf derselben realen MP4-Aufnahme (20:59 min Audio) auf einem **Mac mini M5 Pro mit 64 GB**. VoxDrop 1.5.0 nutzt Metal mit Qwen3-ASR 1.7B und Whisper Large v3 Turbo. Jede Variante beginnt mit einem frischen Auftragsprozess. Die Sprechererkennung ist immer aktiv, mit einem Durchgang ohne DOVER-Lap und drei mit DOVER-Lap. Die Option „Lange Stille überspringen“ blieb aus.
 
 | Modell | GPU-Budget | DOVER-Lap | Sprache | Gesamt | Echtzeitfaktor | Sprecherphase | RAM-Spitze | Ø GPU |
@@ -116,6 +118,31 @@ Messreihe mit **16 Kombinationen** auf derselben realen MP4-Aufnahme (20:59 min 
 
 **Gesamt** umfasst Dekodierung, Spracherkennung und Sprecherzuordnung aus der lokalen Kopie. **Echtzeitfaktor** ist Audiolänge geteilt durch Gesamtzeit. Bei 4× dauert die Verarbeitung ein Viertel der Aufnahmedauer. **RAM-Spitze** ist der höchste gemessene Speicherbedarf des Auftragsprozesses samt Kindprozessen. Der Mac teilt sich den Speicher zwischen CPU und GPU. **Ø GPU** ist der Mittelwert der gesamten Apple-GPU aus Stichproben im Abstand von rund zwei Sekunden. Das eingestellte GPU-Budget steuert die Rechenpausen von VoxDrop. Die Messreihe erfasst Laufzeit und Speicherbedarf. Die Transkriptionsqualität wurde nicht benotet.
 
+### Windows 11 mit GeForce RTX 5060
+
+Alle 16 Varianten auf derselben Aufnahme lieferten ein gültiges Ergebnis. Je Variante lief ein frischer CUDA-Worker aus VoxDrop 1.5.0 unter Windows 11 Pro (Ryzen 9 7900X, GeForce RTX 5060 mit 8 GB, NVIDIA-Treiber 596.36). Die Einstellungen entsprechen der Mac-Matrix. Die Zeit umfasst die Verarbeitung bis zum fertigen Text. Zwischen den Aufträgen lagen 35 Sekunden Pause.
+
+| Modell | GPU-Budget | DOVER-Lap | Sprache | Gesamt RTX | Echtzeitfaktor | Sprecherphase | RAM-Spitze | VRAM-Spitze | Ø GPU |
+| --- | ---: | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Whisper | 100 % | Aus | Automatisch | 1:41 min | 12,4× | 0:44 min | 2,29 GiB | 3,80 GiB | 55,7 % |
+| Whisper | 100 % | Aus | Deutsch | 1:42 min | 12,3× | 0:44 min | 2,25 GiB | 3,80 GiB | 59,6 % |
+| Whisper | 100 % | An | Automatisch | 2:06 min | 10,0× | 1:08 min | 2,26 GiB | 3,80 GiB | 64,4 % |
+| Whisper | 100 % | An | Deutsch | 2:05 min | 10,1× | 1:08 min | 2,27 GiB | 3,76 GiB | 67,5 % |
+| Whisper | 50 % | Aus | Automatisch | 2:59 min | 7,0× | 1:18 min | 2,27 GiB | 3,83 GiB | 36,9 % |
+| Whisper | 50 % | Aus | Deutsch | 2:41 min | 7,8× | 1:09 min | 2,25 GiB | 3,70 GiB | 33,0 % |
+| Whisper | 50 % | An | Automatisch | 3:24 min | 6,2× | 1:49 min | 2,26 GiB | 3,71 GiB | 30,8 % |
+| Whisper | 50 % | An | Deutsch | 3:28 min | 6,0× | 1:49 min | 2,26 GiB | 3,77 GiB | 32,3 % |
+| Qwen | 100 % | Aus | Automatisch | 3:50 min | 5,5× | 0:40 min | 3,19 GiB | 6,88 GiB | 50,5 % |
+| Qwen | 100 % | Aus | Deutsch | 3:44 min | 5,6× | 0:40 min | 3,16 GiB | 6,77 GiB | 49,1 % |
+| Qwen | 100 % | An | Automatisch | 3:49 min | 5,5× | 1:01 min | 2,77 GiB | 6,71 GiB | 59,2 % |
+| Qwen | 100 % | An | Deutsch | 4:07 min | 5,1× | 1:01 min | 3,03 GiB | 6,73 GiB | 51,8 % |
+| Qwen | 50 % | Aus | Automatisch | 6:55 min | 3,0× | 1:09 min | 2,75 GiB | 6,88 GiB | 25,7 % |
+| Qwen | 50 % | Aus | Deutsch | 6:47 min | 3,1× | 1:09 min | 2,99 GiB | 6,85 GiB | 28,9 % |
+| Qwen | 50 % | An | Automatisch | 7:33 min | 2,8× | 1:49 min | 3,24 GiB | 6,87 GiB | 29,4 % |
+| Qwen | 50 % | An | Deutsch | 7:27 min | 2,8× | 1:50 min | 2,92 GiB | 6,78 GiB | 28,5 % |
+
+**RAM-Spitze** ist der höchste gemessene Arbeitsspeicher des Windows-Auftragsprozesses und seiner Kinder. **VRAM-Spitze** und **Ø GPU** beziehen sich auf die gesamte Grafikkarte, gemessen ungefähr alle zwei Sekunden. Die unterschiedlich erfassten RAM-Werte von Windows und macOS eignen sich nur eingeschränkt zum direkten Vergleich. Die Messreihe bewertet Laufzeit und Speicherbedarf. Für die Beurteilung der Dauerstabilität am KVM ist ein durchgehender Mehrstundenbetrieb erforderlich.
+
 ### Auftragsdetails zum Langtest auf der RTX 5060
 
 <details>
@@ -127,7 +154,7 @@ Die Auftragsdetails zeigen **7 min 36 s Verarbeitung** für **48 min 55 s Audio*
 
 Nachgestellte Ansicht mit den Messwerten des echten Langtests. Dateiname und Uhrzeiten sind Beispiele.
 
-Für die Aufnahme der Mac-Messreihe liegt kein Windows-Messwert vor. In einer früheren kontrollierten Messung auf der RTX 5060 senkte ein GPU-Budget von 50 % die durchschnittliche Auslastung von 92,4 % auf 42,3 %. [Windows-Messprotokoll](docs/GPU_ARBEITSBUDGET.md#geprüfter-stand--windows-v134)
+In einer früheren kontrollierten Messung auf der RTX 5060 senkte ein GPU-Budget von 50 % die durchschnittliche Auslastung von 92,4 % auf 42,3 %. [Windows-Messprotokoll](docs/GPU_ARBEITSBUDGET.md#geprüfter-stand--windows-v134)
 
 </details>
 
