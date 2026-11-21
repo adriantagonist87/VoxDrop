@@ -1,8 +1,14 @@
 # VoxDrop
 
+<img align="right" src="docs/images/voxdrop-icon.png" alt="" width="112">
+
 VoxDrop macht aus Audio- und Videoaufnahmen durchsuchbare Textdateien. So kannst du eine Besprechung, ein Interview oder eine Sprachnachricht später nachlesen und gezielt nach einer Stelle suchen. Die Transkription läuft auf deinem Mac oder Windows-PC. Deine Aufnahmen bleiben bei dir.
 
-VoxDrop wird für macOS und Windows parallel mit demselben Funktionsumfang entwickelt. Die Versionshinweise zeigen den Stand der jeweiligen Downloads.
+## Aktuelle stabile Version
+
+**VoxDrop 1.5.0** ist für macOS auf Apple Silicon und für Windows 11 auf x64 verfügbar. Prüfsummen und Paketnachweise liegen beim gemeinsamen Release. [Versionshinweise und Prüfsummen](https://github.com/adriantagonist87/VoxDrop/releases/latest)
+
+**[macOS-DMG herunterladen](https://github.com/adriantagonist87/VoxDrop/releases/download/v1.5.0/VoxDrop-1.5.0-macOS-arm64.dmg)** · **[Windows-ZIP herunterladen](https://github.com/adriantagonist87/VoxDrop/releases/download/v1.5.0/VoxDrop-1.5.0-Windows-x64.zip)** · [Alle Versionen](https://github.com/adriantagonist87/VoxDrop/releases)
 
 ## Hardware und System
 
@@ -15,7 +21,7 @@ VoxDrop wird für macOS und Windows parallel mit demselben Funktionsumfang entwi
 
 Für die Ersteinrichtung brauchst du Internet und einen beschreibbaren Programmordner. Unter **Einstellungen → Transkription → Rechengerät** kannst du auch **CPU** wählen.
 
-**[Für macOS herunterladen](https://github.com/adriantagonist87/VoxDrop/releases/download/v1.5.0-macos/VoxDrop-1.5.0-macOS-arm64.dmg)** · **[Für Windows herunterladen](https://github.com/adriantagonist87/VoxDrop/releases/download/v1.5.0-windows/VoxDrop-1.5.0-Windows-x64.zip)** · [Alle Versionen](https://github.com/adriantagonist87/VoxDrop/releases)
+Unter Windows kannst du **CPU-Schutz für alle wartenden und neuen Aufträge** einschalten. Er verarbeitet auch bereits für CUDA eingeplante Aufträge auf der CPU. Erkennt VoxDrop während der CUDA-Verarbeitung einen Grafiktreiber-Timeout, pausiert die Warteschlange und der Auftrag bleibt für einen erneuten Start erhalten. [Windows-Prüfstand](docs/PROJEKTSTATUS.md#windows-150--funktionsabgleich-und-schutz-bei-grafikfehlern)
 
 ## Was VoxDrop kann
 
@@ -78,18 +84,20 @@ Die TGA-Schulungen landen mit ihren TXT-Dateien im Zielunterordner. Bei den Supp
 
 ### macOS
 
-1. Lade die [DMG für macOS](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.5.0-macos) herunter und öffne sie im Finder.
+1. Lade die [DMG für macOS](#aktuelle-stabile-version) herunter und öffne sie im Finder.
 2. Lege in **Programme** einen Ordner namens **VoxDrop** an. Öffne den Ordner **VoxDrop** in der DMG und kopiere **VoxDrop.app direkt** in den neu angelegten Ordner. Wirf die DMG aus und starte die App aus **Programme → VoxDrop**.
 3. Falls macOS die App beim ersten Start blockiert, schließe die Meldung mit **Fertig**. Öffne **Systemeinstellungen → Datenschutz & Sicherheit**, wähle bei VoxDrop **Dennoch öffnen** und bestätige die Abfrage.
 4. Öffne **Einstellungen → Transkription → Modelle herunterladen**. Als Modellspeicher soll **`/Applications/VoxDrop/Modelle`** angezeigt werden. Falls dort stattdessen der Benutzerordner steht, beende die App und prüfe die direkte Kopie aus Schritt 2.
 
 ### Windows
 
-1. Lade die [ZIP für Windows](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.5.0-windows) herunter und entpacke sie vollständig in einen lokalen Ordner, in den du schreiben kannst.
+1. Lade die [ZIP für Windows](#aktuelle-stabile-version) herunter und entpacke sie vollständig in einen lokalen Ordner, in den du schreiben kannst.
 2. Öffne **`VoxDrop.exe`** im entpackten Ordner. Beim ersten Start richtet VoxDrop seine Laufzeit automatisch im Unterordner **Laufzeit** ein.
 3. Öffne **Einstellungen → Transkription → Modelle herunterladen**. Die Modelle landen im Ordner **Modelle** neben der EXE.
 
 Sobald die Modelle eingerichtet sind, zieh eine Aufnahme ins Fenster und starte die Verarbeitung mit **▶**. Für die automatische Verarbeitung fügst du unter **Einstellungen → Ordner & Überwachung** einen Ordner hinzu und schaltest die Überwachung ein.
+
+Für ein Update beende VoxDrop vollständig. Die Datenübertragung ist unter **Einstellungen → Import & Export** verfügbar. Bewahre bei einem Windows-Update die Ordner **Laufzeit** und **Modelle** auf. [Sicherung und Gerätewechsel](docs/IMPORT_EXPORT.md)
 
 ## Gemessene Laufzeit und Speichernutzung
 
