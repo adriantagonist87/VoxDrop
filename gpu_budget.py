@@ -1,4 +1,4 @@
-"""Cooperative CUDA work/idle pacing for this app's models, never driver limits."""
+"""Cooperative GPU work/idle pacing for this app's models, never driver limits."""
 import json
 import os
 import threading
@@ -43,7 +43,7 @@ class GpuBudget:
         while True:
             percent = self.current_percent()
             remaining = work * (100 / percent - 1) - (self.clock() - started)
-            if remaining <= 0:
+            if remaining <= 1e-6:
                 break
             self.sleep(min(.05, remaining))
         self.idle_seconds += self.clock() - started
@@ -88,12 +88,22 @@ def cuda_budget():
                      synchronize=torch.cuda.synchronize)
 
 
+def metal_budget(*, synchronize=lambda: None):
+    return GpuBudget(config=os.environ.get('VOXDROP_GPU_BUDGET_CONFIG'),
+                     synchronize=synchronize)
+
+
 @contextmanager
 def pace_torch(*models, hardware, budget=None):
-    if hardware != 'cuda':
+    if hardware not in ('cuda', 'metal'):
         yield
         return
-    budget = budget or cuda_budget()
+    if budget is None:
+        if hardware == 'metal':
+            import torch
+            budget = metal_budget(synchronize=torch.mps.synchronize)
+        else:
+            budget = cuda_budget()
     handles, seen = [], set()
     try:
         # Instance hooks only: no global Torch changes and no changed tensors,
@@ -123,7 +133,43 @@ class PacedWhisper:
         return attribute
 
 
-def pace_whisper(transcriber):
+def pace_whisper(transcriber, hardware='cuda'):
     whisper = transcriber._model
-    whisper.model = PacedWhisper(whisper.model, cuda_budget())
+    # CTranslate2's synchronous Metal calls finish their work before returning.
+    whisper.model = PacedWhisper(whisper.model, metal_budget() if hardware == 'metal' else cuda_budget())
     return transcriber
+
+
+@contextmanager
+def pace_mlx(model, *, hardware, budget=None):
+    """Pace completed MLX encoder/decoder blocks without changing weights/cache.
+
+    Special methods are resolved on the type. Use temporary per-instance types,
+    never monkeypatch the shared MLX classes or alter the module/weight tree.
+    """
+    if hardware != 'metal':
+        yield
+        return
+    import mlx.core as mx
+    budget = budget or metal_budget(synchronize=mx.synchronize)
+    internal = getattr(model, '_model', model)
+    modules = [internal.audio_tower, *internal.model.layers]
+    changed = []
+    try:
+        for module in modules:
+            original = type(module)
+            def call(self, *args, _call=original.__call__, **kwargs):
+                if budget.current_percent() == 100:
+                    return _call(self, *args, **kwargs)
+                def completed():
+                    result = _call(self, *args, **kwargs)
+                    mx.eval(result)
+                    return result
+                return budget.call(completed)
+            paced = type(original.__name__ + 'VoxDropBudget', (original,), {'__call__': call})
+            object.__setattr__(module, '__class__', paced)
+            changed.append((module, original))
+        yield budget
+    finally:
+        for module, original in reversed(changed):
+            object.__setattr__(module, '__class__', original)

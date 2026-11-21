@@ -7,6 +7,8 @@ bundle="$runtime/package/VoxDrop.app"
 version=$(/usr/bin/plutil -extract CFBundleShortVersionString raw -o - "$bundle/Contents/Info.plist")
 minimum=$(/usr/bin/plutil -extract LSMinimumSystemVersion raw -o - "$bundle/Contents/Info.plist")
 reference=$(sed -n 's/^commit=//p' "$project/scripts/bootstrap.sh")
+code_commit=$(/usr/bin/git -C "$project" rev-parse HEAD)
+/usr/bin/git -C "$project" diff --exit-code HEAD --
 output="$runtime/package/VoxDrop-$version-macOS-arm64.dmg"
 stage=$(mktemp -d "$runtime/package/.dmg.XXXXXX")
 trap 'rm -rf "$stage"' EXIT
@@ -18,6 +20,8 @@ mkdir -p "$contents/Quellcode" "$contents/VoxDrop"
 ln -s /Applications "$contents/Applications"
 /usr/bin/git -C "$runtime/aTrain" archive --format=tar.gz \
     --prefix="aTrain-$reference/" -o "$contents/Quellcode/aTrain-$reference.tar.gz" "$reference"
+/usr/bin/git -C "$project" archive --format=tar.gz \
+    --prefix="VoxDrop-$code_commit/" -o "$contents/Quellcode/VoxDrop-$code_commit.tar.gz" "$code_commit"
 cat > "$contents/Installation.txt" <<EOF
 VoxDrop $version
 Automatic Media Transcription
@@ -26,10 +30,15 @@ Voraussetzung ist ein Mac mit Apple Silicon und macOS $minimum oder neuer.
 
 1. Den gesamten Ordner „VoxDrop“ in den Programme-Ordner ziehen.
    Darin „VoxDrop.app“ öffnen.
-2. Unter Modell auf „Modelle herunterladen“ klicken.
+2. Unter Einstellungen → Transkription die Modelle herunterladen.
 3. Für eine einmalige Transkription Ordner ins Fenster ziehen. Für die
    laufende Überwachung Ordner hinzufügen, die Ordnerüberwachung einschalten
-   und den Dienst starten. Für SMB muss die Freigabe vorher eingehängt sein.
+   und mit dem Play-Knopf die Verarbeitung starten. Für SMB muss die Freigabe
+   vorher eingehängt sein.
+
+X blendet das Fenster in die Menüleiste aus; Minimieren legt es ins Dock.
+„VoxDrop beenden“ und Cmd-Q stoppen die gesamte App und ihre Verarbeitung.
+Der GPU-Budgetregler gibt kooperativ Rechenzeit frei; er begrenzt nicht den RAM.
 
 Der einmalige Modell-Download benötigt Internet. Die Transkription und
 Sprecherzuordnung erfolgen anschließend lokal auf dem Mac.
@@ -49,8 +58,8 @@ https://support.apple.com/de-de/102445
 Quellcode und Build-Anleitung
 https://github.com/adriantagonist87/VoxDrop
 
-Das Archiv im Ordner Quellcode enthält die genaue aTrain-Revision,
-deren Code und Lizenz im App-Bundle enthalten sind.
+Die Archive im Ordner Quellcode enthalten diesen VoxDrop-Quellstand und
+die genaue aTrain-Revision einschließlich ihrer Lizenztexte.
 EOF
 
 /usr/bin/hdiutil create -quiet -fs HFS+ -volname "VoxDrop $version" \

@@ -248,7 +248,7 @@ def load_whisper(path, hardware):
                 model_path.as_posix(), device="mps", compute_type="float16"
             )
 
-    return MetalWhisper(path)
+    return pace_whisper(MetalWhisper(path), hardware='metal')
 
 
 def transcribe(
@@ -372,7 +372,7 @@ def assign_speakers(
                     "Die Apple-GPU steht für die Sprechererkennung nicht zur Verfügung."
                 )
             diarizer.to(torch.device("mps"))
-        models = (diarizer._segmentation.model, diarizer._embedding.model_) if hardware == 'cuda' else ()
+        models = (diarizer._segmentation.model, diarizer._embedding.model_) if hardware in ('cuda','metal') else ()
         with pace_torch(*models, hardware=hardware):
             if dover_lap:
                 from speaker_diarization import apply_annotation, run_multiple

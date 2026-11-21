@@ -59,6 +59,21 @@ class DesktopWindowTests(unittest.TestCase):
         self.assertEqual(self.window.windowState(), Qt.WindowState.WindowFullScreen)
         self.assertTrue(self.window.isVisible())
 
+    @unittest.skipUnless(sys.platform == 'darwin', 'Cocoa full-screen Space transition')
+    def test_cocoa_fullscreen_minimization_after_maximizing_keeps_the_fullscreen_mode(self):
+        if self.app.platformName() != 'cocoa':
+            self.skipTest('Requires native Cocoa window transitions')
+        self.presenter.show()
+        self.window.showMaximized(); QTest.qWait(350)
+        self.window.showFullScreen(); QTest.qWait(1200)
+        self.window.showMinimized(); QTest.qWait(1200)
+        self.presenter.show(); QTest.qWait(1600)
+        self.assertEqual(self.window.windowState(), Qt.WindowState.WindowFullScreen)
+        self.assertEqual(self.presenter.last_state, Qt.WindowState.WindowFullScreen)
+        self.window.showNormal(); QTest.qWait(1200)
+        self.window.hide(); self.presenter.show(); QTest.qWait(300)
+        self.assertEqual(self.window.windowState(), Qt.WindowState.WindowNoState)
+
     def test_network_wait_offers_cancel_and_recursive_mode_locks_archive_option(self):
         self.presenter.show()
         self.controller.downloading = True
@@ -96,12 +111,11 @@ class DesktopWindowTests(unittest.TestCase):
 
     def test_gpu_slider_keyboard_saves_live_budget_without_saving_other_draft_edits(self):
         self.queue_fixture()
-        self.controller.draft['hardware'] = 'cuda'
+        self.controller.draft['hardware'] = self.controller_module.GPU
         self.controller.draft['language'] = 'en'
         self.controller.changed.emit()
         slider = self.visual('gpuBudgetSlider')
-        with patch.object(self.controller_module, 'GPU', 'cuda'), \
-             patch.object(self.controller_module, 'read_settings', return_value={**self.controller_module.DEFAULTS, 'language': 'de'}) , \
+        with patch.object(self.controller_module, 'read_settings', return_value={**self.controller_module.DEFAULTS, 'language': 'de'}) , \
              patch.object(self.controller_module, 'save_settings') as save, \
              patch.object(self.controller, 'action', side_effect=lambda operation, message: operation()):
             self.controller.changed.emit()
@@ -118,10 +132,9 @@ class DesktopWindowTests(unittest.TestCase):
 
     def test_gpu_slider_waits_for_busy_action_without_losing_pending_value(self):
         self.queue_fixture()
-        self.controller.draft['hardware'] = 'cuda'
+        self.controller.draft['hardware'] = self.controller_module.GPU
         self.controller.changed.emit()
-        with patch.object(self.controller_module, 'GPU', 'cuda'), \
-             patch.object(self.controller_module, 'save_settings') as save, \
+        with patch.object(self.controller_module, 'save_settings') as save, \
              patch.object(self.controller_module, 'read_settings', return_value=self.controller_module.DEFAULTS.copy()), \
              patch.object(self.controller, 'action', side_effect=lambda operation, message: operation()):
             self.controller.changed.emit()
@@ -268,7 +281,9 @@ class DesktopWindowTests(unittest.TestCase):
                 finished(None, str(error))
             else:
                 finished(result, None)
-        with patch.object(self.controller_module.sys, 'platform', 'win32'), patch.object(self.controller, 'submit', side_effect=immediately):
+        with patch.object(self.controller_module.sys, 'platform', 'win32'), \
+             patch.object(self.controller_module, 'windows_login_item', return_value=False), \
+             patch.object(self.controller, 'submit', side_effect=immediately):
             with patch.object(self.controller_module, 'reveal_in_explorer') as reveal:
                 self.controller.revealOutput()
             reveal.assert_called_once_with(transcript)

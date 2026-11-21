@@ -1,5 +1,11 @@
 # Projektstatus VoxDrop
 
+## Mac-Portierung am 21. November 2026
+
+Der aktuelle gemeinsame Windows-Stand 1.4 ist auf dem Mac in nativer Abnahme. Neue Oberfläche/Queue/Suche übernommen; zusätzlich sequenzielle Qwen-MLX-Modellphasen, Metal-/MPS-GPU-Budget, Unix-Prozesswächter, Mac-Supervisor/Wiederaufnahme, offene lokale Aufnahmen und Cmd-Q angebunden. Ein echter Cocoa-Vollbild-/Minimierungsfehler wurde reproduziert und korrigiert. 207 Regressionen (199 bestanden/acht explizite Skips), zwölf echte Metal-Sprachläufe und große native QML-Listen bei 100/125/150 % bestanden. Produktivinstallation und Veröffentlichung folgen nach Abschluss des Paketprüfers. [Nachweise, Grenzen und genaue Prüfwerkzeuge](MAC_ABNAHME_2026-11-21.md).
+
+Die folgenden Abschnitte dokumentieren die bisherigen Windows-Veröffentlichungen und die historische Mac-Ausgabe. Der neue Mac-Prüfstand oben ergänzt diese Belege.
+
 ## Aktuell: Arbeitsübersicht für Windows 1.4.0
 
 Queue und Verlauf stehen im breiten Fenster nebeneinander, im Mindestfenster als Reiter. Aktueller Auftrag, kompakter 44×44-Play-/Stopp-Knopf, Überwachungsstatus und GPU-Budget bleiben auch in den drei Einstellungsgruppen erreichbar. Entwürfe speichern/verwerfen; sofortige Aktionen sind getrennt. Alle bisherigen Such-, Detail-, Drop-, Abbruch-, Dateischutz-, Reset- und Lebensdauerfunktionen bleiben erhalten. Inkrementelle Qt-Listen erhalten Scrollanker und aufgeklappte Zeilen. Der Verlauf ist über 250er-Seiten vollständig zugänglich. [Funktionsmatrix, Architektur und reproduzierbare Prüfung](WORKSPACE_LAYOUT.md).

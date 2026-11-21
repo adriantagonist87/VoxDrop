@@ -56,14 +56,13 @@ class ProcessLifecycleTests(unittest.TestCase):
                 self.assertFalse(process.is_running())
                 recording.unlink()  # No retry: cancel_tree must release the mapping first.
 
-    @unittest.skipUnless(WINDOWS, "Windows kill-on-owner-exit job objects")
     def test_owner_crash_kills_child_and_grandchild(self):
         leaf = "import time; time.sleep(60)"
         branch = ("import subprocess,sys,time; p=subprocess.Popen([sys.executable,'-c',"
-                  + repr(leaf) + "],creationflags=0x08000000); print(p.pid,flush=True); time.sleep(60)")
+                  + repr(leaf) + ("],creationflags=0x08000000)" if WINDOWS else "])") + "; print(p.pid,flush=True); time.sleep(60)")
         owner = ("import sys,subprocess,time; from platform_io import child_process; "
                  "child=child_process([sys.executable,'-c'," + repr(branch) +
-                 "],stdout=subprocess.PIPE,text=True,creationflags=0x08000000); p=child.__enter__(); "
+                 "],stdout=subprocess.PIPE,text=True" + (",creationflags=0x08000000" if WINDOWS else "") + "); p=child.__enter__(); "
                  "print(str(p.pid)+','+p.stdout.readline().strip(),flush=True); time.sleep(60)")
         with subprocess.Popen([sys.executable, "-B", "-c", owner], stdout=subprocess.PIPE,
                               text=True, **process_options()) as parent:

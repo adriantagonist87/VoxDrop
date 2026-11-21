@@ -1567,13 +1567,11 @@ def recover(db, state, *, verify_exports=True):
         error_state(
             db,
             job["id"],
-            "ready" if WINDOWS or not verify_exports else "failed",
-            "Auftrag unterbrochen. Automatische Wiederaufnahme nach Dienststart."
-            if WINDOWS else "Auftrag unterbrochen. Manuelle Wiederholung möglich.",
+            "ready",
+            "Auftrag unterbrochen. Automatische Wiederaufnahme nach Dienststart.",
         )
-        if WINDOWS or not verify_exports:
-            with db:
-                db.execute("UPDATE jobs SET finished=NULL WHERE id=?", (job["id"],))
+        with db:
+            db.execute("UPDATE jobs SET finished=NULL WHERE id=?", (job["id"],))
 
 
 def retry(db, job_id):
@@ -2012,6 +2010,7 @@ def supervise_worker(state, model_data, config, log):
                     [sys.executable, "-BEs", "-Xutf8", str(Path(__file__).resolve()),
                      "--state-dir", str(state), "--model-data", str(model_data),
                      "run", str(config)],
+                    cancellable=True,
                     stdin=subprocess.DEVNULL,
                     stdout=subprocess.PIPE,
                     stderr=subprocess.STDOUT,
@@ -2034,7 +2033,7 @@ def supervise_worker(state, model_data, config, log):
                         try:
                             child.wait(timeout=6)
                         except subprocess.TimeoutExpired:
-                            child.kill()
+                            child.cancel_tree()
                     code = child.wait()
                 reader.join(timeout=10)
                 if stop.is_set():
@@ -2070,7 +2069,7 @@ def _start_in_background(state,model_data,config):
                 str(state),
                 "--model-data",
                 str(model_data.resolve()),
-                "supervise" if WINDOWS else "run",
+                "supervise",
                 str(config.resolve()),
             ],
             **process_options(background=True),

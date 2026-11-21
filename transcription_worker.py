@@ -91,10 +91,8 @@ def run_transcription(media, *, report, measurements, cancelled=None, gpu_budget
         environment = os.environ.copy()
         if gpu_budget_config is not None:
             environment['VOXDROP_GPU_BUDGET_CONFIG'] = str(gpu_budget_config)
-        if WINDOWS:
-            # Qwen's decoded numpy audio and library temporaries must stay in
-            # recoverable job storage even when Windows kills the worker tree.
-            environment.update({name: directory for name in ("TMPDIR", "TEMP", "TMP")})
+        # Keep decoded audio recoverable on both platforms after a hard stop.
+        environment.update({name: directory for name in ("TMPDIR", "TEMP", "TMP")})
         with child_process(
             command,
             cancellable=True,

@@ -1,6 +1,7 @@
 """Offline Qwen ASR and word alignment, isolated from aTrain's Python packages."""
 
 import argparse
+import gc
 import hashlib
 import json
 import os
@@ -317,16 +318,25 @@ def run(packages, model_root, recording, result, hardware, language):
     accelerator = "Apple-GPU" if hardware == "metal" else "CPU"
     emit(phase=f"Qwen-Modell laden ({accelerator})", fraction=None)
     asr = load(model_root / ASR)
-    aligner = load(model_root / ALIGNER)
     audio = np.load(recording, mmap_mode="r", allow_pickle=False)
-    words = recognize_words(
-        asr,
-        aligner,
-        audio,
-        language,
-        split_audio_into_chunks,
-        lambda phase, fraction: emit(phase=phase, fraction=fraction),
-    )
+    from gpu_budget import pace_mlx
+    report = lambda phase, fraction: emit(phase=phase, fraction=fraction)
+    chunks = []
+    with pace_mlx(asr, hardware=hardware):
+        recognize_chunks(asr, audio, language, split_audio_into_chunks, report,
+                         lambda *chunk: chunks.append(chunk))
+    del asr
+    gc.collect()
+    mx.synchronize()
+    mx.clear_cache()
+    words = []
+    if chunks:
+        report("Qwen-Wortzeiten berechnen", 0.0)
+        aligner = load(model_root / ALIGNER)
+        with pace_mlx(aligner, hardware=hardware):
+            for index, chunk in enumerate(chunks, start=1):
+                words.extend(timed_words(aligner, *chunk, len(audio)))
+                report("Qwen-Wortzeiten berechnen", index / len(chunks))
     result.write_text(json.dumps(words, ensure_ascii=False), encoding="utf-8")
 
 

@@ -64,9 +64,23 @@ def lifecycle_lock(state):
 
 
 def watch_owner(state,stop):
+    owner = None
     while not stop.is_set():
+        lost = False
+        if owner is not None:
+            try:
+                process = psutil.Process(owner[0])
+                lost = not _alive(process, owner[1])
+            except psutil.Error:
+                lost = True
+        if lost:
+            stop.set()
         try:
             with closing(sqlite3.connect(state/'jobs.sqlite3',timeout=2)) as db:
+                if owner is None:
+                    row = db.execute('SELECT owner_pid,owner_created FROM app_control WHERE id=1').fetchone()
+                    if row and row[0] is not None:
+                        owner = tuple(row)
                 if stopping(db) or not owner_alive(db):
                     stop.set()
                     request_stop(db)

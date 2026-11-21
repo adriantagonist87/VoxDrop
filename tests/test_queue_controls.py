@@ -130,7 +130,7 @@ class QueueTests(unittest.TestCase):
         self.assertEqual(first.read_bytes(),b'synthetic media')
         self.assertEqual(second.read_bytes(),b'cancelled media')
 
-    @unittest.skipUnless(WINDOWS,'Windows writer sharing probe')
+    @unittest.skipUnless(WINDOWS or sys.platform == 'darwin','Native writable-handle probe')
     def test_explicit_start_does_not_bypass_open_writer_or_wait_for_scan_interval(self):
         source,identifier=self.add()
         with self.db:self.db.execute("UPDATE jobs SET state='seen' WHERE id=?",(identifier,))
@@ -456,7 +456,7 @@ class QueueTests(unittest.TestCase):
         self.assertEqual(row['result_kind'],'reused')
         self.assertEqual(hashlib.sha256(renamed.read_bytes()).hexdigest(),self.row(one)['media_hash'])
 
-    @unittest.skipUnless(WINDOWS,'Native Windows writable-handle probe')
+    @unittest.skipUnless(WINDOWS or sys.platform == 'darwin','Native writable-handle probe')
     def test_open_obs_style_writer_is_deferred_even_without_growth_then_processed_once(self):
         source,one=self.add()
         with source.open('ab'):
