@@ -2,6 +2,8 @@
 
 VoxDrop macht aus Audio- und Videoaufnahmen durchsuchbare Textdateien. So kannst du eine Besprechung, ein Interview oder eine Sprachnachricht später nachlesen und gezielt nach einer Stelle suchen. Die Transkription läuft auf deinem Mac oder Windows-PC. Deine Aufnahmen bleiben bei dir.
 
+VoxDrop wird für macOS und Windows parallel mit demselben Funktionsumfang entwickelt. Die Versionshinweise zeigen den Stand der jeweiligen Downloads.
+
 **[Für macOS herunterladen](https://github.com/adriantagonist87/VoxDrop/releases/download/v1.5.0-macos/VoxDrop-1.5.0-macOS-arm64.dmg)** · **[Für Windows herunterladen](https://github.com/adriantagonist87/VoxDrop/releases/download/v1.4.1/VoxDrop-1.4.1-Windows-x64.zip)** · [Alle Versionen](https://github.com/adriantagonist87/VoxDrop/releases)
 
 ## Was VoxDrop kann
@@ -12,7 +14,7 @@ VoxDrop macht aus Audio- und Videoaufnahmen durchsuchbare Textdateien. So kannst
 - **Sprecher mit DOVER-Lap genauer zuordnen.** VoxDrop kombiniert drei Prüfdurchgänge. Das kann die Zuordnung bei häufigen Sprecherwechseln und gleichzeitigem Sprechen verbessern. Die zusätzliche Prüfung kostet Rechenzeit und kann mehr Speicher belegen.
 - **GPU-Auslastung reduzieren.** Senke das GPU-Budget, wenn nebenbei etwa ein BIM-Modell oder ein Video geöffnet ist. VoxDrop gibt anderen Programmen Rechenzeit, auch während eines laufenden Auftrags. Die Verarbeitung dauert dafür länger. Der Regler steuert die Rechenzeit. Lastspitzen und Speicherbedarf hängen weiterhin vom Modell ab.
 - **Aufträge steuern und Ergebnisse wiederfinden.** Ändere die Reihenfolge, halte die Verarbeitung an oder starte einen Auftrag erneut. Suche im Verlauf nach Dateinamen oder im Transkripttext. Eine erneute Transkription erhält eine eigene TXT-Datei.
-- **Daten sichern und mitnehmen.** In **macOS 1.5.0** kannst du unter **Einstellungen → Import & Export** Einstellungen, Verlauf und Warteschlange sichern. Modelle sowie Aufnahmen und TXT-Dateien lassen sich separat dazuwählen. Der Import zeigt dir vorab die enthaltenen Daten und lässt dich Ordner auf dem neuen Mac zuordnen.
+- **Daten sichern und mitnehmen.** Unter **Einstellungen → Import & Export** kannst du Einstellungen, Verlauf und Warteschlange sichern. Modelle sowie Aufnahmen und TXT-Dateien lassen sich separat dazuwählen. Der Import zeigt dir vorab die enthaltenen Daten und lässt dich Ordner auf dem Zielgerät zuordnen.
 
 ## Ein Blick in die App
 
@@ -57,7 +59,7 @@ Die TGA-Schulungen landen mit ihren TXT-Dateien im Zielunterordner. Bei den Supp
 <details>
 <summary>Einstellungen, Verlauf und weitere Daten exportieren</summary>
 
-![Import und Export auf macOS mit auswählbaren Einstellungen, Datenbanken, Modellen und Medien](docs/images/voxdrop-import-export.png)
+![Import und Export mit auswählbaren Einstellungen, Datenbanken, Modellen und Medien](docs/images/voxdrop-import-export.png)
 
 </details>
 
@@ -94,7 +96,7 @@ Für die Einrichtung brauchst du Internet und mehrere Gigabyte freien Speicher. 
 
 Die Mac-Kurztests stammen aus der Neuinstallation von **1.5.0**. Apple Silicon hat gemeinsamen Speicher für CPU und GPU. In einem separaten Qwen-Kurztest sank die gemessene GPU-Speicherspitze für Erkennung und Zeitmarken von **5,29 auf 3,58 GiB**, nachdem beide Schritte nacheinander ausgeführt wurden. [Mac-Messprotokoll](docs/MAC_ABNAHME_2026-11-21.md#direkter-qwen-speichervergleich)
 
-Die Windows-Werte stammen aus früheren nativen Abnahmeläufen. Der VRAM-Wert umfasst auch den Desktop und andere laufende Programme. Audiomaterial und Sprecheroptionen unterscheiden sich zwischen den Plattformen. [Windows-Kurztests](docs/PROJEKTSTATUS.md#abschließende-paket-dateiprüfungen-und-präzisierte-meldungen) · [Windows-Langtest](docs/WINDOWS_ABNAHME_2026-11-18.md)
+Die Windows-Werte stammen aus früheren nativen Abnahmeläufen. Der VRAM-Wert umfasst auch den Desktop und andere laufende Programme. Die Testläufe verwendeten unterschiedliche Aufnahmen und Sprecheroptionen. [Windows-Kurztests](docs/PROJEKTSTATUS.md#abschließende-paket-dateiprüfungen-und-präzisierte-meldungen) · [Windows-Langtest](docs/WINDOWS_ABNAHME_2026-11-18.md)
 
 ### Was DOVER-Lap und ein kleineres GPU-Budget kosten
 
