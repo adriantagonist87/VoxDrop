@@ -70,7 +70,10 @@ class DesktopWindowTests(unittest.TestCase):
         self.presenter.show(); QTest.qWait(1600)
         self.assertEqual(self.window.windowState(), Qt.WindowState.WindowFullScreen)
         self.assertEqual(self.presenter.last_state, Qt.WindowState.WindowFullScreen)
+        # Leaving a native full-screen Space restores the preceding zoomed
+        # window first. A second normal request then leaves that zoomed mode.
         self.window.showNormal(); QTest.qWait(1200)
+        self.window.showNormal(); QTest.qWait(350)
         self.window.hide(); self.presenter.show(); QTest.qWait(300)
         self.assertEqual(self.window.windowState(), Qt.WindowState.WindowNoState)
 
