@@ -1,5 +1,11 @@
 # Projektstatus VoxDrop
 
+## Ordnersteuerung und Wiederbefüllen der Warteschlange
+
+Windows 1.4.0 ließ wartende Aufträge eines entfernten Überwachungspfads in der Queue. „Warteschlange leeren“ markierte ungestartete Aufnahmen als abgebrochen, weshalb aktive Scanner dieselbe Dateiversion nicht erneut einreihten. Der Fix entzieht wartenden automatischen Aufträgen deaktivierter Pfade die Auswahl, lässt laufende Arbeit abschließen und erlaubt die erneute Erkennung ungestarteter Versionen beim Scan. Manuelle Drops, manuelle Wiederholungen, abgeschlossene Ergebnisse und Fehler behalten ihre Bedeutung.
+
+Die Pfadliste bietet Pause/Fortsetzen und drei Ausgabemodi. Die explizite Scanaktion stellt auch ungestartete, zuvor abgebrochene Aufnahmen aktiver Pfade wieder zur Prüfung. Der normale Datei- und Schreibschutz bleibt aktiv. Technische Details stehen unter [Ordnersteuerung](ENTWICKLUNG.md#ordnersteuerung-und-warteschlange).
+
 ## Aktuell: Arbeitsübersicht für Windows 1.4.0
 
 Queue und Verlauf stehen im breiten Fenster nebeneinander, im Mindestfenster als Reiter. Aktueller Auftrag, kompakter 44×44-Play-/Stopp-Knopf, Überwachungsstatus und GPU-Budget bleiben auch in den drei Einstellungsgruppen erreichbar. Entwürfe speichern/verwerfen; sofortige Aktionen sind getrennt. Alle bisherigen Such-, Detail-, Drop-, Abbruch-, Dateischutz-, Reset- und Lebensdauerfunktionen bleiben erhalten. Inkrementelle Qt-Listen erhalten Scrollanker und aufgeklappte Zeilen. Der Verlauf ist über 250er-Seiten vollständig zugänglich. [Funktionsmatrix, Architektur und reproduzierbare Prüfung](WORKSPACE_LAYOUT.md).

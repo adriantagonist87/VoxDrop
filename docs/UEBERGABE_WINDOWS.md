@@ -1,5 +1,9 @@
 # Übergabeauftrag für Codex auf dem Windows-PC
 
+## Ordnersteuerung und Scan
+
+Nach einem Update von 1.4.0 in **Warteschlange → Aktionen → Überwachte Ordner neu einlesen** bislang ausgeblendete, ungestartete Dateien der aktiven Ordner wieder erfassen. Entfernte und pausierte Pfade behalten ihre fertigen Ergebnisse; ihre wartenden automatischen Aufträge werden ausgeblendet. Die Ausgabe je Pfad wird in **Einstellungen → Ordner & Überwachung** gespeichert. Ein Zielunterordner verarbeitet die oberste Pfadebene und verschiebt Aufnahme und TXT zusammen.
+
 ## Aktuell: Arbeitsübersicht für Windows 1.4.0
 
 Queue und Verlauf stehen im breiten Fenster nebeneinander, im Mindestfenster als Reiter. Aktueller Auftrag, kompakter 44×44-Play-/Stopp-Knopf, Überwachungsstatus und GPU-Budget bleiben auch in den drei Einstellungsgruppen erreichbar. Entwürfe speichern/verwerfen; sofortige Aktionen sind getrennt. Alle bisherigen Such-, Detail-, Drop-, Abbruch-, Dateischutz-, Reset- und Lebensdauerfunktionen bleiben erhalten. Inkrementelle Qt-Listen erhalten Scrollanker und aufgeklappte Zeilen. Der Verlauf ist über 250er-Seiten vollständig zugänglich. [Funktionsmatrix, Architektur und reproduzierbare Prüfung](WORKSPACE_LAYOUT.md).

@@ -81,6 +81,34 @@ class WorkspaceTests(unittest.TestCase):
         self.assertEqual(self.controller.draft['gpu_budget_percent'], 75)
         self.assertFalse(self.controller.state['settingsDirty'])
 
+    def test_pause_button_and_rescan_menu_use_saved_folders_without_saving_draft(self):
+        self.queue_fixture()
+        settings = self.seed_config()
+        folder = str(self.config_file.parent / 'Watch')
+        settings.update(folders=[folder], monitoring=True)
+        self.config_file.write_text(json.dumps(settings), encoding='utf-8')
+        self.controller.saved_config = dict(settings)
+        self.controller.discardSettings()
+        self.controller.setFolderOutput(folder, 'subfolder')
+        self.controller.setSetting('language', 'en')
+        self.controller.preview = False
+        self.click('settingsButton')
+        self.click('folderSettingsTab')
+        with patch.object(self.controller_module, 'command', return_value='') as command, \
+             patch.object(self.controller, 'refresh'), \
+             patch.object(self.controller, 'submit', side_effect=lambda operation, finished: finished(operation(), None)):
+            self.click('folderPause0')
+            saved = json.loads(self.config_file.read_text())
+            self.assertEqual(saved['folder_options'][folder], {'paused': True, 'output': 'global'})
+            self.assertEqual(saved['language'], 'de')
+            self.assertEqual(self.controller.draft['folder_options'][folder]['output'], 'subfolder')
+            self.assertFalse(self.controller.state['canRescanFolders'])
+            self.click('folderPause0')
+            self.click('queueTab')
+            self.click('queueActionsButton')
+            self.click('rescanFoldersButton')
+            self.assertEqual(command.call_args.args, ('rescan-folders', self.config_file))
+
     def test_save_button_persists_edits_and_does_not_reconfigure_existing_jobs(self):
         jobs = self.queue_fixture()
         self.seed_config()

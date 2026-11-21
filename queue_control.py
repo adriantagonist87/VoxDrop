@@ -9,6 +9,10 @@ class JobCancelled(Exception):
 
 
 PENDING = "(j.state IN ('seen','ready') OR (j.state='failed' AND r.job_id IS NOT NULL))"
+WATCHED_JOB = """origin_job_id IS NULL AND COALESCE(json_extract(settings,'$.folder_drop'),0)=0
+    AND COALESCE(json_extract(settings,'$.manual_retry'),0)=0
+    AND COALESCE(json_extract(settings,'$.watch_path'),json_extract(settings,'$.input_dir')) IS NOT NULL"""
+WATCH_PATH = "COALESCE(json_extract(settings,'$.watch_path'),json_extract(settings,'$.input_dir'))"
 
 
 def initialise_queue(db):
@@ -200,7 +204,17 @@ def cancel_queue(db):
         ids={row['id'] for row in queue_jobs(db)}
         ids.update(row[0] for row in db.execute("""SELECT id FROM jobs
             WHERE state IN ('copying','transcribing') AND publication_started=0"""))
-        for job_id in ids:
+        # A bulk clear empties the visible queue and pauses processing. A new
+        # scan can discover untouched recordings again in enabled folders.
+        parked = db.execute(f"""UPDATE jobs SET state='watch_deferred',updated=?
+            WHERE state IN ('seen','ready') AND attempt=0 AND started IS NULL
+            AND text_hash IS NULL AND NOT publication_started AND {WATCHED_JOB}
+            RETURNING id""", (time.time(),)).fetchall()
+        # Removing an automatic retry must not replace its recorded error.
+        failed = db.execute("""DELETE FROM job_retries
+            WHERE job_id IN (SELECT id FROM jobs WHERE state='failed') RETURNING job_id""").fetchall()
+        withdrawn = {row[0] for row in parked + failed}
+        for job_id in ids.difference(withdrawn):
             _cancel(db,job_id)
         return len(ids)
 
