@@ -9,6 +9,7 @@ Ausgangsbasis: `2e493e973c9f24ed3b46e44c45f31f7801398217` aus `origin/main`, Win
 - GPU-Budget auch auf Metal: temporäre Instanztypen an MLX-Audioencoder und Textdecoderblöcken evaluieren die Ergebnisse vor Synchronisation/Pause. CTranslate2-Metal delegiert seine synchronen nativen Aufrufe. Beide pyannote-Modelle erhalten MPS-Hooks. CPU bleibt ohne GPU-Pausen. Modellpräzision und Erkennungsparameter bleiben gleich; kein exaktes systemweites Last- oder RAM-Limit.
 - `posix_guard.py` besitzt die jeweilige Unix-Prozessgruppe. Das Schließen der nur beim Eigentümer gehaltenen Pipe beendet die Gruppe auch nach hartem Eigentümerabsturz. Ausgabe/Exitcode bleiben erhalten. Der vorhandene Supervisor, begrenzte Logs und automatische Auftragswiederaufnahme gelten nun auch auf dem Mac. Temporäre Audiodaten liegen auf beiden Systemen im bereinigbaren Auftrag.
 - Der Owner-Watchdog merkt PID und Erstellungszeit, damit eine später gesperrte SQLite-Datenbank die Eigentümerverlust-Erkennung nicht unterbindet. Profile werden weiterhin getrennt beendet.
+- Auch der kurze Unix-Startbefehl bleibt bis zur Dienstübergabe pipegebunden. Ein während SQLite blockierter Start darf seinen GUI-Eigentümer nicht überleben; der erfolgreich übergebene Supervisor legt ausdrücklich eine neue Sitzung an. Zwei echte Prozessregressionen prüfen beide Seiten dieser Übergabe. Der Windows-Startpfad bleibt erhalten.
 - Cmd-Q läuft über einen Qt-Quit-Eventfilter in den vorhandenen vollständigen Abschluss. Rotes X bleibt Ausblenden in die Menüleiste; Minimieren bleibt Dock.
 - Nativ reproduzierter Cocoa-Fehler: nach Maximieren → Vollbild → Minimieren wurden `Minimized → Windowed → Maximized → Minimized` gemeldet. Der gespeicherte Vollbildmodus wird während dieses Übergangs festgehalten und nach der nativen Wiederherstellung bestätigt. Bewusstes anschließendes Normalisieren bleibt wirksam.
 - Lokale offene Schreibhandles werden mit dem vorhandenen macOS-`lsof` erkannt, auch ohne weiteres Größenwachstum. Ein auf einem anderen SMB-Client offener Schreiber ist damit nicht nachgewiesen; Dateiversions-/Kopier-/Veröffentlichungsschutz bleibt zusätzlich aktiv.
@@ -21,14 +22,30 @@ macOS 27.2, Apple Silicon, Python 3.12.13, Qt 6.10.2, MLX 0.32.4 / MLX-Audio 0.6
 
 | Prüfung | Ergebnis |
 | --- | --- |
-| Gemeinsame Regressionen | 207 Fälle in 41,680 s, 199 bestanden, acht explizite Skips: sieben Windows-Adapter und eine nur nativ ausführbare Cocoa-Regression. |
+| Gemeinsame Regressionen | Final nativ auf Cocoa: 209 Fälle in 51,914 s, 202 bestanden, sieben reine Windows-Skips. Die neue vollständige Cocoa-Regression läuft hier tatsächlich. Vorheriger Offscreen-Lauf: 207 Fälle in 41,680 s, acht Skips. |
 | Native Fenster-/Modellregressionen | Zehn engere Fälle auf Cocoa bestanden. Erweiterte Maximieren-/Vollbild-/Minimierungsfolge zusätzlich im Paketprüfer. |
 | Große native Oberfläche | 8.000 Queue- und 20.000 Verlaufseinträge bei 100/125/150 % Qt-Skalierung; Mindestfenster, alle Einstellungsgruppen, Details, Menüs und Dialoge; keine QML-Warnungen. |
 | Inhaltsindex | 20.000 synthetische TXT, 206 erwartete Treffer, keine übersprungenen Dateien, Abbruch bestanden. Indexieren/Suchen 0,829 s; einschließlich Schreiben 1,888 s. Ein lokaler Einzellauf, keine SMB-Leistungszusage. |
 | Modellmatrix | Zwölf echte Metal-Läufe: beide ASR-Modelle × getrennte deutsche/englische Aufnahmen × 100 %, 50 %, 50 % mit Stille und drei DOVER-Durchgängen. Textanker, ursprüngliche Zeitlinie nach zwölf Sekunden Pause und Originalhashes bestanden. Je Sprache/Modell waren die Transkripte bei 100/50 % ohne Stilleoption bytegleich. |
 | Normale native App | Swift-Bundle-Einstieg mit isoliertem Profil geöffnet; Oberfläche und Einstellungen visuell geprüft, Metal-Budget per Tastatur gespeichert. Tatsächliches Cmd-Q leitete vollständigen Abschluss ein; GUI, Supervisor und Dienst danach beendet. |
+| Finaler Paketprüfer | 1.4.0 Build 24, Programmcode `7fcf56a7e2fce89ba49d8c07db8b34b419c3de84`: echte QML-Klicks Stopp → Start während Metal-Qwen; Stopp in 0,631 s, Queue erhalten, erfolgreiche Verarbeitung und geschützte Inhaltswiederverwendung. Drei DOVER-Durchgänge mit tatsächlicher Fusion in SQLite bestätigt. Native Fensterzustände, X/Tray, echte TXT-Inhaltssuche, SQLite/Fremdschlüssel und vollständiges natives Quit bestanden. |
+| Ausfall und Wiederanlauf | Derselbe Release-Build über seinen Swift-Launcher mit `--background`: Dienst-SIGKILL, keine verwaisten Inferenzprozesse, automatischer Dienst-/Auftragswiederanlauf, dekodiertes Audio im Auftragsordner und anschließend entfernt. GUI-SIGKILL bei gehaltener SQLite-Schreibtransaktion: gesamter eigener Prozessbaum nach 6,276 s beendet; keine neuen Scans ohne App; erneuter App-Start stellte den unterbrochenen Auftrag fertig. |
+| Echte SMB-Ablage | Frischer eigener Testunterordner auf der bereits gemounteten Freigabe: rekursiver Drop mit Unicode/Leerzeichen/Komma/Plus, TXT neben unverändertem Original, keine Archivverschiebung, Neutranskription mit eigener TXT und geschütztem vorherigen Ergebnis, lokale SQLite konsistent. Eigene Testablage anschließend vollständig entfernt. Kein SMB-Serverausfall erzwungen. |
+| CPU | Whisper-CPU mit englischer künstlicher Aufnahme erfolgreich in rund sechs Sekunden. Ein längerer Qwen-CPU-Kontrolllauf wurde wegen seiner Laufzeit beendet; eine kurze CPU-Probe wird separat protokolliert. Der produktive und vollständig abgenommene Standard ist Metal. |
 
 Die 100-%-Sprachläufe dauerten auf den rund 25–28 Sekunden langen Testaufnahmen 2,5–3,9 Sekunden. Mit 50 % und Sprecher/DOVER lagen sie bei 13,5–22,5 Sekunden. Diese kurzen künstlichen Aufnahmen sind keine neue Langaufnahme-/RAM-Benchmarkserie. Die alten README-Benchmarks bleiben historische Messungen.
+
+### Direkter Qwen-Speichervergleich
+
+Der unveränderte Mac-Backendcode aus `df207f79aa812f70d090e4306443436d51d48952` und der neue Backendcode wurden nacheinander mit denselben vorhandenen Modellen und derselben künstlichen deutschen Aufnahme ausgeführt. An den Ladegrenzen wurde nach `mx.synchronize()` der aktive MLX-Speicher erfasst; je Lauf wurde die MLX-Spitzenmessung zurückgesetzt. Die vollständigen ausgerichteten Ergebnis-JSONs waren bytegleich.
+
+| MLX-Kennzahl | Früher | Sequenzielle Phasen |
+| --- | ---: | ---: |
+| Aktiv vor Laden des Aligners | 2.469.576.408 Byte | 203.388 Byte |
+| Aktiv nach Laden des Aligners | 4.311.206.872 Byte | 1.841.833.852 Byte |
+| Spitzenallokation im Lauf | 5.684.462.072 Byte (5,29 GiB) | 3.841.581.516 Byte (3,58 GiB) |
+
+Die MLX-Spitze sank in diesem Einzellauf um 1,72 GiB beziehungsweise 32,4 %. Das ist keine Messung des gesamten Prozessbaums, der gesamten macOS-RAM-Anzeige oder eines mehrstündigen Meetings. Der Effekt entsteht durch das tatsächliche Freigeben des ASR-Modells vor dem Aligner, ohne Quantisierungs-/Modellwechsel.
 
 ## Reproduzieren
 
@@ -43,6 +60,12 @@ res="$PWD/.runtime/package/VoxDrop.app/Contents/Resources"
 
 Das Modellprüfskript verlangt `de.wav`, `en.wav` und `references.json` mit `language`, `required` und `second_start_seconds`. Die Aufnahmen enthalten ausschließlich künstliche Sprache. Private Pfade, Datenbanken, Rohlogs und Medien bleiben unter `.runtime/` und außerhalb von GitHub.
 
-## Noch laufender Abschluss
+## Produktivupdate und Release
 
-Vollständiger nativer Paket-/Wiederaufnahmeprüfer, Eigentümerverlust während echter Erkennung, Mac-SMB-Testablage, finaler Commit/Windows-CI, DMG, gesichertes Produktivupdate und öffentlicher Downloadnachweis werden im anschließenden Statusupdate eingetragen. Keine neue Betriebssystem-Neustart-/Anmeldeabnahme und keine wochenlange Echtzeitprüfung behauptet. Der bestehende Anmeldestart bleibt erhalten; ein Rechnerneustart wird nicht ungefragt ausgelöst.
+Die signierte App 1.4.0 Build 24 ist am bisherigen Mac-Installationsort produktiv installiert und sichtbar geöffnet. Vorher wurden App, konsistenter SQLite-Verlauf, Einstellungen und Anmelderegistrierung außerhalb des Repositorys gesichert. Nachher: Konfiguration bytegleich; alle vier vorherigen Aufträge in ID, Quelle, Dateiversion und Zustand erhalten; sämtliche 106 Modell-/Cachedateien in Hash, Inode, Größe und Änderungszeit unverändert; SQLite/Fremdschlüssel ok; Bundle-Signatur und alle 43 Manifestdateien gültig. Die bestehende Anmelderegistrierung startet weiterhin den nativen App-Launcher mit `--background`, RunAtLoad und ohne KeepAlive.
+
+Die tatsächliche installierte Oberfläche meldete Überwachung an, den bestehenden SMB-Ordner 1/1 verfügbar, keine Fehler und keinen aktiven Auftrag. Der laufende Dienst gehört jetzt zur neuen GUI. Paketcode: `7fcf56a7e2fce89ba49d8c07db8b34b419c3de84`; vollständiger nativer 209er-Teststand mit finaler Cocoa-Regressionsfolge: `c1e1f285ba4e79c7a0d363e1d9c55deb76493627`. [Windows-CI auf diesem Stand erfolgreich](https://github.com/adriantagonist87/VoxDrop/actions/runs/44926847171).
+
+Die separate Mac-Veröffentlichung verwendet `v1.4.0-macos` und ersetzt keine vorhandene Windows-ZIP. Öffentlicher DMG-Download-/Prüfsummennachweis wird nach dem Upload ergänzt. Keine neue Betriebssystem-Neustart-/Anmeldeabnahme und keine wochenlange Echtzeitprüfung behauptet. Der bestehende Anmeldestart bleibt erhalten; ein Rechnerneustart wird nicht ungefragt ausgelöst.
+
+Beim ersten Windows-CI-Lauf hielt der neue Mac-Test seine Numpy-Memorymap in den Mock-Argumenten fest; `reset_mock()` gibt sie nun vor Windows-Tempbereinigung frei. Beim Paketprüfer wurde die getrennte Darstellung von aktuellem Auftrag und Queue sowie die beabsichtigte Inhaltswiederverwendung korrekt berücksichtigt. Auf SMB entfernt macOS AppleDouble-Begleitdateien teils zusammen mit der Hauptdatei; die Bereinigung des ausschließlich eigenen Testordners toleriert bereits entfernte Begleitdateien. Diese Testtreiberbefunde ändern keine persönlichen Dateien oder die produktive Windows-Ausgabe.

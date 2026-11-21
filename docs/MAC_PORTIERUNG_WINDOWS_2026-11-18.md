@@ -1,5 +1,7 @@
 # Mac auf den aktuellen Windows-Funktionsstand bringen
 
+**Abschluss vom 21.11.2026:** Die folgende Übergabe wurde mit macOS 1.4.0 Build 24 umgesetzt, nativ abgenommen und auf dem Mac mini produktiv installiert. Maßgeblicher aktueller Prüfstand und verbleibende Grenzen: [Mac-Abnahme](MAC_ABNAHME_2026-11-21.md). Die frühere Mac-DMG 1.3.1 und die bisherige Windows-ZIP werden nicht überschrieben; die neue Mac-Ausgabe erhält eine separate Veröffentlichung.
+
 ## Auftrag und Ausgangspunkt
 
 Der Nutzer beauftragt am 18. November 2026 den Abschluss der Windows-Veröffentlichung und die Weiterentwicklung auf dem Mac auf denselben Funktionsstand. `main` ist dafür die gemeinsame Entwicklungsbasis. Diese Integration ist ausdrücklich keine native Mac-Freigabe: Die bisherige Mac-DMG v1.3.1 bleibt erhalten, bis der neue Stand auf einem echten Apple-Silicon-Mac geprüft und neu gebaut wurde. Frühere Hinweise „gemeinsamer Code bleibt im Windows-Draft“ beschreiben den vorherigen Übergabezustand.
