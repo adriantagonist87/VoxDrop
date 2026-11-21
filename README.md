@@ -4,6 +4,17 @@ VoxDrop macht aus Audio- und Videoaufnahmen durchsuchbare Textdateien. So kannst
 
 VoxDrop wird für macOS und Windows parallel mit demselben Funktionsumfang entwickelt. Die Versionshinweise zeigen den Stand der jeweiligen Downloads.
 
+## Hardware und System
+
+| Paket | Prozessor und Betriebssystem | GPU und Laufzeit |
+| --- | --- | --- |
+| macOS | Apple Silicon (ARM64), ab macOS 26.2 | Integrierte Apple-GPU mit Metal. CPU und GPU teilen sich den Arbeitsspeicher. |
+| Windows | x64-PC mit Intel- oder AMD-Prozessor und Windows 11 | Für CUDA eine kompatible NVIDIA-GPU mit Treiber für CUDA 12.8. Getestet mit RTX 5060 und 8 GB VRAM. Die Laufzeit benötigt das [Visual C++ Redistributable für x64](https://learn.microsoft.com/de-de/cpp/windows/latest-supported-vc-redist). |
+
+**RAM und Speicherplatz.** Als Richtwert für den Einstieg sind 16 GB Arbeitsspeicher sinnvoll. Eine allgemeine RAM- oder VRAM-Untergrenze wurde bisher nicht vermessen. Der Bedarf hängt von Modell, Audiolänge und Sprecheroptionen ab. Auf dem Mac belegten Programm, beide Modelle und Download-Cache zusammen rund 11,3 GiB. Plane freien Platz für die Einrichtung und zusätzlich für Arbeitskopien deiner Aufnahmen ein. Unter Windows lädt VoxDrop beim ersten Start auch die Laufzeit herunter.
+
+Für die Ersteinrichtung brauchst du Internet und einen beschreibbaren Programmordner. Unter **Einstellungen → Transkription → Rechengerät** kannst du auch **CPU** wählen.
+
 **[Für macOS herunterladen](https://github.com/adriantagonist87/VoxDrop/releases/download/v1.5.0-macos/VoxDrop-1.5.0-macOS-arm64.dmg)** · **[Für Windows herunterladen](https://github.com/adriantagonist87/VoxDrop/releases/download/v1.4.1/VoxDrop-1.4.1-Windows-x64.zip)** · [Alle Versionen](https://github.com/adriantagonist87/VoxDrop/releases)
 
 ## Was VoxDrop kann
@@ -67,8 +78,6 @@ Die TGA-Schulungen landen mit ihren TXT-Dateien im Zielunterordner. Bei den Supp
 
 ### macOS
 
-**Apple Silicon, macOS 26.2 oder neuer.**
-
 1. Lade die [DMG für macOS](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.5.0-macos) herunter und öffne sie im Finder.
 2. Lege in **Programme** einen Ordner namens **VoxDrop** an. Öffne den Ordner **VoxDrop** in der DMG und kopiere **VoxDrop.app direkt** in den neu angelegten Ordner. Wirf die DMG aus und starte die App aus **Programme → VoxDrop**.
 3. Falls macOS die App beim ersten Start blockiert, schließe die Meldung mit **Fertig**. Öffne **Systemeinstellungen → Datenschutz & Sicherheit**, wähle bei VoxDrop **Dennoch öffnen** und bestätige die Abfrage.
@@ -76,13 +85,11 @@ Die TGA-Schulungen landen mit ihren TXT-Dateien im Zielunterordner. Bei den Supp
 
 ### Windows
 
-**Windows 11, 64 Bit.** Für die GPU-Beschleunigung brauchst du eine CUDA-fähige NVIDIA-Grafikkarte mit passendem Treiber. Getestet mit einer RTX 5060 mit 8 GB VRAM.
-
 1. Lade die [ZIP für Windows](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.4.1) herunter und entpacke sie vollständig in einen lokalen Ordner, in den du schreiben kannst.
 2. Öffne **`VoxDrop.exe`** im entpackten Ordner. Beim ersten Start richtet VoxDrop seine Laufzeit automatisch im Unterordner **Laufzeit** ein.
 3. Öffne **Einstellungen → Transkription → Modelle herunterladen**. Die Modelle landen im Ordner **Modelle** neben der EXE.
 
-Für die Einrichtung brauchst du Internet und mehrere Gigabyte freien Speicher. Sobald die Modelle eingerichtet sind, zieh eine Aufnahme ins Fenster und starte die Verarbeitung mit **▶**. Für die automatische Verarbeitung fügst du unter **Einstellungen → Ordner & Überwachung** einen Ordner hinzu und schaltest die Überwachung ein.
+Sobald die Modelle eingerichtet sind, zieh eine Aufnahme ins Fenster und starte die Verarbeitung mit **▶**. Für die automatische Verarbeitung fügst du unter **Einstellungen → Ordner & Überwachung** einen Ordner hinzu und schaltest die Überwachung ein.
 
 ## Gemessene Laufzeit und Speichernutzung
 
@@ -97,6 +104,14 @@ Für die Einrichtung brauchst du Internet und mehrere Gigabyte freien Speicher. 
 Die Mac-Kurztests stammen aus der Neuinstallation von **1.5.0**. Apple Silicon hat gemeinsamen Speicher für CPU und GPU. In einem separaten Qwen-Kurztest sank die gemessene GPU-Speicherspitze für Erkennung und Zeitmarken von **5,29 auf 3,58 GiB**, nachdem beide Schritte nacheinander ausgeführt wurden. [Mac-Messprotokoll](docs/MAC_ABNAHME_2026-11-21.md#direkter-qwen-speichervergleich)
 
 Die Windows-Werte stammen aus früheren nativen Abnahmeläufen. Der VRAM-Wert umfasst auch den Desktop und andere laufende Programme. Die Testläufe verwendeten unterschiedliche Aufnahmen und Sprecheroptionen. [Windows-Kurztests](docs/PROJEKTSTATUS.md#abschließende-paket-dateiprüfungen-und-präzisierte-meldungen) · [Windows-Langtest](docs/WINDOWS_ABNAHME_2026-11-18.md)
+
+### Auftragsdetails zum Langtest auf der RTX 5060
+
+Die Auftragsdetails zeigen **7 min 36 s Verarbeitung** für **48 min 55 s Audio** mit Qwen und drei DOVER-Lap-Durchgängen. Die Anzeige nennt **3,40 GiB RAM** für den Auftrag. Beim selben Lauf erreichte die **gesamte Grafikkarte 7,29 GiB VRAM** in der höchsten Stichprobe. Der VRAM-Wert stammt aus einer separaten GPU-Messung und umfasst weitere Programme. [Messprotokoll](docs/WINDOWS_ABNAHME_2026-11-18.md#aktueller-paketstand-und-fortsetzung)
+
+![Nachgestellte Auftragsdetails mit 48 Minuten 55 Sekunden Audio, 7 Minuten 36 Sekunden Verarbeitung und 3,40 GiB RAM](docs/images/voxdrop-langtest-rtx5060.png)
+
+Nachgestellte Ansicht mit den Messwerten des echten Langtests. Dateiname und Uhrzeiten sind Beispiele.
 
 ### Was DOVER-Lap und ein kleineres GPU-Budget kosten
 
