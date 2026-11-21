@@ -1,5 +1,13 @@
 # Entwicklung auf macOS und Windows
 
+## Ordnersteuerung und Warteschlange
+
+`folders` bleibt eine Liste von Pfadstrings. Die optionale Zuordnung `folder_options` speichert je Pfad `paused` und `output` (`global`, `beside`, `subfolder`). Alte Profile erben die globalen Einstellungen. Ein expliziter Zielunterordner deaktiviert die rekursive Suche für diesen Pfad, verwendet den gemeinsamen Zielordnernamen und archiviert Aufnahme und TXT gemeinsam. Die Transkriptionsoptionen bereits wartender Aufträge bleiben beim Wechsel der Ausgabe erhalten, solange der Auftrag nicht erneut entdeckt wird.
+
+Die Auftragszuordnung folgt `watch_path` (bei alten Aufträgen `input_dir`). Einmalige Drops, Neutranskriptionen und ausdrücklich angeforderte Wiederholungen gelten als manuell. `reconcile-folders CONFIG` setzt wartende automatische Aufträge deaktivierter Pfade auf `watch_deferred` und entfernt fällige automatische Wiederholungen aus der Queue. Gespeicherte Fehlertexte bleiben im Verlauf. Der Scanner verwirft überholte Scanergebnisse und der Worker prüft den Pfad vor der Übernahme. Beim Wiederfinden derselben Dateiversion durch einen aktiven Pfad werden zurückgestellte Aufträge unter Beachtung des Stabilitätsintervalls wieder sichtbar.
+
+„Warteschlange leeren“ pausiert die Verarbeitung und stellt ungestartete automatische Aufträge zurück. Aktive Ordner füllen die Queue über normale Scans wieder. Einzelentfernung blendet eine Dateiversion bis zu einer ausdrücklichen Aktion aus. `rescan-folders CONFIG` plant einen sofortigen Scan der aktiven Pfade und markiert auch ältere, ungestartete Abbrüche dieser Pfade zur erneuten Prüfung. Ein bereits gestarteter Abbruch sowie abgeschlossene oder fehlgeschlagene Aufträge werden dadurch nicht neu transkribiert. Es gibt keine Schemaänderung.
+
 ## Aktuell: Arbeitsübersicht für Windows 1.4.0
 
 Queue und Verlauf stehen im breiten Fenster nebeneinander, im Mindestfenster als Reiter. Aktueller Auftrag, kompakter 44×44-Play-/Stopp-Knopf, Überwachungsstatus und GPU-Budget bleiben auch in den drei Einstellungsgruppen erreichbar. Entwürfe speichern/verwerfen; sofortige Aktionen sind getrennt. Alle bisherigen Such-, Detail-, Drop-, Abbruch-, Dateischutz-, Reset- und Lebensdauerfunktionen bleiben erhalten. Inkrementelle Qt-Listen erhalten Scrollanker und aufgeklappte Zeilen. Der Verlauf ist über 250er-Seiten vollständig zugänglich. [Funktionsmatrix, Architektur und reproduzierbare Prüfung](WORKSPACE_LAYOUT.md).

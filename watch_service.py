@@ -47,6 +47,7 @@ from queue_control import (
     prioritise_jobs, restore_preempted,
     immediate_count, prune_immediate,
     move_queue_relative,
+    WATCHED_JOB, WATCH_PATH,
 )
 from media_history import MediaBusy, initialise_media_history, remember_result, previously_transcribed
 from history_store import HISTORY_FILTERS, search_storage_lock, storage_generation
@@ -226,8 +227,25 @@ def read_settings(path):
             validate_subfolder(name)
         elif not isinstance(name, str):
             name = "_FERTIGGESTELLT"
+        options = values.get("folder_options", {})
+        if not isinstance(options, dict):
+            raise ValueError("Ordneroptionen müssen nach Pfad zugeordnet sein.")
+        folder_options = {}
+        for folder in paths:
+            choice = options.get(folder, {})
+            if not isinstance(choice, dict):
+                raise ValueError("Ungültige Ordneroptionen.")
+            paused = choice.get("paused", False)
+            mode = choice.get("output", "global")
+            if type(paused) is not bool or mode not in ("global", "beside", "subfolder"):
+                raise ValueError("Ungültige Pause oder Ausgabeoption für einen Ordner.")
+            if mode == "subfolder":
+                validate_subfolder(name)
+            if paused or mode != "global":
+                folder_options[folder] = {"paused": paused, "output": mode}
         settings.update(
             folders=paths,
+            folder_options=folder_options,
             include_subfolders=recursive,
             create_output_subfolder=create,
             output_subfolder=name,
@@ -288,8 +306,53 @@ def validate_subfolder(name):
 
 
 def folder_profile(settings, path):
-    profile = {key: value for key, value in settings.items() if key != "folders"}
+    profile = {key: value for key, value in settings.items() if key not in ("folders", "folder_options")}
+    mode = settings.get("folder_options", {}).get(path, {}).get("output", "global")
+    if mode == "beside":
+        profile["create_output_subfolder"] = False
+    elif mode == "subfolder":
+        profile.update(include_subfolders=False, create_output_subfolder=True)
     return {**profile, "watch_path": path, "require_smb": False, "scope_dir": None}
+
+
+def enabled_watch_paths(settings):
+    if "folders" not in settings:
+        return [settings["input_dir"]]
+    options = settings.get("folder_options", {})
+    return [path for path in settings["folders"] if not options.get(path, {}).get("paused")]
+
+
+def reconcile_watched_jobs(db, settings):
+    """Withdraw pending work whose configured watcher was paused or removed."""
+    enabled = json.dumps(enabled_watch_paths(settings))
+    with db:
+        db.execute("BEGIN IMMEDIATE")
+        inactive = f"{WATCHED_JOB} AND {WATCH_PATH} NOT IN (SELECT value FROM json_each(?))"
+        parked = db.execute(f"""UPDATE jobs SET state='watch_deferred',updated=?
+            WHERE state IN ('seen','ready') AND {inactive} RETURNING id""",
+            (time.time(), enabled)).fetchall()
+        db.executemany("DELETE FROM immediate_jobs WHERE job_id=?", parked)
+        # A failed retry remains visible as a failure in history.
+        db.execute(f"""DELETE FROM job_retries WHERE job_id IN
+            (SELECT id FROM jobs WHERE state='failed' AND {inactive})""", (enabled,))
+        db.execute(f"""DELETE FROM immediate_jobs WHERE job_id IN
+            (SELECT id FROM jobs WHERE state='failed' AND {inactive})""", (enabled,))
+        db.execute("DELETE FROM folder_status WHERE path NOT IN (SELECT value FROM json_each(?))", (enabled,))
+        return len(parked)
+
+
+def request_watched_rescan(db, settings):
+    paths = enabled_watch_paths(settings)
+    if not settings["monitoring"] or not paths:
+        raise ValueError("Schalte die Ordnerüberwachung für mindestens einen Ordner ein.")
+    with db:
+        db.execute("BEGIN IMMEDIATE")
+        # Also recover untouched files hidden by older versions of Clear Queue.
+        db.execute(f"""UPDATE jobs SET state='watch_deferred',updated=?
+            WHERE state='cancelled' AND attempt=0 AND started IS NULL AND text_hash IS NULL
+            AND NOT publication_started AND {WATCHED_JOB}
+            AND {WATCH_PATH} IN (SELECT value FROM json_each(?))""", (time.time(), json.dumps(paths)))
+        db.executemany("INSERT OR IGNORE INTO folder_refresh VALUES (?)", ((path,) for path in paths))
 
 
 def output_folder(source, settings):
@@ -537,7 +600,7 @@ def inspect_folders_with_deadline(settings):
     return json.loads(result.stdout)
 
 
-def scan(db, settings, now=None, *, inspect=inspect_folders, generation=None):
+def scan(db, settings, now=None, *, inspect=inspect_folders, generation=None, config=None):
     if stopping(db):
         return
     generation=storage_generation(db) if generation is None else generation
@@ -555,6 +618,11 @@ def scan(db, settings, now=None, *, inspect=inspect_folders, generation=None):
         db.execute('BEGIN IMMEDIATE')
         if generation!=storage_generation(db) or stopping(db):
             return
+        if config is not None:
+            latest = read_settings(config)
+            path = settings["watch_path"]
+            if path not in enabled_watch_paths(latest) or folder_profile(latest, path) != settings:
+                return
         for candidate in versions:
             destination = (
                 str(Path(candidate[0]).parent)
@@ -578,6 +646,31 @@ def scan(db, settings, now=None, *, inspect=inspect_folders, generation=None):
                 """UPDATE jobs SET state='seen', detected=?, updated=?
                 WHERE source=? AND size=? AND mtime_ns=? AND origin_job_id IS NULL AND state='superseded'""",
                 (now, now, *candidate),
+            )
+            db.execute(
+                f"""UPDATE jobs SET state='seen', detected=?, updated=?,
+                finished=NULL, error=NULL, phase=NULL, progress=NULL,
+                settings=CASE WHEN text_hash IS NULL AND NOT publication_started THEN ? ELSE settings END,
+                completed_dir=CASE WHEN text_hash IS NULL AND NOT publication_started THEN ? ELSE completed_dir END
+                WHERE source=? AND size=? AND mtime_ns=? AND state='watch_deferred'
+                AND {WATCHED_JOB} AND ({WATCH_PATH}=? OR (text_hash IS NULL AND NOT publication_started))""",
+                (now, now, snapshot, destination, *candidate, settings.get("watch_path", settings.get("input_dir"))),
+            )
+            # Keep transcription choices on existing jobs. Output routing follows
+            # the current watcher until processing starts.
+            db.execute(
+                f"""UPDATE jobs SET completed_dir=?, settings=json_set(settings,
+                '$.include_subfolders',json(?), '$.create_output_subfolder',json(?),
+                '$.output_subfolder',?, '$.move_media',json('false'))
+                WHERE source=? AND size=? AND mtime_ns=? AND {WATCHED_JOB} AND {WATCH_PATH}=?
+                AND state IN ('seen','ready') AND attempt=0 AND text_hash IS NULL
+                AND NOT publication_started AND (completed_dir!=?
+                OR COALESCE(json_extract(settings,'$.include_subfolders'),0)!=?
+                OR COALESCE(json_extract(settings,'$.create_output_subfolder'),0)!=?)""",
+                (destination, json.dumps(bool(settings.get("include_subfolders"))),
+                 json.dumps(bool(settings.get("create_output_subfolder"))), settings.get("output_subfolder", "_FERTIGGESTELLT"),
+                 *candidate, settings.get("watch_path", settings.get("input_dir")), destination,
+                 bool(settings.get("include_subfolders")), bool(settings.get("create_output_subfolder"))),
             )
             db.execute(
                 """UPDATE jobs SET state='ready', updated=? WHERE source=? AND size=? AND mtime_ns=?
@@ -654,7 +747,8 @@ def prepare_drop(db, settings, paths):
         previous = drop_previous(db, version)
         if previous:
             state = previous['state']
-            kind = ('queued' if state in ('seen','ready') else 'active' if state in ('copying','transcribing','exporting')
+            kind = ('new' if state == 'watch_deferred' and not previous['text_hash'] and not previous['publication_started']
+                    else 'queued' if state in ('seen','ready') else 'active' if state in ('copying','transcribing','exporting')
                     else 'existing' if state == 'existing' else 'done' if state in ('done','duplicate','superseded') else 'problem')
         else:
             kind = 'existing' if Path(version[0]).with_suffix('.txt').is_file() else 'new'
@@ -706,7 +800,8 @@ def resolve_drop(db, token, action):
             version = (source, item['size'], item['mtime_ns'])
             previous = drop_previous(db, version)
             state = previous['state'] if previous else None
-            if action == 'ignore' and (previous is not None or item['kind'] != 'new'):
+            deferred = state == 'watch_deferred' and not previous['text_hash'] and not previous['publication_started']
+            if action == 'ignore' and ((previous is not None and not deferred) or item['kind'] != 'new'):
                 ignored += 1
                 continue
             if state in ('copying','transcribing','exporting'):
@@ -715,12 +810,13 @@ def resolve_drop(db, token, action):
                 continue
             profile = item['profile']
             now = time.time()
-            if state in ('seen','ready') and item['text_exists'] and action in ('retranscribe','immediate'):
+            if (state in ('seen','ready') or deferred) and item['text_exists'] and action in ('retranscribe','immediate'):
                 db.execute("UPDATE jobs SET state='existing',updated=? WHERE id=?", (now, previous['id']))
                 remember_result(db, previous['id'], 'existing', Path(source).with_suffix('.txt'))
                 previous = db.execute('SELECT * FROM jobs WHERE id=?', (previous['id'],)).fetchone()
                 state = 'existing'
-            if state in ('seen','ready') or (state in ('failed','blocked','cancelled') and action in ('front','queue','immediate') and not (item['text_exists'] and action == 'immediate')):
+                deferred = False
+            if deferred or state in ('seen','ready') or (state in ('failed','blocked','cancelled') and action in ('front','queue','immediate') and not (item['text_exists'] and action == 'immediate')):
                 identifier = previous['id']
                 db.execute("UPDATE jobs SET state='ready',completed_dir=?,settings=?,updated=?,error=NULL WHERE id=?",
                     (str(Path(source).parent), json.dumps(profile, ensure_ascii=False), now, identifier))
@@ -1183,7 +1279,11 @@ def keep_transcript_beside_source(db, job, settings, config):
     parent = str(Path(job["source"]).parent)
     if config is None or parent == job["completed_dir"]:
         return job
-    if not read_settings(config).get("include_subfolders"):
+    current = read_settings(config)
+    path = settings.get("watch_path", settings.get("input_dir"))
+    if path in current.get("folders", ()):
+        current = folder_profile(current, path)
+    if not current.get("include_subfolders"):
         return job
     if job["publication_started"]:
         raise FileExistsError(
@@ -1235,15 +1335,16 @@ def next_job(
             (SELECT job_id FROM job_retries WHERE retry_at<=?)""",
             (time.time(), time.time()),
         )
+    manual_selection = """(origin_job_id IS NOT NULL OR json_extract(settings,'$.folder_drop')=1
+        OR json_extract(settings,'$.manual_retry')=1 OR id IN (SELECT job_id FROM immediate_jobs))"""
     selection = (
-        """AND (origin_job_id IS NOT NULL OR json_extract(settings,'$.folder_drop')=1 OR
-        COALESCE(json_extract(settings,'$.watch_path'),json_extract(settings,'$.input_dir'))
-        IN (SELECT path FROM folder_status WHERE available=1) OR id IN (SELECT job_id FROM immediate_jobs))"""
+        f"""AND ({manual_selection} OR {WATCH_PATH}
+        IN (SELECT path FROM folder_status WHERE available=1))"""
         if available_only
         else ""
     )
     if not allow_automatic:
-        selection = "AND (origin_job_id IS NOT NULL OR json_extract(settings,'$.folder_drop')=1 OR id IN (SELECT job_id FROM immediate_jobs))"
+        selection = f"AND {manual_selection}"
     selection += " AND (NOT EXISTS(SELECT 1 FROM queue_state WHERE paused=1) OR id IN (SELECT job_id FROM immediate_jobs))"
     job = db.execute(
         f"""SELECT jobs.* FROM jobs JOIN queue_positions q ON q.job_id=jobs.id
@@ -1252,6 +1353,13 @@ def next_job(
     if job is None:
         return False
     settings = json.loads(job["settings"])
+    watched = (job["origin_job_id"] is None and not settings.get("folder_drop") and not settings.get("manual_retry")
+               and (settings.get("watch_path") or settings.get("input_dir")))
+    if config is not None and watched:
+        current = read_settings(config)
+        if watched not in enabled_watch_paths(current):
+            reconcile_watched_jobs(db, current)
+            return True
     try:
         job = keep_transcript_beside_source(db, job, settings, config)
     except FileExistsError as error:
@@ -1298,6 +1406,9 @@ def next_job(
     phase = "exporting" if job["text_hash"] else "copying"
     now = time.time()
     with db:
+        db.execute("BEGIN IMMEDIATE")
+        if config is not None and watched and watched not in enabled_watch_paths(read_settings(config)):
+            return False
         claimed = db.execute(
             f"""UPDATE jobs SET state=?, attempt=attempt+1, started=?, updated=?, finished=NULL,
             error=NULL, settings=? WHERE id=? AND state='ready' AND settings=?
@@ -1313,6 +1424,20 @@ def next_job(
     def check_cancel():
         if cancellation_requested(db, job_id):
             raise JobCancelled('Auftrag abgebrochen.')
+
+    def schedule_retry(delay):
+        with db:
+            db.execute("BEGIN IMMEDIATE")
+            if config is not None and watched:
+                try:
+                    still_enabled = watched in enabled_watch_paths(read_settings(config))
+                except (OSError, TypeError, ValueError):
+                    still_enabled = False
+                if not still_enabled:
+                    db.execute("DELETE FROM job_retries WHERE job_id=?", (job_id,))
+                    return
+            db.execute("INSERT OR REPLACE INTO job_retries VALUES (?,?,?)",
+                       (job_id, time.time() + delay, delay))
 
     try:
         check_cancel()
@@ -1478,8 +1603,7 @@ def next_job(
         finish_cancelled_job(db, state, work, job_id)
     except MediaBusy as error:
         error_state(db,job_id,'failed',str(error))
-        with db:
-            db.execute('INSERT OR REPLACE INTO job_retries VALUES (?,?,?)',(job_id,time.time()+5,5))
+        schedule_retry(5)
     except SourceChanged as error:
         error_state(db, job_id, "superseded", str(error))
     except FileExistsError as error:
@@ -1494,9 +1618,7 @@ def next_job(
         if transient_file_error(error):
             previous = db.execute("SELECT delay FROM job_retries WHERE job_id=?", (job_id,)).fetchone()
             delay = min(900, previous[0] * 2) if previous else 10
-            with db:
-                db.execute("INSERT OR REPLACE INTO job_retries VALUES (?,?,?)",
-                           (job_id, time.time() + delay, delay))
+            schedule_retry(delay)
         else:
             with db:
                 db.execute("DELETE FROM job_retries WHERE job_id=?", (job_id,))
@@ -1579,7 +1701,7 @@ def recover(db, state, *, verify_exports=True):
 def retry(db, job_id):
     with db:
         changed = db.execute(
-            """UPDATE jobs SET state='ready', updated=?,error=NULL
+            """UPDATE jobs SET state='ready', updated=?,error=NULL,settings=json_set(settings,'$.manual_retry',json('true'))
             WHERE id=? AND state IN ('failed','blocked','cancelled')""",
             (time.time(), job_id),
         ).rowcount
@@ -1752,9 +1874,9 @@ def probe_folder(settings, path):
     return inspect_folders_with_deadline(folder_profile(settings, path))
 
 
-def probe_pending_folders(db, settings, deadlines, retries):
+def probe_pending_folders(db, settings, deadlines, retries, *, config=None):
     generation=storage_generation(db)
-    paths = settings["folders"]
+    paths = enabled_watch_paths(settings)
     requested = set()
     if db.execute("SELECT 1 FROM folder_refresh LIMIT 1").fetchone():
         with db:
@@ -1779,6 +1901,7 @@ def probe_pending_folders(db, settings, deadlines, retries):
                         folder_profile(settings, path),
                         inspect=lambda _, result=task: result.result(),
                         generation=generation,
+                        config=config,
                     )
                 except (OSError, ValueError) as error:
                     if generation!=storage_generation(db):
@@ -1845,7 +1968,8 @@ def poll_config(db, config, stop, connected, multiple=None):
                 multiple.set()
             if current != previous:
                 connected.clear()
-                updated_paths = set(current["folders"])
+                updated_paths = set(enabled_watch_paths(current))
+                reconcile_watched_jobs(db, current)
                 with db:
                     for row in db.execute("SELECT path FROM folder_status").fetchall():
                         if row["path"] not in updated_paths:
@@ -1866,7 +1990,7 @@ def poll_config(db, config, stop, connected, multiple=None):
                 }
                 previous = current
             if (
-                probe_pending_folders(db, current, folder_deadlines, folder_retries)
+                probe_pending_folders(db, current, folder_deadlines, folder_retries, config=config)
                 and current["monitoring"]
             ):
                 connected.set()
@@ -1929,13 +2053,9 @@ def run(state, config, *, once):
             lifetime.start()
         if once:
             if multiple.is_set():
-                with db:
-                    db.execute(
-                        "DELETE FROM folder_status WHERE path NOT IN (SELECT value FROM json_each(?))",
-                        (json.dumps(settings["folders"]),),
-                    )
+                reconcile_watched_jobs(db, settings)
             available = (
-                probe_pending_folders(db, settings, {}, {}) and settings["monitoring"]
+                probe_pending_folders(db, settings, {}, {}, config=config) and settings["monitoring"]
                 if multiple.is_set()
                 else scan_once(db, settings)
             )
@@ -2155,6 +2275,8 @@ def main(argv=None):
     refresh_command = commands.add_parser("refresh-folder")
     refresh_command.add_argument("config", type=Path)
     refresh_command.add_argument("folder")
+    commands.add_parser("rescan-folders").add_argument("config", type=Path)
+    commands.add_parser("reconcile-folders").add_argument("config", type=Path)
     status_command = commands.add_parser("status")
     status_command.add_argument("--limit", type=int, default=-1)
     status_command.add_argument("--offset", type=int, default=0)
@@ -2327,6 +2449,10 @@ def main(argv=None):
                 print(retranscribe(db, args.job_id, read_settings(args.config)))
             elif args.command == "clear-history":
                 clear_history(db, state)
+            elif args.command == "reconcile-folders":
+                print(reconcile_watched_jobs(db, read_settings(args.config)))
+            elif args.command == "rescan-folders":
+                request_watched_rescan(db, read_settings(args.config))
             elif args.command == "refresh-folder":
                 if args.folder not in read_settings(args.config).get("folders", ()):
                     raise ValueError("Der Ordner ist nicht in der gespeicherten Liste.")

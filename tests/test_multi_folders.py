@@ -15,6 +15,10 @@ from watch_service import (
     next_job,
     probe_pending_folders,
     read_settings,
+    reconcile_watched_jobs,
+    request_watched_rescan,
+    folder_profile,
+    scan,
     recover,
     rename_exclusive,
     reserve_archive_export,
@@ -23,6 +27,90 @@ from watch_service import (
 
 
 class MultiFolderTests(unittest.TestCase):
+    def test_folder_removal_and_pause_withdraw_only_automatic_pending_jobs(self):
+        from queue_control import queue_jobs, start_queue
+        one = self.first / "Telefon.wav"
+        two = self.second / "Video.wav"
+        manual = self.first / "Manuell.wav"
+        one.write_bytes(b"one")
+        two.write_bytes(b"two")
+        manual.write_bytes(b"manual")
+        settings = self.settings()
+        with patch("watch_service.inspect_folders_with_deadline", side_effect=inspect_folders):
+            enqueue_folders(self.db, settings, [str(manual)])
+        self.scan(settings, 100)
+        self.scan(settings, 130)
+        changed = {**settings, 'folders': [str(self.second)],
+                   'folder_options': {str(self.second): {'paused': True}}}
+        self.assertEqual(reconcile_watched_jobs(self.db, changed), 2)
+        self.assertEqual([row['source'] for row in queue_jobs(self.db)], [str(manual)])
+        self.assertEqual(start_queue(self.db), 1)
+        self.scan({**changed, 'folder_options': {}}, 160)
+        self.scan({**changed, 'folder_options': {}}, 190)
+        self.assertEqual([row['source'] for row in queue_jobs(self.db)], [str(manual), str(two)])
+        self.assertEqual(self.db.execute('select count(*) from jobs').fetchone()[0], 3)
+        self.assertTrue(one.is_file())
+
+    def test_rescan_recovers_legacy_clear_without_touching_terminal_jobs(self):
+        from queue_control import cancel_job, queue_jobs
+        files = [self.first / f'{name}.wav' for name in ('untouched','done','error','started')]
+        for file in files:
+            file.write_bytes(file.name.encode())
+        settings = self.settings()
+        self.scan(settings, 100)
+        self.scan(settings, 130)
+        ids = {Path(row['source']).stem: row['id'] for row in queue_jobs(self.db)}
+        cancel_job(self.db, ids['untouched'])
+        with self.db:
+            for name, state in [('done', 'done'), ('error', 'failed'), ('started', 'cancelled')]:
+                self.db.execute('update jobs set state=?,attempt=1,started=100 where id=?', (state, ids[name]))
+        self.scan(settings, 160)
+        self.assertEqual(queue_jobs(self.db), [])
+        request_watched_rescan(self.db, settings)
+        self.scan(settings, 190, force=False)
+        self.scan(settings, 220)
+        self.assertEqual([row['id'] for row in queue_jobs(self.db)], [ids['untouched']])
+        self.assertEqual(self.db.execute('select count(*) from jobs').fetchone()[0], 4)
+        self.assertEqual(self.db.execute('select state from jobs where id=?', (ids['error'],)).fetchone()[0], 'failed')
+
+    def test_stale_scan_cannot_requeue_removed_path_and_active_job_may_finish(self):
+        ready = self.first / 'ready.wav'
+        ready.write_bytes(b'example')
+        settings = self.settings()
+        self.scan(settings, 100)
+        self.scan(settings, 130)
+        self.db.execute("UPDATE jobs SET state='transcribing',attempt=1,started=130")
+        self.db.commit()
+        config = self.root / 'config.json'
+        config.write_text(json.dumps({**settings, 'folders': [str(self.second)]}))
+        self.assertEqual(reconcile_watched_jobs(self.db, read_settings(config)), 0)
+        new = self.first / 'new.wav'
+        new.write_bytes(b'new')
+        scan(self.db, folder_profile(settings, str(self.first)), 160, config=config)
+        self.assertEqual([row[0] for row in self.db.execute('select state from jobs')], ['transcribing'])
+
+    def test_path_output_overrides_global_destination_and_keeps_recursive_default(self):
+        settings = self.settings(recursive=True)
+        config = self.root / 'config.json'
+        config.write_text(json.dumps({**settings, 'folder_options': {str(self.second): {'output': 'subfolder'}}}))
+        saved = read_settings(config)
+        self.assertTrue(folder_profile(saved, str(self.first))['include_subfolders'])
+        self.assertFalse(folder_profile(saved, str(self.second))['include_subfolders'])
+        first = self.first / 'first.wav'
+        second = self.second / 'second.wav'
+        first.write_bytes(b'first recording')
+        second.write_bytes(b'second recording')
+        self.scan(saved, 100)
+        self.scan(saved, 130)
+        with patch("watch_service.inspect_folders_with_deadline", side_effect=inspect_folders):
+            self.assertTrue(next_job(self.db, self.state, self.engine, config=config))
+            self.assertTrue(next_job(self.db, self.state, self.engine, config=config))
+        self.assertTrue(first.is_file())
+        self.assertTrue(first.with_suffix('.txt').is_file())
+        self.assertFalse(second.exists())
+        self.assertTrue((self.second / '_FERTIGGESTELLT' / second.name).is_file())
+        self.assertTrue((self.second / '_FERTIGGESTELLT' / 'second.txt').is_file())
+
     def test_opus_folder_drop_is_processed_beside_unchanged_original(self):
         source = self.first / "Besprechung.OPUS"
         source.write_bytes(b"media-discovery-fixture")

@@ -39,7 +39,8 @@ class HistoryResetTests(unittest.TestCase):
         self.assertEqual(self.db.execute('SELECT COUNT(*) FROM jobs').fetchone()[0],8000)
         self.assertEqual(service.history_jobs(self.db,'desc',250,terminal_only=True),[])
         self.assertEqual(service.history_counts(self.db),dict(all=0,errors=0,done=0,cancelled=0,existing=0))
-        with self.db:self.db.execute("UPDATE jobs SET attempt=1,started=1 WHERE id=1")
+        with self.db:self.db.execute("UPDATE jobs SET state='ready',attempt=1,started=1 WHERE id=1")
+        service.cancel_job(self.db, 1)
         self.assertEqual(service.history_counts(self.db)['cancelled'],1)
         self.assertEqual([job['id'] for job in service.history_jobs(self.db,'desc',250,terminal_only=True)],[1])
         with closing(service.database(self.state)) as reopened:

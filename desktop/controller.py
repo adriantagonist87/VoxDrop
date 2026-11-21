@@ -80,6 +80,7 @@ STATES = {
 }
 DEFAULTS = {
     "folders": [],
+    "folder_options": {},
     "include_subfolders": False,
     "create_output_subfolder": False,
     "output_subfolder": "_FERTIGGESTELLT",
@@ -428,7 +429,9 @@ class Controller(QObject):
             }
         checked = {path: self.folder_status(path) for path in self.paths}
         saved_paths = list(dict.fromkeys(self.saved_config.get('folders', [])))
-        saved_checked = [self.folder_status(path) for path in saved_paths]
+        saved_options = self.saved_config.get('folder_options', {})
+        enabled_paths = [path for path in saved_paths if not saved_options.get(path, {}).get('paused')]
+        saved_checked = [self.folder_status(path) for path in enabled_paths]
         drop_latest = self.drop_message_at > self.message_at
         paused=self.snapshot.get('queue_paused',False)
         count=len(self.snapshot.get('queue',[]))
@@ -459,6 +462,9 @@ class Controller(QObject):
             "serviceError": service.get("error") or "",
             "monitoringEnabled": bool(self.saved_config.get('monitoring')),
             "folderCount": len(saved_paths),
+            "pausedFolderCount": len(saved_paths) - len(enabled_paths),
+            "canRescanFolders": self.ready and not busy and bool(enabled_paths)
+                and bool(self.saved_config.get('monitoring')),
             "availableFolderCount": sum(bool(item.get('available') and not item.get('error')) for item in saved_checked),
             "folderWarnings": [item for item in saved_checked if item.get('error')],
             "settingsDirty": self.settings_dirty(),
@@ -722,11 +728,56 @@ class Controller(QObject):
                 self.foldersChanged.emit()
 
     def config(self):
+        paths = [path.strip() for path in self.paths if path.strip()]
+        options = self.draft['folder_options']
         return {
             **self.draft,
-            "folders": [path.strip() for path in self.paths if path.strip()],
+            "folders": paths,
+            "folder_options": {path: options[path] for path in paths if path in options},
             "output_subfolder": self.draft["output_subfolder"].strip(),
         }
+
+    @staticmethod
+    def folder_options_with(settings, path, key, value):
+        options = dict(settings.get('folder_options', {}))
+        choice = {'paused': False, 'output': 'global', **options.get(path, {}), key: value}
+        if choice == {'paused': False, 'output': 'global'}:
+            options.pop(path, None)
+        else:
+            options[path] = choice
+        return options
+
+    @Slot(str, str)
+    def setFolderOutput(self, path, mode):
+        path = path.strip()
+        if path and mode in ('global', 'beside', 'subfolder'):
+            self.draft['folder_options'] = self.folder_options_with(self.draft, path, 'output', mode)
+            self.changed.emit()
+
+    @Slot(str)
+    def toggleFolderPause(self, path):
+        path = path.strip()
+        if not path or self.busy or self.stop_command_pending or self.quitting:
+            return
+        if path not in self.saved_config.get('folders', ()):
+            paused = not self.draft['folder_options'].get(path, {}).get('paused', False)
+            self.draft['folder_options'] = self.folder_options_with(self.draft, path, 'paused', paused)
+            self.changed.emit()
+            return
+        saved = read_settings()
+        if path not in saved['folders']:
+            self.notify('Der Ordner ist nicht mehr in der gespeicherten Liste.', True)
+            return
+        paused = not saved['folder_options'].get(path, {}).get('paused', False)
+        saved['folder_options'] = self.folder_options_with(saved, path, 'paused', paused)
+
+        def apply():
+            save_settings(saved)
+            command('reconcile-folders', CONFIG)
+
+        self.draft['folder_options'] = self.folder_options_with(self.draft, path, 'paused', paused)
+        self.direct.pop(path, None)
+        self.action(apply, 'Ordner pausiert.' if paused else 'Ordnerüberwachung fortgesetzt.')
 
     def refresh_saved_settings(self):
         # Preview/isolated tests must never read another profile's configuration.
@@ -921,9 +972,12 @@ class Controller(QObject):
             )
             return
         settings = self.config()
+        folder_paths_changed = settings['folders'] != self.saved_config.get('folders')
 
         def save_and_start():
             save_settings(settings)
+            if folder_paths_changed:
+                command('reconcile-folders', CONFIG)
             if start:
                 command("start", CONFIG)
 
@@ -1078,6 +1132,9 @@ class Controller(QObject):
         settings = self.config()
         if path:
             settings["folders"] = [path]
+        elif automatic:
+            settings["folders"] = [p for p in settings["folders"]
+                                  if not settings['folder_options'].get(p, {}).get('paused')]
         if not automatic:
             self.notify("Ordner werden geprüft …")
 
@@ -1239,7 +1296,9 @@ class Controller(QObject):
 
     def update_status(self):
         if self.tray:
-            paths = [self.folder_status(path) for path in self.saved_config.get('folders', []) if path.strip()]
+            options = self.saved_config.get('folder_options', {})
+            paths = [self.folder_status(path) for path in self.saved_config.get('folders', [])
+                     if path.strip() and not options.get(path, {}).get('paused')]
             available = bool(paths) and all(
                 path.get("available") and not path.get("error") for path in paths
             )
@@ -1488,7 +1547,17 @@ class Controller(QObject):
 
     @Slot()
     def cancelQueue(self):
-        self.action(lambda:command('cancel-queue'),'Warteschlange abgebrochen und pausiert.')
+        self.action(lambda:command('cancel-queue'),
+                    'Warteschlange geleert und pausiert. Aktive Ordner werden weiter eingelesen.')
+
+    @Slot()
+    def rescanFolders(self):
+        if not self.state['canRescanFolders']:
+            return
+        def rescan():
+            command('start', CONFIG)
+            command('rescan-folders', CONFIG)
+        self.action(rescan, 'Neueinlesen angefordert. Gefundene Dateien werden nach der Stabilitätsprüfung eingereiht.')
 
     @Slot(bool)
     def pauseQueue(self, paused):
