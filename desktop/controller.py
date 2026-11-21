@@ -716,6 +716,8 @@ class Controller(QObject):
     @Slot(str, "QVariant")
     def setSetting(self, key, value):
         if key in DEFAULTS and key != "folders":
+            if self.draft.get(key) == value:
+                return
             self.draft[key] = value
             if value and key in ('include_subfolders', 'create_output_subfolder'):
                 other = 'create_output_subfolder' if key == 'include_subfolders' else 'include_subfolders'
@@ -1737,11 +1739,17 @@ class Controller(QObject):
         if self.transfer_running or key not in profile_transfer.COMPONENTS:
             return
         if direction == 'export':
+            if self.export_options[key] == enabled:
+                return
             self.export_options = {**self.export_options, key: enabled}
         elif direction == 'import' and self.import_preview.get('available', {}).get(key):
             if key == 'models' and self.import_preview.get('platform') != sys.platform:
                 return
+            if self.import_options[key] == enabled:
+                return
             self.import_options = {**self.import_options, key: enabled}
+        else:
+            return
         self.changed.emit()
 
     @Slot()

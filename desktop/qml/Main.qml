@@ -824,14 +824,14 @@ ApplicationWindow {
                                     text: "Unterordner mit einbeziehen"
                                     Layout.fillWidth: true
                                     checked: settings.include_subfolders
-                                    onToggled: api.setSetting("include_subfolders", checked)
+                                    onCheckedChanged: api.setSetting("include_subfolders", checked)
                                 }
                                 Toggle {
                                     objectName: "createOutputSubfolder"
                                     text: "Unterordner für fertige Transkripte erstellen"
                                     Layout.fillWidth: true
                                     checked: settings.create_output_subfolder
-                                    onToggled: api.setSetting("create_output_subfolder", checked)
+                                    onCheckedChanged: api.setSetting("create_output_subfolder", checked)
                                 }
                                 Field {
                                     objectName: "outputSubfolderName"
@@ -895,7 +895,7 @@ ApplicationWindow {
                                         text: modelData.label
                                         checked: api.transfer.exportOptions[modelData.key]
                                         enabled: !viewState.busy
-                                        onToggled: api.setTransferOption("export", modelData.key, checked)
+                                        onCheckedChanged: api.setTransferOption("export", modelData.key, checked)
                                     }
                                 }
                                 Muted { Layout.fillWidth: true; text: "Gesichert werden gespeicherte Einstellungen. Netzwerk-Zugangsdaten und die Anmeldestart-Registrierung gehören zum jeweiligen Gerät. Medien werden nur mit der entsprechenden Checkbox kopiert; Originale bleiben erhalten." }
@@ -919,7 +919,7 @@ ApplicationWindow {
                                             Layout.fillWidth: true; text: modelData.label
                                             checked: api.transfer.importOptions[modelData.key]
                                             enabled: !viewState.busy && Boolean((api.transfer.preview.available || ({}))[modelData.key]) && (modelData.key !== "models" || api.transfer.preview.platform === api.nativePlatform)
-                                            onToggled: api.setTransferOption("import", modelData.key, checked)
+                                            onCheckedChanged: api.setTransferOption("import", modelData.key, checked)
                                         }
                                     }
                                     Muted { Layout.fillWidth: true; visible: api.transfer.preview.platform !== api.nativePlatform; text: "Beim Wechsel zwischen Windows und macOS werden Rechengerät und Pfade angepasst. Modelle sind plattformspezifisch und werden auf dem Zielgerät neu eingerichtet." }

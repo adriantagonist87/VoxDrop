@@ -87,6 +87,13 @@ class WorkspaceTests(unittest.TestCase):
         self.click('createOutputSubfolder')
         self.assertFalse(self.controller.draft['create_output_subfolder'])
         self.assertFalse(self.controller.draft['include_subfolders'])
+        from PySide6.QtGui import QAccessible, QAccessibleActionInterface
+        for name, selected, other in (('includeSubfolders','include_subfolders','create_output_subfolder'),
+                                      ('createOutputSubfolder','create_output_subfolder','include_subfolders')):
+            interface=QAccessible.queryAccessibleInterface(self.visual(name))
+            interface.actionInterface().doAction(QAccessibleActionInterface.toggleAction())
+            QTest.qWait(30)
+            self.assertTrue(self.controller.draft[selected]);self.assertFalse(self.controller.draft[other])
 
     def test_gui_export_preview_and_reimport_real_isolated_database(self):
         import watch_service as backend
