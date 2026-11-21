@@ -7,7 +7,7 @@ from pathlib import Path
 
 from controller import LOGO, PROFILE, Controller
 from window_state import WindowPresenter
-from PySide6.QtCore import Qt, QUrl
+from PySide6.QtCore import QEvent, QObject, Qt, QUrl
 from PySide6.QtGui import QFont, QFontDatabase, QIcon, QWindow
 from PySide6.QtNetwork import QLocalServer, QLocalSocket
 from PySide6.QtQml import QQmlApplicationEngine
@@ -15,6 +15,19 @@ from PySide6.QtQuickControls2 import QQuickStyle
 from PySide6.QtWidgets import QApplication, QMessageBox
 
 HERE = Path(__file__).resolve().parent
+
+
+class QuitInterceptor(QObject):
+    """Native Cmd-Q must stop the app, independently of QML's hide-on-X."""
+    def __init__(self, controller, parent):
+        super().__init__(parent)
+        self.controller = controller
+
+    def eventFilter(self, watched, event):
+        if event.type() == QEvent.Type.Quit and not self.controller.shutdown_complete:
+            self.controller.requestQuit()
+            return True
+        return False
 
 
 def create_app(argv):
@@ -59,6 +72,8 @@ def main():
         return 1
 
     controller = Controller()
+    quit_interceptor = QuitInterceptor(controller, app)
+    app.installEventFilter(quit_interceptor)
     app.aboutToQuit.connect(controller.ensureStopped)
     engine = QQmlApplicationEngine()
     controller.init_tray()

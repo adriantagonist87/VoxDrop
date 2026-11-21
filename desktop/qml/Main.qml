@@ -291,7 +291,7 @@ ApplicationWindow {
                     stepSize: 5
                     snapMode: Slider.SnapAlways
                     value: settings.gpu_budget_percent || 100
-                    enabled: viewState.ready && !viewState.busy && api.gpuValue === "cuda" && (settings.hardware === "cuda" || viewState.current.hardwareValue === "cuda")
+                    enabled: viewState.ready && !viewState.busy && (settings.hardware === api.gpuValue || viewState.current.hardwareValue === api.gpuValue)
                     Accessible.name: "GPU-Arbeitsbudget in Prozent"
                     Accessible.description: "Weniger GPU-Arbeit lässt mehr Zeit für andere Programme und verlängert die Transkription."
                     background: Rectangle {
@@ -712,7 +712,7 @@ ApplicationWindow {
                                     AppActionButton { text: "Protokoll öffnen"; onClicked: api.openLog() }
                                 }
                                 TaskProgress { Layout.fillWidth: true; visible: viewState.downloading; indeterminate: true }
-                                Muted { text: api.gpuValue === "cuda" ? "GPU-Budget oben: wirkt sofort, auch für laufende Aufträge. Rechenzeit wird kooperativ freigegeben; Lastspitzen und Grafikspeicherbedarf bleiben möglich." : "GPU-Arbeitsbudget: derzeit für Windows-CUDA verfügbar. Metal-Portierung steht separat aus."; Layout.fillWidth: true }
+                                Muted { text: "GPU-Budget oben: wirkt sofort, auch für laufende Aufträge. Rechenzeit wird kooperativ freigegeben; Lastspitzen und Grafikspeicherbedarf bleiben möglich."; Layout.fillWidth: true }
                             }
 
                             ColumnLayout {

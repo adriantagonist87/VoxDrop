@@ -213,13 +213,13 @@ class WorkspaceTests(unittest.TestCase):
 
     def test_one_off_pickers_route_multiple_paths_without_changing_watched_folders(self):
         self.queue_fixture()
-        paths = ['D:/Example/One.wav', 'D:/Example/Two.mp4']
+        paths = [(self.controller_module.PROFILE / name).as_posix() for name in ('One.wav', 'Two.mp4')]
         before = list(self.controller.paths)
         with patch.object(self.controller_module.QFileDialog, 'getOpenFileNames', return_value=(paths, '')), \
              patch.object(self.controller, 'enqueueFolders') as enqueue:
             self.controller.pickMedia()
         self.assertEqual([url.toLocalFile().replace('\\','/') for url in enqueue.call_args.args[0]], paths)
-        with patch.object(self.controller_module.QFileDialog, 'getExistingDirectory', return_value='D:/Example/Folder'), \
+        with patch.object(self.controller_module.QFileDialog, 'getExistingDirectory', return_value=str(self.controller_module.PROFILE / 'Folder')), \
              patch.object(self.controller, 'enqueueFolders') as enqueue:
             self.controller.pickDropFolder()
         self.assertEqual(len(enqueue.call_args.args[0]), 1)

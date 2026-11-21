@@ -146,8 +146,13 @@ def resume_windows_child(child):
 
 @contextmanager
 def child_process(*args, cancellable=False, **kwargs):
-    """Popen with Windows descendant cleanup, including owner crashes."""
+    """Popen with platform-specific descendant cleanup, including owner crashes."""
     import subprocess
+
+    if not WINDOWS:
+        with posix_child_process(*args, **kwargs) as child:
+            yield child
+        return
 
     if WINDOWS:
         # Assignment must precede execution, including uv's Python redirector.
@@ -185,6 +190,66 @@ def child_process(*args, cancellable=False, **kwargs):
                 close_job()
 
 
+@contextmanager
+def posix_child_process(arguments, **kwargs):
+    """A pipe-owned guardian also cleans detached groups after owner SIGKILL."""
+    import subprocess
+    from pathlib import Path
+
+    owner_read, owner_write = os.pipe()
+    ready_read, ready_write = os.pipe()
+    child = None
+    try:
+        inherited = tuple(kwargs.pop('pass_fds', ()))
+        child = subprocess.Popen(
+            [sys.executable, '-BEs', str(Path(__file__).with_name('posix_guard.py')),
+             str(owner_read), str(ready_write), *map(str, arguments)],
+            pass_fds=(*inherited, owner_read, ready_write), **kwargs)
+        os.close(owner_read); owner_read = None
+        os.close(ready_write); ready_write = None
+        with os.fdopen(ready_read, 'rb') as ready:
+            ready_read = None
+            line = ready.readline()
+        if not line:
+            child.wait()
+            raise RuntimeError('Der VoxDrop-Prozesswächter konnte nicht gestartet werden.')
+        group = int(line)
+        import threading
+        lock = threading.Lock()
+
+        def cancel_tree():
+            nonlocal owner_write
+            with lock:
+                if owner_write is not None:
+                    os.close(owner_write)
+                    owner_write = None
+                try:
+                    child.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    import signal
+                    try: os.killpg(group, signal.SIGKILL)
+                    except ProcessLookupError: pass
+                    child.kill()
+                    child.wait(timeout=5)
+
+        child.cancel_tree = cancel_tree
+        try:
+            yield child
+        finally:
+            cancel_tree()
+    finally:
+        for descriptor in (owner_read, owner_write, ready_read, ready_write):
+            if descriptor is not None:
+                os.close(descriptor)
+        if child is not None:
+            if child.poll() is None:
+                child.terminate()
+            child.wait()
+            for stream in (child.stdin, child.stdout, child.stderr):
+                if stream is not None:
+                    stream.close()
+
+
 def lock_service(handle):
     if WINDOWS:
         import msvcrt
@@ -203,7 +268,16 @@ def lock_service(handle):
 
 
 def file_is_being_written(path):
-    """Probe Windows sharing compatibility; do not lock the file during inference."""
+    """Defer local writable handles; never hold the media locked during inference."""
+    if sys.platform == 'darwin':
+        import subprocess
+        result = subprocess.run(
+            ['/usr/sbin/lsof', '-nP', '-Ffa', '--', str(path)],
+            capture_output=True, text=True, timeout=3)
+        if result.returncode not in (0, 1) or (result.returncode == 1 and result.stderr.strip()):
+            raise OSError('Offene Aufnahme konnte nicht geprüft werden: ' + result.stderr.strip())
+        # Inspect writable descriptors, including a paused local recorder.
+        return any(line in ('aw', 'au') for line in result.stdout.splitlines())
     if not WINDOWS:
         return False
     import ctypes
