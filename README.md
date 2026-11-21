@@ -93,7 +93,7 @@ Sobald die Modelle eingerichtet sind, zieh eine Aufnahme ins Fenster und starte 
 
 ## Gemessene Laufzeit und Speichernutzung
 
-**Zwischenstand: 7 von 16 Varianten abgeschlossen.** Neue Messwerte erscheinen nach jedem Lauf.
+**Zwischenstand: 8 von 16 Varianten abgeschlossen.** Neue Messwerte erscheinen nach jedem Lauf.
 
 Messreihe mit **16 Kombinationen** auf derselben realen MP4-Aufnahme (20:59 min Audio) auf einem **Mac mini M5 Pro mit 64 GB**. VoxDrop 1.5.0 nutzt Metal mit Qwen3-ASR 1.7B und Whisper Large v3 Turbo. Jede Variante beginnt mit einem frischen Auftragsprozess. Die Sprechererkennung ist immer aktiv, mit einem Durchgang ohne DOVER-Lap und drei mit DOVER-Lap. Die Option „Lange Stille überspringen“ blieb aus.
 
@@ -106,6 +106,7 @@ Messreihe mit **16 Kombinationen** auf derselben realen MP4-Aufnahme (20:59 min 
 | Qwen | 100 % | An | Automatisch | 2:06 min | 10,0× | 1:15 min | 5,67 GiB | 87,3 % |
 | Qwen | 100 % | An | Deutsch | 2:06 min | 10,0× | 1:16 min | 5,72 GiB | 87,0 % |
 | Qwen | 50 % | Aus | Automatisch | 11:23 min | 1,8× | 1:34 min | 5,91 GiB | 47,1 % |
+| Qwen | 50 % | An | Automatisch | 12:01 min | 1,7× | 2:31 min | 5,86 GiB | 49,5 % |
 
 **Gesamt** umfasst Dekodierung, Spracherkennung und Sprecherzuordnung aus der lokalen Kopie. **Echtzeitfaktor** ist Audiolänge geteilt durch Gesamtzeit. Bei 4× dauert die Verarbeitung ein Viertel der Aufnahmedauer. **RAM-Spitze** ist der höchste gemessene Speicherbedarf des Auftragsprozesses samt Kindprozessen. Der Mac teilt sich den Speicher zwischen CPU und GPU. **Ø GPU** ist der Mittelwert der gesamten Apple-GPU aus Stichproben im Abstand von rund zwei Sekunden. Das eingestellte GPU-Budget steuert die Rechenpausen von VoxDrop. Die Messreihe erfasst Laufzeit und Speicherbedarf. Die Transkriptionsqualität wurde nicht benotet.
 
