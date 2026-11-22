@@ -23,6 +23,8 @@ Für die Ersteinrichtung brauchst du Internet und einen beschreibbaren Programmo
 
 Unter Windows kannst du **CPU-Schutz für alle wartenden und neuen Aufträge** einschalten. Er verarbeitet auch bereits für CUDA eingeplante Aufträge auf der CPU. Erkennt VoxDrop während der CUDA-Verarbeitung einen Grafiktreiber-Timeout, pausiert die Warteschlange und der Auftrag bleibt für einen erneuten Start erhalten. [Windows-Prüfstand](docs/PROJEKTSTATUS.md#windows-150--funktionsabgleich-und-schutz-bei-grafikfehlern)
 
+Für die Rückkehr zur GPU wähle unter **Einstellungen → Transkription** das Rechengerät **NVIDIA-GPU (CUDA)** und schalte den **CPU-Schutz** aus. Speichere, stoppe den laufenden Auftrag über **■** und starte die Verarbeitung wieder mit **▶**. Der zuvor für CUDA eingeplante Auftrag beginnt auf der GPU neu. Diese Gerätewahl gilt auch bei einem regulären Wiederanlauf. [Beobachteter Windows-Langlauf](docs/PROJEKTSTATUS.md#gpu-neustart-und-timeout-bei-qwen-wortzeiten)
+
 ## Was VoxDrop kann
 
 - **Dateien und Ordner ablegen.** Zieh eine Aufnahme oder einen ganzen Ordner ins Fenster. VoxDrop nimmt auch Dateien aus Unterordnern auf und speichert die TXT-Dateien neben den Originalen. Unterstützt werden unter anderem MP3, M4A, WAV, OPUS, MP4 und MOV.
