@@ -2,41 +2,96 @@
 
 import errno
 import os
+import re
 import stat
+import subprocess
 import sys
 import time
+import xml.etree.ElementTree as ET
 from contextlib import contextmanager
+from datetime import datetime, timezone
+from functools import lru_cache
+from pathlib import Path
 
 WINDOWS = sys.platform == "win32"
+EVENT_NS = "{http://schemas.microsoft.com/win/2004/08/events/event}"
+WER_PROVIDER = "Provider[@Name='Windows Error Reporting'] and EventID=1001"
+
+
+def _windows_events(channel, query, *, oldest=False, one=False):
+    wevtutil = Path(os.environ.get("SystemRoot", r"C:\Windows")) / "System32/wevtutil.exe"
+    args = [str(wevtutil), "qe", channel, f"/q:{query}", "/f:xml", "/e:Events", "/uni:true",
+            "/rd:false" if oldest else "/rd:true"]
+    if one:
+        args.append("/c:1")
+    result = subprocess.run(args, capture_output=True, timeout=2, check=True, **process_options())
+    return ET.fromstring(result.stdout.decode("utf-16")).findall(f"{EVENT_NS}Event")
+
+
+@lru_cache(maxsize=256)
+def _first_wer_time(report_id):
+    # ReportId stays the same when Windows resubmits a queued report.
+    query = f"*[System[{WER_PROVIDER}] and EventData[Data[@Name='ReportId']='{report_id}']]"
+    events = _windows_events("Application", query, oldest=True, one=True)
+    if not events:
+        raise ValueError("WER report is no longer in the event log")
+    stamp = events[0].find(f"{EVENT_NS}System/{EVENT_NS}TimeCreated")
+    if stamp is None:
+        raise ValueError("WER event lacks creation time")
+    return datetime.fromisoformat(stamp.get("SystemTime", "")).timestamp()
+
+
+def _current_wer_report(event, started):
+    data = {field.get("Name"): field.text or ""
+            for field in event.findall(f"{EVENT_NS}EventData/{EVENT_NS}Data")}
+    # Dump names carry local time to the minute, even when WER first submits
+    # a report days later. Do not access paths supplied by event payloads.
+    dump = re.search(r"\bWATCHDOG-(\d{8}-\d{4})\.dmp\b", data.get("AttachedFiles", ""), re.I)
+    if dump:
+        dt = datetime.strptime(dump[1], "%Y%m%d-%H%M")
+        # A repeated local hour at the end of daylight saving time has two instants.
+        if max(dt.timestamp(), dt.replace(fold=1).timestamp()) + 60 <= started:
+            return False
+    report_id = data.get("ReportId", "")
+    if not re.fullmatch(r"[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}", report_id):
+        return False
+    return _first_wer_time(report_id) >= started
 
 
 def graphics_timeout_since(started):
     """Look for display recovery or a GPU engine timeout during this CUDA run."""
     if not WINDOWS or not started:
         return None
-    import subprocess
-    from pathlib import Path
-
-    elapsed_ms = round((time.time() - started) * 1000)
-    if not 0 <= elapsed_ms <= 48 * 60 * 60 * 1000:
+    now = time.time()
+    if started > now:
         return None
-    date = f"TimeCreated[timediff(@SystemTime) <= {elapsed_ms}]"
-    queries = (
-        ("System", f"*[System[{date} and ((Provider[@Name='Display'] and EventID=4101)"
-         " or (Provider[@Name='nvlddmkm'] and EventID=153))]]", "Grafiktreiber-Ereignis"),
-        ("Application", f"*[System[{date} and Provider[@Name='Windows Error Reporting'] and EventID=1001]"
-         " and EventData[Data[@Name='EventName']='LiveKernelEvent'"
-         " and (Data[@Name='P1']='141' or Data[@Name='P1']='117')]]", "GPU-Timeout (LiveKernelEvent)"),
-    )
-    wevtutil = Path(os.environ.get("SystemRoot", r"C:\Windows")) / "System32/wevtutil.exe"
-    for channel, query, evidence in queries:
+    # Keep the existing bounded lookup even for a worker running over two days.
+    since = max(started, now - 48 * 60 * 60)
+    stamp = datetime.fromtimestamp(since, timezone.utc).isoformat(timespec="microseconds").replace("+00:00", "Z")
+    date = f"TimeCreated[@SystemTime >= '{stamp}']"
+    system_query = (f"*[System[{date} and ((Provider[@Name='Display'] and EventID=4101)"
+                    " or (Provider[@Name='nvlddmkm'] and EventID=153))]]")
+    unavailable = (OSError, subprocess.SubprocessError, ValueError, ET.ParseError)
+    try:
+        for event in _windows_events("System", system_query, one=True):
+            event_id = event.findtext(f"{EVENT_NS}System/{EVENT_NS}EventID")
+            return ("NVIDIA-Treiberfehler (153)" if event_id == "153"
+                    else "Wiederherstellung des Grafiktreibers (4101)")
+    except unavailable:
+        pass
+    query = (f"*[System[{date} and {WER_PROVIDER}]"
+             " and EventData[Data[@Name='EventName']='LiveKernelEvent'"
+             " and (Data[@Name='P1']='141' or Data[@Name='P1']='117')]]")
+    try:
+        reports = _windows_events("Application", query)
+    except unavailable:
+        return None
+    for report in reports:
         try:
-            result = subprocess.run([str(wevtutil), "qe", channel, f"/q:{query}", "/rd:true", "/c:1", "/f:xml"],
-                                    capture_output=True, timeout=2, **process_options())
-        except (OSError, subprocess.TimeoutExpired):
+            if _current_wer_report(report, since):
+                return "GPU-Timeout (Windows-Fehlerbericht 141/117)"
+        except unavailable:
             continue
-        if result.returncode == 0 and b"<Event " in result.stdout:
-            return evidence
     return None
 
 
