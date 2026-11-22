@@ -8,7 +8,7 @@ Die [erneute Windows-Abnahme von 1.5.0](PROJEKTSTATUS.md#erneute-windows-abnahme
 
 Der [RTX-5060-Vergleich](PROJEKTSTATUS.md#langbenchmark-mit-16-varianten-auf-der-geforce-rtx-5060) führte dieselben 16 Fälle wie der Mac mit einzelnen, frischen CUDA-Workern aus. In 73 Minuten mit kurzen Auftragswechseln wurde kein protokollierter Grafiktreiber-Timeout festgestellt. Der produktive CPU-Schutz war weiterhin aktiv. Für die Dauerfreigabe am KVM bleibt der kontinuierliche Mehrstundenlauf erforderlich.
 
-Ein späterer produktiver CUDA-Auftrag hielt bei der Qwen-Wortzeitberechnung mit NVIDIA-Ereignis 153 und Windows-Codes 141/117 an. Der Schutz beendete den GPU-Worker und erhielt den Auftrag in der pausierten Queue. Der Wechsel zurück zu CUDA mit deaktiviertem CPU-Schutz und der Wiederanlauf nach einem CPU-Versuch wurden separat bestätigt. [Ablauf und Befund](PROJEKTSTATUS.md#gpu-neustart-und-timeout-bei-qwen-wortzeiten)
+Ein produktiver Qwen-Auftrag hielt während der Wortzeitberechnung an. Die als Auslöser gespeicherten Windows-Berichte 141/117 waren Wiederholungen älterer Berichte. Zusätzlich meldete NVIDIA ein zeitnahes Ereignis 153. Zum getrennten Systemstillstand am 20.11. liegt ein Bugcheck 0x133 vor. Bei weiteren Untersuchungen zuerst die ursprünglichen WER-Berichtskennungen, die Windows-Kernelereignisse und die Auftragszeiten abgleichen. Das zugehörige Minidump benötigt die Lesefreigabe eines Windows-Administrators. Der CUDA-Neustart bei abgeschaltetem CPU-Schutz wurde separat bestätigt. [Ablauf, Korrektur und native Prüfungen](PROJEKTSTATUS.md#gpu-neustart-und-timeout-bei-qwen-wortzeiten)
 
 ## Ordnersteuerung und Scan
 
