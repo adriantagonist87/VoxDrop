@@ -14,6 +14,14 @@ Nutzerbefund unter Windows 1.4.1: nach längerer CUDA-Verarbeitung eingefrorenes
 
 Der Windows-CPU-Schutz greift auch bei bereits eingeplanten CUDA-Aufträgen. Während CUDA überwacht VoxDrop protokollierte Grafik-Timeouts und stoppt seinen Modellprozess kontrolliert. Die Queue bleibt anhaltbar und der Auftrag an seiner Position. Beim Wiederanlauf nach einem Abbruch kann ein protokollierter Timeout den erneuten automatischen GPU-Start verhindern. Eine CUDA-Dauerfreigabe erfordert einen beobachteten Mehrstundenlauf mit KVM.
 
+### GPU-Neustart und Timeout bei Qwen-Wortzeiten
+
+Am 22.11.2026 auf dem Windows-11-PC mit RTX 5060 und Treiber 596.36 unter 1.5.0 beobachtet. Das Abschalten des CPU-Schutzes und der kontrollierte Neustart brachten einen zuvor auf der CPU ausgeführten, für CUDA eingeplanten Qwen-Auftrag auf die RTX zurück. In einem isolierten Prüffall wurde derselbe Rechengerätewechsel auch beim Wiederanlauf eines unterbrochenen CPU-Versuchs bestätigt. Ein simulierter GPU-Timeout pausierte weiterhin die Queue, ein bewusstes ▶ erlaubte den erneuten CUDA-Start.
+
+Der produktive CUDA-Lauf mit einer Aufnahme von 2 Std. 48 Min. und 100 % GPU-Budget beendete die Spracherkennung. Windows meldete nach rund 20 Minuten während „Qwen-Wortzeiten berechnen“ `LiveKernelEvent 141` und `117` sowie ein NVIDIA-Ereignis `153`. Die letzte Fortschrittsstichprobe lag in dieser Phase bei 13 %. VoxDrop stoppte den Worker, gab dessen GPU-Last frei und pausierte die Warteschlange mit 27 bereiten Aufträgen. Für den betroffenen Versuch wurde keine TXT veröffentlicht. CPU-Schutz und GPU-Auswahl blieben auf der zuvor gespeicherten Nutzerwahl. [Windows-Grafiktimeout und Wiederherstellung](https://learn.microsoft.com/windows-hardware/drivers/display/timeout-detection-and-recovery)
+
+Die Beobachtung grenzt den Fehler zeitlich auf die Qwen-Wortzeitberechnung ein. Treiber-, Hardware- und Modellanteil sind offen. Für eine gezielte Prüfung eignet sich ein getrennter Vergleich des Windows-Aligners mit derselben repräsentativen Last. Die vorherige RTX-Messreihe besteht für die dort getestete Aufnahme und die einzelnen Worker mit Pausen.
+
 ### Erneute Windows-Abnahme von 1.5.0
 
 Nativ unter Windows 11 Pro, Build 26200, mit Paketcode `5a1854ec650415d7f18ffea0da0163ec1f6b6334` geprüft. Export der produktiven Einstellungen und Reimport in ein separates Profil erhielten beide Pfade und das bytegleiche Fensterlayout. Die Überwachung war nach dem Import ausgeschaltet. Export und Reimport von Einstellungen und SQLite-Datenbank wurden außerdem per Klick mit künstlichen Aufträgen ausgeführt. Die App legte eine Rücksicherung an und ließ die Wiederherstellung pausiert.
