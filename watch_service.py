@@ -497,11 +497,19 @@ def is_scan_directory(metadata, device):
     )
 
 
-def verify_source_directory(root, parent):
-    if not parent.is_relative_to(root):
-        raise OSError(f"Ordner liegt außerhalb des überwachten Pfads: {parent}")
+def verify_source_directory(root, parent, *, source_root=None):
+    anchor = root
+    if not parent.is_relative_to(anchor):
+        # A Windows drive letter may resolve to UNC. Keep the job's path
+        # spelling, but validate every descendant through the resolved root.
+        # Resolving the whole parent would hide a replaced child symlink.
+        if source_root is None or str(source_root).lower().startswith("smb://"):
+            raise OSError(f"Ordner liegt außerhalb des überwachten Pfads: {parent}")
+        anchor = Path(os.path.abspath(Path(source_root).expanduser()))
+        if not parent.is_relative_to(anchor) or anchor.resolve(strict=True) != root:
+            raise OSError(f"Ordner liegt außerhalb des überwachten Pfads: {parent}")
     device = root.stat().st_dev
-    for name in parent.relative_to(root).parts:
+    for name in parent.relative_to(anchor).parts:
         root /= name
         if name.startswith(".") or not is_scan_directory(root.lstat(), device):
             raise OSError(f"Unterordner ist kein regulärer Ordner am Quellpfad: {root}")
@@ -558,7 +566,7 @@ def inspect_folders(settings):
     recursive = bool(settings.get("include_subfolders") and settings.get("watch_path"))
     if recursive and (parent := settings.get("source_parent")):
         parent = Path(parent)
-        verify_source_directory(incoming, parent)
+        verify_source_directory(incoming, parent, source_root=settings.get("watch_path"))
         incoming = completed = parent
     if settings.get("watch_path") and settings.get("probe_write", True):
         verify_writable(incoming)
@@ -1273,7 +1281,8 @@ def job_folders(job, settings):
         completed = Path(job["completed_dir"])
         if parent == completed:
             return probe_job_paths(
-                {"watch_path": str(parent), "create_output_subfolder": False}
+                {"watch_path": str(parent), "create_output_subfolder": False,
+                 "include_subfolders": True}, parent=parent
             )
         incoming, output, _, _ = inspect_folders_with_deadline(
             {
