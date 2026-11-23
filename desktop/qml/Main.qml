@@ -1047,11 +1047,33 @@ ApplicationWindow {
     Connections {
         target: api
         function onDetailsOpened() { detail.open() }
+        function onAudioPreviewOpened() { audioPopup.open() }
+        function onAudioPreviewClosed() { audioPopup.close() }
         function onDropConflictOpened() { dropConflicts.open() }
         function onDropResolved() { dropConflicts.close() }
     }
 
     DropConflictDialog { id: dropConflicts; api: window.api }
+
+    Popup {
+        id: audioPopup
+        objectName: "audioPreviewPopup"
+        parent: Overlay.overlay
+        anchors.centerIn: parent
+        width: Math.min(800, window.width - 32)
+        padding: 0
+        modal: true
+        focus: true
+        closePolicy: Popup.CloseOnPressOutside | Popup.CloseOnEscape
+        background: Rectangle { color: "#ffffff"; radius: 14 }
+        Overlay.modal: Rectangle { color: "#38000000" }
+        onClosed: api.closeAudioPreview()
+        contentItem: AudioPreview {
+            objectName: "audioPreviewPanel"
+            player: api.audioPlayer
+            extraError: selected.fileError || ""
+        }
+    }
 
     Dialog {
         id: detail
@@ -1077,7 +1099,6 @@ ApplicationWindow {
                 spacing: 9
                 Heading { text: selected.name || ""; Layout.fillWidth: true }
                 Copy { text: selected.status || ""; font.weight: Font.DemiBold; Layout.fillWidth: true }
-                AudioPreview { objectName: "audioPreviewPanel"; player: api.audioPlayer; Layout.fillWidth: true }
                 Repeater {
                     model: selected.rows || []
                     delegate: RowLayout {

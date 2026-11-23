@@ -1,5 +1,6 @@
 """On-demand audio-only preview of a local original, independent of inference."""
 import os
+import math
 from pathlib import Path
 
 from PySide6.QtCore import QObject, Property, QUrl, Signal, Slot
@@ -24,6 +25,8 @@ class AudioPreview(QObject):
         self._error = ""
         self._loading = False
         self._volume = max(0., min(100., float(volume)))
+        self._muted = False
+        self._rate = 1.
 
     @Property("QVariantMap", notify=changed)
     def state(self):
@@ -34,7 +37,15 @@ class AudioPreview(QObject):
                     playing=bool(player and player.isPlaying()), loading=self._loading,
                     seekable=bool(player and player.isSeekable() and duration > 0),
                     position=position, duration=duration, positionText=clock(position),
-                    durationText=clock(duration), volume=self._volume, error=self._error)
+                    durationText=clock(duration), volume=self._volume, muted=self._muted,
+                    rate=self._rate, rateText=f'{self._rate:g}×',
+                    rateAvailable=self._pitch_available(), error=self._error)
+
+    def _pitch_available(self):
+        if self._player is None:
+            return False
+        from PySide6.QtMultimedia import QMediaPlayer
+        return self._player.pitchCompensationAvailability() != QMediaPlayer.PitchCompensationAvailability.Unavailable
 
     def _ensure_player(self):
         if self._player is not None:
@@ -46,13 +57,21 @@ class AudioPreview(QObject):
         self._player = QMediaPlayer(self)
         self._output = QAudioOutput(self)
         self._output.setVolume(self._volume / 100.)
+        self._output.setMuted(self._muted)
         self._player.setAudioOutput(self._output)
+        if self._pitch_available():
+            self._player.setPitchCompensation(True)
+        self._player.playbackRateChanged.connect(self._rate_changed)
         for signal in (self._player.positionChanged, self._player.durationChanged,
                        self._player.playbackStateChanged, self._player.seekableChanged):
             signal.connect(self.changed)
         self._player.tracksChanged.connect(self._disable_video)
         self._player.mediaStatusChanged.connect(self._media_status)
         self._player.errorOccurred.connect(self._media_error)
+
+    def _rate_changed(self, value):
+        self._rate = value
+        self.changed.emit()
 
     def _disable_video(self):
         self._player.setActiveVideoTrack(-1)
@@ -88,6 +107,7 @@ class AudioPreview(QObject):
             self._path = path
             self._loading = True
             self._player.setSource(QUrl.fromLocalFile(path))
+            self._player.setPlaybackRate(self._rate)
         self.toggle()
 
     @Slot()
@@ -115,8 +135,36 @@ class AudioPreview(QObject):
         self._volume = max(0., min(100., float(percent)))
         if self._output:
             self._output.setVolume(self._volume / 100.)
+        if self._volume > 0:
+            self._muted = False
+            if self._output:self._output.setMuted(False)
         self.volumeChanged.emit(self._volume)
         self.changed.emit()
+
+    @Slot()
+    def toggleMute(self):
+        self._muted = not self._muted
+        if self._output:self._output.setMuted(self._muted)
+        self.changed.emit()
+
+    @Slot(float)
+    def setRate(self, rate):
+        if self._player is None or not math.isfinite(rate):
+            return
+        rate = max(.5, min(3., rate))
+        # Never offer a speed change that also changes the speaker's pitch.
+        if not self._pitch_available():
+            self._player.setPlaybackRate(1.)
+            return
+        self._player.setPitchCompensation(True)
+        self._player.setPlaybackRate(rate)
+
+    @Slot(int)
+    def changeRate(self, direction):
+        rates=(.5,.75,1.,1.25,1.5,1.75,2.,2.5,3.)
+        candidates=[value for value in rates if value > self._rate+.01] if direction>0 else \
+                   [value for value in reversed(rates) if value < self._rate-.01]
+        if candidates:self.setRate(candidates[0])
 
     @Slot()
     def close(self):

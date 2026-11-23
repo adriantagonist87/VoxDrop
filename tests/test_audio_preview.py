@@ -2,6 +2,7 @@ from pathlib import Path
 import tempfile
 import unittest
 import wave
+from unittest.mock import Mock
 
 from PySide6.QtCore import QCoreApplication, QEvent
 from PySide6.QtTest import QTest
@@ -87,3 +88,40 @@ class AudioPreviewTests(unittest.TestCase):
         self.player.close()
         self.assertEqual(self.player.state["error"], "")
         self.assertFalse(self.player.state["available"])
+
+    def test_real_speed_control_enables_pitch_compensation_and_limits_rate(self):
+        if QMediaDevices.defaultAudioOutput().isNull():
+            self.skipTest('No audio output device in this test session')
+        self.player.play_file(self.media)
+        self.wait_for(lambda:self.player.state['duration']==4000)
+        if not self.player.state['rateAvailable']:
+            self.skipTest('Backend cannot preserve pitch at different playback rates')
+        self.player.setRate(1.5)
+        self.assertTrue(self.player._player.pitchCompensation())
+        self.assertEqual(self.player._player.playbackRate(),1.5)
+        self.player.changeRate(1);self.assertEqual(self.player.state['rate'],1.75)
+        self.player.changeRate(-1);self.assertEqual(self.player.state['rate'],1.5)
+        self.player.setRate(99);self.assertEqual(self.player.state['rate'],3.)
+        self.player.setRate(-1);self.assertEqual(self.player.state['rate'],.5)
+        self.player.setRate(float('nan'));self.assertEqual(self.player.state['rate'],.5)
+
+    def test_unavailable_pitch_backend_keeps_normal_speed(self):
+        backend=Mock()
+        backend.pitchCompensationAvailability.return_value=QMediaPlayer.PitchCompensationAvailability.Unavailable
+        self.player._player=backend
+        self.assertFalse(self.player.state['rateAvailable'])
+        self.player.setRate(2)
+        backend.setPlaybackRate.assert_called_once_with(1.)
+        backend.setPitchCompensation.assert_not_called()
+
+    def test_mute_preserves_volume_and_volume_change_restores_sound(self):
+        self.player.setVolume(35)
+        self.player.toggleMute()
+        self.assertTrue(self.player.state['muted'])
+        self.assertEqual(self.player.state['volume'],35)
+        self.assertIsNone(self.player._player)
+        self.player._ensure_player()
+        self.assertTrue(self.player._output.isMuted())
+        self.player.toggleMute();self.assertFalse(self.player._output.isMuted())
+        self.player.toggleMute();self.player.setVolume(40)
+        self.assertFalse(self.player._output.isMuted())
