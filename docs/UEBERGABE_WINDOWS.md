@@ -1,5 +1,11 @@
 # Übergabeauftrag für Codex auf dem Windows-PC
 
+## Modelldownload-Fortschritt und Serverprüfung, 23.11.2026
+
+Geprüfter Funktionscode `79d42538022573fc32d6927115c99ebf3c4dc9c3`, Branch `fix/model-download-progress`, [PR #25](https://github.com/adriantagonist87/VoxDrop/pull/25). Bytegenauer Datei-/Gesamtfortschritt, aktuelle Transferrate, Cache und separate Verifikation sowie ein eigener Server-Testknopf mit tatsächlichem API-/CDN-Dateiabruf. Vollständiger lokal kombinierter Player-/SMB-/Download-Stand: 276 Regressionen (264 bestanden/zwölf Skips), echte kleine HTTPS-/Xet-Dateien, Resume nach erzwungenem Abbruch und native Oberfläche bei drei Qt-Skalierungen bestanden.
+
+Lokale App aktualisiert und normal per EXE neu gestartet; alle installierten Whisper-/Qwen-/Aligner-/Sprecherhashes ohne Netzwerk verifiziert. Aktuelles Profil/alte Dateien gesichert, Einstellungen/Queue/Modelle/Runtime und vorhandene Pause erhalten. Kein Release und kein neues öffentliches Paket. **Auf `main` nur Dokumentation; gemeinsame Implementierung bis Mac-Gegenprüfung im PR.** Dort zuerst abweichende Hub-Version, per-Datei-/Xet-Callbacks, Cache-/Resume-Rate, Serverfehler, Retina-Darstellung und Beenden prüfen. Native Mac-Freigabe bleibt 1.5.0 Build 27. [Genaue Nachweise und nächste Schritte](MODELLDOWNLOAD.md).
+
 ## Manueller Datei-/Ordner-Drop auf SMB, 23.11.2026
 
 Fehler „Ordner liegt außerhalb des überwachten Pfads“ für einen manuellen Datei-Drop von einem Netzlaufwerk reproduziert und im Code `f43e27fdf74dda4b1a492513cc548b9f7a4a54f1` behoben: Laufwerksbuchstabe und UNC-Auflösung desselben Stamms wurden als verschiedene Wurzeln behandelt. [PR #23](https://github.com/adriantagonist87/VoxDrop/pull/23), Branch `fix/manual-drop-paths`. Manuelle Quellen dürfen überall liegen; TXT neben Original unabhängig von normalen Überwachungs-/Ausgabeoptionen. Unterordner-/Dateischutz bleibt erhalten.

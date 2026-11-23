@@ -1,5 +1,11 @@
 # Entwicklung auf macOS und Windows
 
+## Streaming beim Modell-Setup und Serverprüfung
+
+Geprüfter Windows-Code `79d42538022573fc32d6927115c99ebf3c4dc9c3`, [PR #25](https://github.com/adriantagonist87/VoxDrop/pull/25): eigener `model_download.py`-Prozess, begrenzte parallele Pipe-Ausgabe, JSON-Ereignisse per Qt-Signal, Größe/Dateiposition getrennt vom tatsächlichen Netzwerktransfer und eigener API-/CDN-Range-Test. Alle drei Builder übernehmen das neue Engine-Modul; Desktop/QML werden wie bisher gemeinsam kopiert. Keine Pin-/Schemaänderung. [Architektur, reproduzierbare Tests und Mac-Hub-Versionsgrenze](MODELLDOWNLOAD.md).
+
+Lokal kombiniert mit Player und SMB-Fix geprüft und installiert; Basis/Overlay-Dateihashes stehen in `local-development.json`. Kein Release. Der Quellfix bleibt bis zur nativen Mac-Prüfung im PR; insbesondere den dort abweichenden Hub und die Callback-/Xet-Pfade gegenprüfen. Bestätigter Mac-Stand bleibt 1.5.0 Build 27.
+
 ## Freigabe öffentlicher Releases
 
 Nutzerregel vom 23.11.2026: Neue öffentliche GitHub-Releases und neue für Dritte angebotene Builds werden nur auf eine ausdrückliche Release-Anweisung veröffentlicht. Bugfixes werden über Commits, Branches, PRs und lokale Tests entwickelt; ein erfolgreicher Test oder ein lokales Update löst keine Veröffentlichung aus. Weitere beauftragte Fehler werden ohne automatische Releases abgearbeitet. Die bereits veröffentlichte Windows-Vorschau 1.5.1 ist ein bestehender Stand, keine Freigabe für weitere Releases. Die Regel ist auch in `AGENTS.md` verbindlich festgehalten.

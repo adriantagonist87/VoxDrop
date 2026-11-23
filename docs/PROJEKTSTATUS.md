@@ -1,5 +1,11 @@
 # Projektstatus VoxDrop
 
+## Modell-Downloads mit echten Bytewerten und Serverprüfung, 23.11.2026
+
+Geprüfter Funktionscode **`79d42538022573fc32d6927115c99ebf3c4dc9c3`**, Branch `fix/model-download-progress`, [PR #25](https://github.com/adriantagonist87/VoxDrop/pull/25): Größe, Datei-/Gesamtfortschritt, aktuelle Transferrate, Cache-/Prüfphasen und separate Prüfung der tatsächlich gewählten API-/CDN-Dateipfade. Vorher blockierte der Controller bis zum Prozessende und QML zeigte nur einen unbestimmten Balken. Unbekannte Größen bleiben ausdrücklich unbekannt; Cache und Resume zählen nicht als neuer Netzwerktransfer.
+
+Finaler kombinierter Windows-Stand mit Player und SMB-Fix: **276 Regressionen, 264 bestanden/zwölf Skips in 155,678 s**. Echte gepinnte HTTPS-/Xet-Dateien, erzwungener Abbruch/Range-Resume, native QML bei 100/125/150 % und echte API-/Dateiserverprüfung bestanden. Lokale Entwicklungsinstallation aktualisiert, normale EXE und alle installierten Modellhashes nachgeprüft; Profil, Modelle, Runtime und bestehende Queuepause erhalten. **Kein Release.** Funktionscode bis nativer Mac-Gegenprüfung im PR; auf `main` nur Übergabe. [Bedienung, Architektur, Nachweise, Grenzen und Mac-Aufgabe](MODELLDOWNLOAD.md).
+
 ## Drag-and-drop von beliebigen Pfaden und SMB-Laufwerken, 23.11.2026
 
 Manueller Datei-Drop vom gemappten SMB-Laufwerk scheiterte vor der Inferenz mit „Ordner liegt außerhalb des überwachten Pfads“. Derselbe Quellstamm erschien einmal mit Laufwerksbuchstaben und einmal als UNC. Korrektur im geprüften Code **`f43e27fdf74dda4b1a492513cc548b9f7a4a54f1`**, [Branch](https://github.com/adriantagonist87/VoxDrop/tree/fix/manual-drop-paths), [PR #23](https://github.com/adriantagonist87/VoxDrop/pull/23): Aliasgleichheit sicher prüfen, Auftragspfade und Unterordnerschutz erhalten. Einzelne Dateien sowie Ordner dürfen von überall kommen; TXT immer neben Original, unabhängig von normalen Überwachungs-/Archivoptionen.
