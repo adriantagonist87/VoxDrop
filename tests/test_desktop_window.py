@@ -401,6 +401,32 @@ class DesktopWindowTests(unittest.TestCase):
         self.controller.closeDetails()
         self.assertFalse(preview.state['available'])
 
+    def test_player_scrubbing_previews_position_and_seeks_only_on_release(self):
+        self.queue_fixture(1)
+        with patch.object(self.controller,'submit'):
+            self.controller.showDetails(1)
+        preview=self.controller.audio_preview
+        backend=Mock(duration=Mock(return_value=12_000),position=Mock(return_value=7000),
+            isPlaying=Mock(return_value=False),isSeekable=Mock(return_value=True))
+        preview._player=backend;preview._path='synthetic.wav'
+        self.controller.audioPreviewOpened.emit();preview.changed.emit();QTest.qWait(40)
+        slider=self.visual('previewSeekSlider')
+        start=slider.mapToScene(QPointF(slider.width()*.3,slider.height()/2)).toPoint()
+        end=slider.mapToScene(QPointF(slider.width()*.7,slider.height()/2)).toPoint()
+        backend.setPosition.reset_mock()
+        QTest.mousePress(self.window,Qt.MouseButton.LeftButton,Qt.KeyboardModifier.NoModifier,start)
+        QTest.mouseMove(self.window,end,40)
+        before=slider.property('value')
+        self.assertTrue(slider.property('scrubbing'))
+        backend.position.return_value=8000;preview.changed.emit();QTest.qWait(30)
+        self.assertAlmostEqual(slider.property('value'),before)
+        backend.setPosition.assert_not_called()
+        QTest.mouseRelease(self.window,Qt.MouseButton.LeftButton,Qt.KeyboardModifier.NoModifier,end)
+        QTest.qWait(30)
+        backend.setPosition.assert_called_once()
+        self.assertAlmostEqual(backend.setPosition.call_args.args[0],before,delta=10)
+        self.assertFalse(slider.property('scrubbing'))
+
     def test_reveal_uses_known_transcript_path_and_reports_shell_failure(self):
         job = self.queue_fixture(1)[0]
         transcript = self.controller_module.PROFILE / 'Bestands TXT, Prüfung + Test.txt'

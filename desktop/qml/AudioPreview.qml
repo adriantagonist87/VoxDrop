@@ -7,20 +7,26 @@ Pane {
     required property QtObject player
     property var audio: player.state
     property string extraError: ""
-    padding: 14
-    background: Rectangle { color: "#ffffff"; radius: 14 }
+    padding: 12
+    background: Rectangle { color: "#292b2a"; radius: 10; border.color: "#4a504c" }
+    function timeText(milliseconds) {
+        let seconds = Math.max(0, Math.floor(milliseconds / 1000))
+        let hours = Math.floor(seconds / 3600)
+        let minutes = Math.floor((seconds % 3600) / 60)
+        return (hours ? hours + ":" : "") + String(minutes).padStart(2, "0") + ":" + String(seconds % 60).padStart(2, "0")
+    }
 
     component IconButton: Button {
         id: button
         property string symbol
-        property color ink: "#171717"
+        property color ink: "#ededed"
         property color fill: "transparent"
         implicitWidth: 28; implicitHeight: 36
         padding: 3
         background: Rectangle {
-            radius: height / 2
-            color: button.fill !== "transparent" ? button.fill : button.down ? "#e2e2e2" : button.hovered ? "#f0f0f0" : "transparent"
-            border.color: button.visualFocus ? "#e60000" : "transparent"
+            radius: 6
+            color: button.fill !== "transparent" ? button.fill : button.down ? "#454f49" : button.hovered ? "#3a403c" : "transparent"
+            border.color: button.visualFocus ? "#8ac6a5" : "transparent"
             border.width: button.visualFocus ? 2 : 0
             opacity: button.enabled ? 1 : .4
         }
@@ -61,20 +67,27 @@ Pane {
     }
     component AudioSlider: Slider {
         id: control
-        implicitHeight: 32
-        padding: 6
+        implicitHeight: 36
+        padding: 2
+        hoverEnabled: true
         background: Rectangle {
-            x: control.leftPadding; y: control.topPadding + control.availableHeight / 2 - height / 2
-            width: control.availableWidth; height: 4; radius: 2
-            color: "#c9c9c9"
-            Rectangle { width: control.visualPosition * parent.width; height: parent.height; radius: 2; color: "#e60000" }
+            x: control.leftPadding + control.handle.width / 2
+            y: control.topPadding + control.availableHeight / 2 - height / 2
+            width: control.availableWidth - control.handle.width; height: 3; radius: 1.5
+            color: "#555b57"
+            Rectangle { width: control.visualPosition * parent.width; height: parent.height; radius: 1.5; color: "#8ac6a5" }
         }
         handle: Rectangle {
             x: control.leftPadding + control.visualPosition * (control.availableWidth - width)
             y: control.topPadding + control.availableHeight / 2 - height / 2
-            implicitWidth: 18; implicitHeight: 18; radius: 9
-            color: control.enabled ? "#e60000" : "#aaaaaa"
-            border.width: control.visualFocus ? 2 : 0; border.color: "#171717"
+            implicitWidth: 28; implicitHeight: 32
+            color: "transparent"
+            Rectangle {
+                anchors.centerIn: parent
+                width: 4; height: control.pressed || control.hovered || control.visualFocus ? 16 : 12; radius: 2
+                color: control.enabled ? "#a7cdb8" : "#777d79"
+                border.width: control.visualFocus ? 1 : 0; border.color: "#ededed"
+            }
         }
     }
     contentItem: ColumnLayout {
@@ -84,9 +97,9 @@ Pane {
             spacing: 10
             IconButton {
                 objectName: "previewPlayButton"
-                implicitWidth: 44; implicitHeight: 44
+                implicitWidth: 40; implicitHeight: 36
                 symbol: panel.audio.playing ? "pause" : "play"
-                fill: "#171717"; ink: "#ffffff"
+                fill: "#8ac6a5"; ink: "#14231c"
                 Accessible.name: panel.audio.playing ? "Audio pausieren" : "Audio abspielen"
                 enabled: panel.audio.available && !panel.audio.loading
                 onClicked: panel.player.toggle()
@@ -96,15 +109,28 @@ Pane {
                 objectName: "previewSeekSlider"
                 Accessible.name: "Wiedergabeposition"
                 Layout.fillWidth: true; Layout.minimumWidth: 160
+                property bool scrubbing: false
+                property real scrubPosition: 0
                 from: 0; to: Math.max(1, panel.audio.duration || 0)
+                stepSize: 1000; snapMode: Slider.NoSnap
                 enabled: panel.audio.seekable && !panel.audio.loading
-                onValueChanged: if (enabled && Math.abs(value - (panel.audio.position || 0)) > 50) panel.player.seek(value)
-                Binding { target: seek; property: "value"; when: !seek.pressed; value: panel.audio.position || 0 }
+                onPressedChanged: {
+                    if (pressed) { scrubPosition = value; scrubbing = true }
+                    else if (scrubbing) {
+                        if (enabled) panel.player.seek(scrubPosition)
+                        scrubbing = false
+                    }
+                }
+                onValueChanged: {
+                    if (scrubbing) scrubPosition = value
+                    else if (!pressed && enabled && Math.abs(value - (panel.audio.position || 0)) > 50) panel.player.seek(value)
+                }
+                Binding { target: seek; property: "value"; when: !seek.scrubbing; value: panel.audio.position || 0 }
             }
             Label {
                 objectName: "previewTime"
-                text: panel.audio.positionText + " / " + panel.audio.durationText
-                color: "#505050"; font.pixelSize: 12
+                text: (seek.scrubbing ? panel.timeText(seek.scrubPosition) : panel.audio.positionText) + " / " + panel.audio.durationText
+                color: "#bdc4c0"; font.pixelSize: 12
                 Layout.minimumWidth: implicitWidth
             }
             RowLayout {
@@ -118,7 +144,7 @@ Pane {
                 Label {
                     objectName: "previewRate"
                     text: Number(panel.audio.rate).toFixed(panel.audio.rate % .5 === 0 ? 1 : 2) + "×"
-                    color: "#171717"; font.pixelSize: 15; font.weight: Font.DemiBold
+                    color: "#ededed"; font.pixelSize: 13; font.weight: Font.DemiBold
                     horizontalAlignment: Text.AlignHCenter; Layout.minimumWidth: 48
                 }
                 IconButton {
@@ -139,7 +165,7 @@ Pane {
                 objectName: "previewVolumeSlider"
                 Accessible.name: "Lautstärke der Audiowiedergabe"
                 Layout.preferredWidth: 96; Layout.minimumWidth: 80
-                from: 0; to: 100
+                from: 0; to: 100; stepSize: 5; snapMode: Slider.NoSnap
                 Binding { target: volume; property: "value"; value: panel.audio.volume }
                 onValueChanged: if (panel.player && Math.abs(value - panel.audio.volume) > .01) panel.player.setVolume(value)
             }
@@ -148,7 +174,7 @@ Pane {
             objectName: "previewStatus"
             text: panel.audio.error || panel.extraError || (panel.audio.loading || !panel.audio.available ? "Tonspur wird geladen …" : "")
             visible: text.length > 0
-            color: panel.audio.error || panel.extraError ? "#a82525" : "#505050"
+            color: panel.audio.error || panel.extraError ? "#ffb4ad" : "#bdc4c0"
             wrapMode: Text.Wrap; Layout.fillWidth: true
             font.pixelSize: 12
         }
