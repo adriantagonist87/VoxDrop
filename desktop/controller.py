@@ -18,6 +18,7 @@ from transcript_search import path_matches, run_content_search, transcript_path,
 from command_process import CommandProcesses
 from rows_model import StableRows
 from network_wait import NetworkPermissionError, retry_network_permission
+from download_status import parse_event, present as present_download, merge_servers
 import profile_transfer
 from shiboken6 import isValid
 from PySide6.QtCore import (
@@ -115,24 +116,28 @@ def read_settings():
 COMMANDS=CommandProcesses()
 
 
-def command(*arguments):
+def command(*arguments, progress=None, cancel=None):
     if arguments[0]=='start' and '--owner-pid' not in arguments:
         import psutil
         arguments=(*arguments,'--owner-pid',os.getpid(),'--owner-created',psutil.Process().create_time())
     python = Path(sys.executable)
     if python.name.casefold() == "pythonw.exe":
         python = python.with_name("python.exe")
+    model_command=arguments[0]=='check-model-server' or (arguments[0]=='setup-models' and progress is not None)
+    script=ENGINE/('model_download.py' if model_command else 'watch_service.py')
+    def output(line):
+        event=parse_event(line)
+        if event is not None and progress is not None:progress(event)
     result = COMMANDS.run(
         [
             str(python),
             "-BEs",
             "-Xutf8",
-            str(ENGINE / "watch_service.py"),
-            "--state-dir",
-            str(PROFILE / "service"),
-            "--model-data",
-            str(MODEL_DATA),
-            *(str(value) for value in arguments),
+            str(script),
+            *([] if model_command else ["--state-dir",str(PROFILE / "service")]),
+            *([] if model_command else ["--model-data",str(MODEL_DATA)]),
+            *([str(arguments[0]),'--model-data',str(MODEL_DATA),*(str(value) for value in arguments[1:])]
+              if model_command else [*(str(value) for value in arguments)]),
         ],
         cwd=ENGINE,
         stdout=subprocess.PIPE,
@@ -142,6 +147,7 @@ def command(*arguments):
         creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
         detached_start=arguments[0]=='start',
         allow_stop=arguments[0]=='stop',
+        **(dict(on_stdout=output,cancel=cancel) if model_command else {}),
     )
     if result.returncode:
         details = result.stderr.strip() or result.stdout.strip()
@@ -157,6 +163,10 @@ def command(*arguments):
             raise NetworkPermissionError(
                 "Für den Modell-Download wurde die Netzwerkverbindung verweigert (Windows-Fehler 10013)."
             )
+        if model_command:
+            events=[parse_event(line) for line in result.stdout.splitlines()]
+            errors=[event['message'] for event in events if event and event.get('phase')=='error']
+            raise RuntimeError(errors[-1] if errors else 'Die Modellaktion konnte nicht abgeschlossen werden. Siehe Protokoll.')
         if traceback:
             if arguments[0] == "setup-models":
                 raise RuntimeError("Die Modelle konnten nicht heruntergeladen werden.")
@@ -341,6 +351,8 @@ class Controller(QObject):
     transferProgress = Signal(str)
     windowRequested = Signal()
     networkPermissionChanged = Signal(bool)
+    modelDownloadProgress = Signal(int, object)
+    modelServerProgress = Signal(int, object)
     logo = Property(QUrl, lambda self: QUrl.fromLocalFile(str(LOGO)), constant=True)
     modelLocation = Property(str, lambda self: str(MODEL_DATA), constant=True)
     gpuName = Property(str, lambda self: GPU_NAME[GPU], constant=True)
@@ -424,6 +436,14 @@ class Controller(QObject):
         self.network_cancel = Event()
         self.networkPermissionChanged.connect(self.network_permission_changed)
         QApplication.instance().aboutToQuit.connect(self.network_cancel.set)
+        self.download_status = {}
+        self.download_generation = 0
+        self.server_generation = 0
+        self.checking_model_server = False
+        self.server_cancel = Event()
+        self.modelDownloadProgress.connect(self.update_model_download)
+        self.modelServerProgress.connect(self.update_model_server)
+        QApplication.instance().aboutToQuit.connect(self.server_cancel.set)
         self.message = ""
         self.message_error = False
         self.message_at = 0
@@ -524,6 +544,8 @@ class Controller(QObject):
             "ready": self.ready,
             "busy": busy,
             "downloading": self.downloading,
+            "modelDownload": present_download(self.download_status),
+            "checkingModelServer": self.checking_model_server,
             "waitingForNetwork": self.waiting_for_network,
             "running": running,
             "service": STATES.get(service.get("state"), "Aktiv")
@@ -570,7 +592,7 @@ class Controller(QObject):
             "autostart": windows_login_item()
             if sys.platform == "win32"
             else self.snapshot.get("autostart", False),
-            "modelsReady": self.models_present(),
+            "modelsReady": self.models_present() and not self.downloading and self.download_status.get('phase') not in ('error','cancelled'),
             "message": self.message,
             "messageError": self.message_error,
             "feedbackText": self.drop_message if drop_latest else self.message,
@@ -700,6 +722,10 @@ class Controller(QObject):
             return
         self.waiting_for_network = waiting
         if self.downloading:
+            if waiting:
+                self.download_status.update(phase='waiting',bytesPerSecond=0,
+                    message='Netzwerkzugriff verweigert (10013). Automatischer erneuter Versuch in fünf Sekunden.')
+                self.changed.emit()
             self.notify(
                 "Netzwerkzugriff verweigert (Windows 10013). Falls eine Freigabeanfrage erscheint, "
                 "bestätige sie selbst. Ohne sichtbare Anfrage prüfe das Protokoll. "
@@ -710,6 +736,10 @@ class Controller(QObject):
     @Slot()
     def cancelNetworkWait(self):
         self.network_cancel.set()
+
+    @Slot()
+    def cancelModelServerCheck(self):
+        self.server_cancel.set()
 
     def action(self, operation, success, *, downloading=False):
         if self.busy or self.stop_command_pending or not self.ready:
@@ -725,6 +755,9 @@ class Controller(QObject):
         def finished(result, error):
             self.busy = False
             self.downloading = False
+            if downloading:
+                self.download_status.update(phase='cancelled' if self.network_cancel.is_set() else 'error' if error else 'complete',
+                    message=error or success,bytesPerSecond=0)
             if not error:
                 self.refresh_saved_settings()
             self.notify(error or success, bool(error))
@@ -782,6 +815,13 @@ class Controller(QObject):
         if key in DEFAULTS and key != "folders":
             if self.draft.get(key) == value:
                 return
+            if key in ('model','speakers'):
+                if self.downloading:return
+                self.server_cancel.set()
+                self.server_generation+=1
+                self.download_generation+=1
+                self.checking_model_server=False
+                self.download_status={}
             self.draft[key] = value
             if value and key in ('include_subfolders', 'create_output_subfolder'):
                 other = 'create_output_subfolder' if key == 'include_subfolders' else 'include_subfolders'
@@ -1174,6 +1214,12 @@ class Controller(QObject):
     def downloadModels(self):
         selected = self.draft["model"]
         flags = [] if self.draft["speakers"] else ["--no-speakers"]
+        if self.busy or self.stop_command_pending or not self.ready:
+            return
+        self.download_generation += 1
+        generation = self.download_generation
+        servers=self.download_status.get('servers',[])
+        self.download_status=dict(phase='preparing',message='Dateien und Größen werden ermittelt …',servers=servers)
 
         def download():
             app = ROOT.parent.parent
@@ -1197,7 +1243,8 @@ class Controller(QObject):
                     "Installiere den VoxDrop-Ordner in einem beschreibbaren Programme-Ordner."
                 ) from error
             return retry_network_permission(
-                lambda: command("setup-models", "--model", selected, *flags),
+                lambda: command("setup-models", "--model", selected, *flags,
+                    progress=lambda event:self.modelDownloadProgress.emit(generation,event),cancel=self.network_cancel),
                 self.network_cancel,
                 self.networkPermissionChanged.emit,
             )
@@ -1207,6 +1254,44 @@ class Controller(QObject):
             "Modelle sind einsatzbereit.",
             downloading=True,
         )
+
+    @Slot(int,object)
+    def update_model_download(self,generation,event):
+        if self.quitting or generation!=self.download_generation:return
+        servers=merge_servers(self.download_status.get('servers',[]),event.get('servers',[]))
+        self.download_status={**event,'servers':servers}
+        self.changed.emit()
+
+    @Slot(int,object)
+    def update_model_server(self,generation,event):
+        if self.quitting or generation!=self.server_generation:return
+        self.download_status['servers']=merge_servers(self.download_status.get('servers',[]),event.get('servers',[]))
+        self.changed.emit()
+
+    @Slot()
+    def checkModelServer(self):
+        if not self.ready or self.quitting or self.checking_model_server or (self.busy and not self.downloading):return
+        self.server_generation+=1
+        generation=self.server_generation
+        selected=self.draft['model']
+        flags=[] if self.draft['speakers'] else ['--no-speakers']
+        self.server_cancel.clear()
+        self.checking_model_server=True
+        self.changed.emit()
+        def check():
+            return command('check-model-server','--model',selected,*flags,
+                progress=lambda event:self.modelServerProgress.emit(generation,event),cancel=self.server_cancel)
+        def finished(result,error):
+            if generation!=self.server_generation:return
+            self.checking_model_server=False
+            if error:
+                for server in self.download_status.get('servers',[]):
+                    if server.get('state')=='checking':
+                        server.update(state='unconfirmed',detail='Prüfung abgebrochen.' if self.server_cancel.is_set()
+                                      else 'Prüfung konnte nicht abgeschlossen werden.',checkedAt=time(),latencyMs=None)
+                self.notify(error,True)
+            self.changed.emit()
+        self.submit(check,finished)
 
     @Slot()
     def openLog(self):
@@ -1335,6 +1420,10 @@ class Controller(QObject):
 
     def cancelForegroundWork(self):
         self.closeDetails()
+        self.download_generation+=1
+        self.server_generation+=1
+        self.server_cancel.set()
+        self.checking_model_server=False
         self.transfer_cancel.set()
         self.content_cancel.set()
         self.network_cancel.set()

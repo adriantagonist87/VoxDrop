@@ -75,20 +75,29 @@ def configured_models(speakers, model):
         yield name, MODELS_DIR / name, catalog[name]
 
 
-def setup_models(data_dir, model=None, qwen_cache=None, *, speakers=True):
+def setup_models(data_dir, model=None, qwen_cache=None, *, speakers=True, report=None):
     from aTrain_core.integrity import verify_model
     from aTrain_core.load_resources import get_model
 
     for name, directory, entry in configured_models(speakers, model or WHISPER_MODEL):
+        if report:
+            report.model(name)
         print(f"Modell bereitstellen und verifizieren: {name}", file=sys.stderr)
         if get_model(name) != directory:
             raise ValueError(f"Unerwarteter Modellpfad für {name}.")
+        if report:
+            report.verifying(name)
         problems = verify_model(directory, entry["files"])
         if problems:
             raise ValueError(f"Prüfsummenfehler bei {name}: " + ", ".join(problems))
+        if report:
+            report.verified(name)
 
     if model in (None, DEFAULT_MODEL):
-        qwen_backend.provision_models(data_dir, cache=qwen_cache)
+        if report:
+            qwen_backend.provision_models(data_dir, cache=qwen_cache, report=report)
+        else:
+            qwen_backend.provision_models(data_dir, cache=qwen_cache)
 
 
 def require_models(speakers, model):

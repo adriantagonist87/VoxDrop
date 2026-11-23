@@ -1,5 +1,6 @@
 import sys
 import json
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -46,6 +47,58 @@ class DesktopWindowTests(unittest.TestCase):
         self.engine.deleteLater()
         QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
         self.app.processEvents()
+
+    def test_model_download_has_real_fraction_sizes_and_current_rate(self):
+        self.window.setProperty('settingsOpen',True)
+        self.window.setProperty('settingsTab',0)
+        self.controller.downloading=True
+        self.controller.update_model_download(0,dict(phase='downloading',message='Datei wird geladen',
+            bytesTotal=1024*1024,bytesCompleted=256*1024,bytesPerSecond=128*1024,networkTransferred=256*1024,
+            files=[dict(name='weights.bin',model='model',size=1024*1024,done=256*1024,status='downloading')],servers=[]))
+        QTest.qWait(60)
+        bar=self.window.findChild(QObject,'modelDownloadProgress')
+        self.assertFalse(bar.property('indeterminate'))
+        self.assertAlmostEqual(bar.property('value'),.25)
+        self.assertIn('25%',self.window.findChild(QObject,'modelDownloadSummary').property('text'))
+        self.assertIn('128.00 KiB/s',self.window.findChild(QObject,'modelDownloadRate').property('text'))
+        self.assertIn('weights.bin',self.window.findChild(QObject,'modelDownloadCurrent').property('text'))
+        self.assertTrue(self.window.findChild(QObject,'cancelModelDownloadButton').property('visible'))
+
+    def test_model_download_unknown_size_and_late_events_do_not_fake_progress(self):
+        self.controller.downloading=True
+        self.controller.update_model_download(0,dict(phase='preparing',files=[],servers=[]))
+        QTest.qWait(20)
+        self.assertTrue(self.window.findChild(QObject,'modelDownloadProgress').property('indeterminate'))
+        self.controller.download_generation=1
+        self.controller.update_model_download(0,dict(phase='complete',bytesTotal=100,bytesCompleted=100))
+        self.assertEqual(self.controller.download_status['phase'],'preparing')
+
+    def test_model_server_result_does_not_replace_active_download_and_selection_resets_it(self):
+        self.controller.download_status=dict(phase='downloading',bytesTotal=100,bytesCompleted=50,files=[],servers=[])
+        self.controller.update_model_server(0,dict(servers=[dict(id='api',checkedAt=1,state='reachable',
+            model='model',role='api',host='huggingface.co',detail='Erreichbar')]))
+        self.assertEqual(self.controller.state['modelDownload']['fraction'],.5)
+        self.assertEqual(len(self.controller.state['modelDownload']['servers']),1)
+        self.controller.setSetting('model','large-v3-turbo')
+        self.assertEqual(self.controller.download_status,{})
+        self.controller.update_model_server(0,dict(servers=[dict(id='stale',checkedAt=2)]))
+        self.assertEqual(self.controller.download_status,{})
+
+    def test_model_cli_uses_selected_storage_and_streaming_without_service_arguments(self):
+        module=self.controller_module
+        received=[]
+        def run(arguments,**options):
+            self.assertEqual(Path(arguments[3]).name,'model_download.py')
+            self.assertNotIn('--state-dir',arguments)
+            self.assertEqual(arguments.count('--model-data'),1)
+            self.assertEqual(arguments[arguments.index('--model-data')+1],str(module.MODEL_DATA))
+            self.assertIn('--no-speakers',arguments)
+            options['on_stdout']('voxdrop-download:{"phase":"downloading"}')
+            return subprocess.CompletedProcess(arguments,0,'','')
+        with patch.object(module.COMMANDS,'run',side_effect=run):
+            module.command('setup-models','--model','large-v3-turbo','--no-speakers',progress=received.append)
+            module.command('check-model-server','--model','large-v3-turbo','--no-speakers',progress=received.append)
+        self.assertEqual(received,[dict(phase='downloading')]*2)
 
     def test_full_qml_fullscreen_survives_minimization_and_native_activation(self):
         self.presenter.show()

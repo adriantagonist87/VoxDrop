@@ -734,13 +734,13 @@ ApplicationWindow {
                                 }
                                 Rectangle { Layout.fillWidth: true; height: 1; color: line }
                                 Heading { text: "Modelle & Speicher"; font.pixelSize: 14 }
-                                Copy { text: viewState.modelsReady ? "Modelle installiert" : "Modell-Setup erforderlich"; Layout.fillWidth: true }
+                                Copy { text: viewState.downloading ? "Modelleinrichtung läuft" : viewState.modelDownload.error ? "Modellprüfung fehlgeschlagen" : viewState.modelsReady ? "Modelle installiert" : "Modell-Setup erforderlich"; Layout.fillWidth: true }
                                 Muted { text: "Modellspeicher: " + api.modelLocation; Layout.fillWidth: true; wrapMode: Text.WrapAnywhere }
                                 RowLayout {
-                                    AppActionButton { objectName: "downloadModelsButton"; text: "Modelle herunterladen"; visible: !viewState.modelsReady; enabled: viewState.ready && !viewState.busy; onClicked: api.downloadModels() }
+                                    AppActionButton { objectName: "downloadModelsButton"; text: "Modelle herunterladen"; visible: !viewState.modelsReady || viewState.modelDownload.error; enabled: viewState.ready && !viewState.busy; onClicked: api.downloadModels() }
                                     AppActionButton { text: "Protokoll öffnen"; onClicked: api.openLog() }
                                 }
-                                TaskProgress { Layout.fillWidth: true; visible: viewState.downloading; indeterminate: true }
+                                ModelDownload { objectName: "modelDownloadPanel"; Layout.fillWidth: true; api: window.api; status: viewState.modelDownload; downloading: viewState.downloading; checking: viewState.checkingModelServer }
                                 Muted { text: "GPU-Budget oben: wirkt sofort, auch für laufende Aufträge. Rechenzeit wird kooperativ freigegeben; Lastspitzen und Grafikspeicherbedarf bleiben möglich."; Layout.fillWidth: true }
                             }
 
