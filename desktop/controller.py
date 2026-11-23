@@ -13,11 +13,13 @@ from time import time
 
 from model_storage import data_directory
 from file_actions import reveal_in_explorer
+from audio_preview import AudioPreview
 from transcript_search import path_matches, run_content_search, transcript_path, history_category
 from command_process import CommandProcesses
 from rows_model import StableRows
 from network_wait import NetworkPermissionError, retry_network_permission
 import profile_transfer
+from shiboken6 import isValid
 from PySide6.QtCore import (
     Property,
     QObject,
@@ -268,6 +270,25 @@ def output_path(job, *, transcript=False):
     )
 
 
+def probe_detail_files(job):
+    python = Path(sys.executable)
+    if python.name.casefold() == "pythonw.exe":
+        python = python.with_name("python.exe")
+    keys = ("id", "source", "completed_dir", "state", "origin_job_id", "settings", "known_transcript_path")
+    request = {key: job.get(key) for key in keys}
+    try:
+        result = COMMANDS.run(
+            [str(python), "-BEs", "-Xutf8", str(HERE / "detail_files.py"), json.dumps(request)],
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8",
+            timeout=8, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+        )
+    except subprocess.TimeoutExpired as error:
+        raise RuntimeError("Die Dateien sind derzeit nicht erreichbar. Prüfe Laufwerk oder Netzwerk und öffne die Details erneut.") from error
+    if result.returncode:
+        raise RuntimeError("Die Dateien dieses Vorgangs konnten nicht geprüft werden.")
+    return json.loads(result.stdout)
+
+
 def waveform(color):
     image = QPixmap(32, 32)
     image.fill(Qt.GlobalColor.transparent)
@@ -311,6 +332,8 @@ class Controller(QObject):
     dropConflictOpened = Signal()
     dropResolved = Signal()
     detailsOpened = Signal()
+    audioPreviewOpened = Signal()
+    audioPreviewClosed = Signal()
     importPreviewOpened = Signal()
     transferProgress = Signal(str)
     windowRequested = Signal()
@@ -340,6 +363,16 @@ class Controller(QObject):
         self.direct = {}
         self.pending = set()
         self.selected = None
+        self.detail_files = {}
+        self.detail_file_job = None
+        self.detail_file_error = ""
+        self.detail_checking = False
+        self.detail_generation = 0
+        self.audio_generation = 0
+        self.audio_requested = False
+        self.audio_preview = AudioPreview(self, volume=self.preferences.value("audioPreview/volume", 70, type=float))
+        self.audio_preview.volumeChanged.connect(lambda volume: self.preferences.setValue("audioPreview/volume", volume))
+        QApplication.instance().aboutToQuit.connect(self.audio_preview.close)
         self.history = []
         self.queue = []
         self.queue_model = StableRows(self)
@@ -420,6 +453,7 @@ class Controller(QObject):
     queueItems = Property('QVariantList',lambda self:self.queue,notify=queueChanged)
     queueModel = Property(QObject, lambda self:self.queue_model, constant=True)
     historyModel = Property(QObject, lambda self:self.history_model, constant=True)
+    audioPlayer = Property(QObject, lambda self: self.audio_preview, constant=True)
     dropPlan = Property('QVariantMap', lambda self: self.drop_plan, notify=changed)
     transfer = Property('QVariantMap', lambda self: dict(running=self.transfer_running, status=self.transfer_status,
         exportOptions=self.export_options, importOptions=self.import_options, preview=self.import_preview,
@@ -556,6 +590,7 @@ class Controller(QObject):
         speakers = settings.get("speakers", True)
         known_result = job.get('result_kind') in ('existing','reused','duplicate')
         pending = job['state'] in ('seen', 'ready') and not known_result
+        files = self.detail_files if self.detail_file_job == job["id"] else {}
         memory = job.get("peak_memory_bytes")
         method = {
             "dover-lap": f"DOVER-Lap ({job.get('speaker_passes') or 3} Durchgänge)",
@@ -564,6 +599,17 @@ class Controller(QObject):
         return {
             "name": Path(job["source"]).name,
             "path": str(output_path(job)),
+            "originalPath": files.get("original", str(output_path(job))),
+            "transcriptPath": files.get("transcript", str(output_path(job, transcript=True))),
+            "canPlayOriginal": files.get("originalAvailable", False),
+            "canRevealOriginal": files.get("originalAvailable", False),
+            "canOpenTranscript": files.get("transcriptAvailable", False),
+            "canRevealTranscript": files.get("transcriptAvailable", False),
+            "filesChecking": self.detail_checking,
+            "fileError": self.detail_file_error,
+            "filesMessage": ("Dateien werden geprüft …" if self.detail_checking else
+                             "Originaldatei nicht mehr am gespeicherten Ort gefunden." if files and not files.get("originalAvailable") else
+                             "Für diesen Vorgang ist kein Transkript vorhanden." if files and not files.get("transcriptAvailable") else ""),
             "status": STATES.get(job["state"], job["state"]),
             "error": job.get("error") or "",
             "note": ({'existing':'Vorhandene TXT-Datei erkannt. Inhalt und Aufnahme wurden nicht durch VoxDrop gegengeprüft.',
@@ -623,6 +669,8 @@ class Controller(QObject):
 
         def finish(result, error):
             self.pending.discard(task)
+            if not isValid(self):
+                return
             if shutdown or not self.quitting:
                 callback(result, error)
 
@@ -1275,6 +1323,7 @@ class Controller(QObject):
         return self.tray is not None and self.tray.isVisible()
 
     def cancelForegroundWork(self):
+        self.closeDetails()
         self.transfer_cancel.set()
         self.content_cancel.set()
         self.network_cancel.set()
@@ -1285,6 +1334,7 @@ class Controller(QObject):
 
     @Slot()
     def requestQuit(self):
+        self.closeDetails()
         if self.quitting:
             return
         self.quitting=True
@@ -1647,9 +1697,75 @@ class Controller(QObject):
             None,
         )
         if selected:
+            self.closeDetails()
             self.selected = selected
+            self.detail_file_job = identifier
+            self.detail_files = {}
+            self.detail_file_error = ""
             self.changed.emit()
             self.detailsOpened.emit()
+            self.check_detail_files()
+
+    def check_detail_files(self, action=None):
+        if self.selected is None:
+            return
+        generation = self.detail_generation
+        job = dict(self.selected)
+        self.detail_checking = True
+        self.detail_file_error = ""
+        self.changed.emit()
+
+        def checked(files, error):
+            if generation != self.detail_generation:
+                return
+            self.detail_checking = False
+            self.detail_file_job = job["id"]
+            self.detail_files = files or {}
+            self.detail_file_error = error or (files or {}).get("error", "")
+            self.changed.emit()
+            if action is not None and not error:
+                action(files)
+
+        self.submit(lambda: probe_detail_files(job), checked)
+
+    @Slot()
+    def closeDetails(self):
+        self.detail_generation += 1
+        self.closeAudioPreview()
+
+    @Slot()
+    def closeAudioPreview(self):
+        self.audio_generation += 1
+        self.audio_preview.close()
+        if self.audio_requested:
+            self.audio_requested = False
+            self.audioPreviewClosed.emit()
+
+    def detail_error(self, message):
+        self.detail_file_error = message
+        self.changed.emit()
+        self.notify(message, True)
+
+    @Slot()
+    def playOriginal(self):
+        if self.selected is None:
+            return
+        self.closeAudioPreview()
+        generation = self.audio_generation
+        self.audio_requested = True
+        self.audioPreviewOpened.emit()
+        def play(files):
+            if generation != self.audio_generation or not self.audio_requested:
+                return
+            if files["originalAvailable"]:
+                self.audio_preview.play_file(files["original"])
+            else:
+                self.detail_error("Die Originaldatei ist nicht mehr am gespeicherten Ort vorhanden.")
+        self.check_detail_files(play)
+
+    @Slot()
+    def revealOriginal(self):
+        self.reveal_detail_file(False)
 
     @Slot(bool)
     def retryJob(self, repeat):
@@ -1671,37 +1787,34 @@ class Controller(QObject):
 
     @Slot()
     def openTranscript(self):
-        if self.selected is None or (self.selected['state'] not in ('done','existing','duplicate')
-                                     and not self.selected.get('known_transcript_path')):
-            return
-        path=output_path(self.selected,transcript=True)
-
-        def checked(result,error):
-            if error:
-                self.notify(error,True)
-            elif not QDesktopServices.openUrl(QUrl.fromLocalFile(str(result))):
-                self.notify('Das Transkript konnte mit der Standardanwendung nicht geöffnet werden.',True)
-
-        def locate():
-            if not path.is_file():
-                raise FileNotFoundError('Die TXT-Datei ist nicht mehr am gespeicherten Ausgabeort vorhanden.')
-            return path
-
-        self.submit(locate,checked)
+        def opened(files):
+            if not files["transcriptAvailable"]:
+                self.detail_error("Für diesen Vorgang ist kein Transkript vorhanden.")
+            elif not QDesktopServices.openUrl(QUrl.fromLocalFile(files["transcript"])):
+                self.detail_error("Das Transkript konnte mit der Standardanwendung nicht geöffnet werden.")
+        self.check_detail_files(opened)
 
     @Slot()
     def revealOutput(self):
-        if self.selected is not None:
-            path = output_path(self.selected, transcript=True)
+        self.reveal_detail_file(True)
+
+    def reveal_detail_file(self, transcript):
+        def reveal(files):
+            key = "transcript" if transcript else "original"
+            if not files[key + "Available"]:
+                self.detail_error("Das Transkript ist nicht vorhanden." if transcript else "Die Originaldatei ist nicht mehr am gespeicherten Ort vorhanden.")
+                return
+            path = Path(files[key])
             if sys.platform == "win32":
                 def revealed(result, error):
                     if error:
-                        self.notify(error, True)
+                        self.detail_error(error)
                 self.submit(lambda: reveal_in_explorer(path), revealed)
             elif sys.platform == "darwin":
                 subprocess.Popen(["/usr/bin/open", "-R", str(path)])
             else:
                 QDesktopServices.openUrl(QUrl.fromLocalFile(str(path.parent)))
+        self.check_detail_files(reveal)
 
     @Slot()
     def clearHistory(self):

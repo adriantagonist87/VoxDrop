@@ -15,7 +15,7 @@ class CommandProcesses:
         with self.lock:
             if not self.active:self.stopping=False
 
-    def run(self,arguments,*,detached_start=False,allow_stop=False,**options):
+    def run(self,arguments,*,detached_start=False,allow_stop=False,timeout=None,**options):
         @contextmanager
         def unmanaged():
             with subprocess.Popen(arguments,**options) as process:yield process
@@ -28,7 +28,7 @@ class CommandProcesses:
             process=context.__enter__()
             self.active[process.pid]=process
         try:
-            stdout,stderr=process.communicate()
+            stdout,stderr=process.communicate(timeout=timeout)
             return subprocess.CompletedProcess(arguments,process.returncode,stdout,stderr)
         finally:
             with self.lock:self.active.pop(process.pid,None)

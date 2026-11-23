@@ -1,5 +1,11 @@
 # Projektstatus VoxDrop
 
+## Originalaufnahme im kompakten Popup-Player, 23.11.2026
+
+Geprüfter Funktionscode **`6f0bb63d1afd843d5bacb9f1ef63026d23adca49`**, Branch `feat/popup-audio-player`, [PR #29](https://github.com/adriantagonist87/VoxDrop/pull/29). Der bisher ständig sichtbare Player entfällt aus den Details. „Originaldatei abspielen“ öffnet eine kompakte Leiste im dunklen App-Stil mit schmalen Griffen und großen Bedienflächen: Play/Pause, dünner Zeitbalken, Position/Dauer, Geschwindigkeit mit Qt-Tonhöhenkorrektur und Lautstärke/Stumm. Außenklick/Escape schließt ausschließlich den Player und gibt die Datei frei; derselbe Button öffnet ihn erneut. Verspätete Dateiprüfung darf nach Schließen nicht mehr abspielen.
+
+44 gezielte Audio-/Qt-Fälle (43 bestanden/ein Skip) und 286 kombinierte Regressionen (274 bestanden/zwölf Skips) bestanden; finale dunkle Darstellung und stabiles Scrubbing bei 100/125/150 % nativ geprüft. Reale WAV-/FLV-/OPUS-Wiedergabe, Seek, gemessener 2×-Zeitfortschritt, aktive Pitch-Korrektur, Außenklick/Escape, Wiederöffnung und Dateifreigabe bestätigt. Lokal vier Desktopdateien aktualisiert, 97 übrige Programmdateien sowie alle bisherigen Fixes/Modelle/Einstellungen/Queuepause erhalten; normale EXE und installierte Dateien nachgeprüft. Kein Release. PR enthält die nötige Playerbasis aus #20; Funktionscode bis nativer Mac-Gegenprüfung im PR, auf `main` nur Dokumentation. [Bedienung, Git-Abhängigkeit, genaue Nachweise und Mac-Aufgabe](AUDIOPLAYER_POPUP.md).
+
 ## Direkter Überwachungsschalter und Stoppauswahl, 23.11.2026
 
 Geprüfter Funktionscode **`5405d8e365171e6cecbc636c586fba866b0a7f87`**, Branch `feat/watch-toggle-stop-options`, [PR #27](https://github.com/adriantagonist87/VoxDrop/pull/27): Ein-/Ausschalter links neben der Überwachungsanzeige; roter Stoppknopf öffnet erst die Auswahl „Transkription sofort stoppen?“, „Transkription geregelt fertigstellen und Warteschlange pausieren“ oder „Abbruch“. Start bleibt direkt, Öffnen/Abbruch verändern keine Verarbeitung. Bestehende Backendaktionen und Schutzpfade bleiben erhalten.
