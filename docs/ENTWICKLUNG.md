@@ -1,5 +1,9 @@
 # Entwicklung auf macOS und Windows
 
+## Überwachung im Header und explizite Stoppauswahl
+
+Windows-geprüfter Funktionscode `5405d8e365171e6cecbc636c586fba866b0a7f87`, [PR #27](https://github.com/adriantagonist87/VoxDrop/pull/27): `Main.qml` ergänzt den unmittelbar an den gespeicherten Überwachungszustand gebundenen Switch und den Stoppdialog; `PlaybackButton.qml` meldet dafür `stopRequested`. Starten, `setMonitoring`, `stopProcessing` und `pauseQueue(true)` nutzen die bestehenden Controller-/CLI-/SQLite-Pfade. Neue/angepasste Qt-Regressionen und Dialogaufnahme im 8.000-/20.000-Workspace-Test. Keine neue Datei im App-Paket, keine Abhängigkeit oder DB-Änderung. [Bedienung, native Prüfungen, kombinierter lokaler Stand und Mac-Gegenprüfung](UEBERWACHUNG_UND_STOPP.md). Kein Release.
+
 ## Streaming beim Modell-Setup und Serverprüfung
 
 Geprüfter Windows-Code `79d42538022573fc32d6927115c99ebf3c4dc9c3`, [PR #25](https://github.com/adriantagonist87/VoxDrop/pull/25): eigener `model_download.py`-Prozess, begrenzte parallele Pipe-Ausgabe, JSON-Ereignisse per Qt-Signal, Größe/Dateiposition getrennt vom tatsächlichen Netzwerktransfer und eigener API-/CDN-Range-Test. Alle drei Builder übernehmen das neue Engine-Modul; Desktop/QML werden wie bisher gemeinsam kopiert. Keine Pin-/Schemaänderung. [Architektur, reproduzierbare Tests und Mac-Hub-Versionsgrenze](MODELLDOWNLOAD.md).

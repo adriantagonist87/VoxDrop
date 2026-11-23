@@ -2,11 +2,11 @@
 
 Oben in der mittleren Spalte steht ein normaler quadratischer Knopf mit festen **44 × 44 logischen Pixeln**: grün mit Play-Dreieck oder rot mit Stopp-Quadrat, daneben eine normale Beschriftung. Er wächst im Vollbild nicht mit und bewegt sich beim Wechsel des aktuellen Auftrags nicht. Beim Anhalten erscheint „Wird gestoppt …“; erneuter Start ist erst nach dem tatsächlichen Ende möglich. Die zuerst gebaute breite Variante wurde auf Nutzerkorrektur durch diesen kompakten Knopf ersetzt.
 
-**Starten** aktiviert die Verarbeitung der bestehenden Warteschlange, auch bei ausgeschalteter Ordnerüberwachung. **Stopp** pausiert die weitere Verarbeitung und beendet eine gerade laufende Erkennung samt Modellprozessen. Der unterbrochene Auftrag kehrt an seinen bisherigen Platz zurück. Die wartenden Dateien bleiben erhalten. Beim erneuten Start beginnt eine unterbrochene Erkennung neu; es gibt keinen behaupteten Modell-Checkpoint mitten in einer Aufnahme.
+**Starten** aktiviert die Verarbeitung der bestehenden Warteschlange, auch bei ausgeschalteter Ordnerüberwachung. Seit 23.11.2026 öffnet **Stopp** zuerst eine [Auswahl mit sofortigem Stopp, geregeltem Fertigstellen und Abbruch](UEBERWACHUNG_UND_STOPP.md). Erst „Transkription sofort stoppen?“ pausiert die weitere Verarbeitung und beendet eine gerade laufende Erkennung samt Modellprozessen. Der unterbrochene Auftrag kehrt an seinen bisherigen Platz zurück. Die wartenden Dateien bleiben erhalten. Beim erneuten Start beginnt eine unterbrochene Erkennung neu; es gibt keinen behaupteten Modell-Checkpoint mitten in einer Aufnahme.
 
 Ist die Erkennung bereits fertig und ihr Ergebnis wird gespeichert oder aus einem vollständigen Cache exportiert, wird dieser sichere Abschluss noch beendet. Danach bleibt die Warteschlange gestoppt. Ein bereits ausdrücklich entfernter Auftrag wird durch Stopp nicht wiederhergestellt.
 
-Die Ordnerüberwachung darf weiterhin neue Dateien einreihen; Stopp hält deren Verarbeitung an. Die getrennte Option „Nach diesem Auftrag pausieren“ lässt den laufenden Auftrag fertigwerden. **„Warteschlange leeren …“** entfernt nach Bestätigung Aufträge und ist absichtlich von Stopp getrennt. Das vollständige Beenden der App bleibt die eigene Tray-Aktion.
+Die Ordnerüberwachung darf weiterhin neue Dateien einreihen; ihre Ein-/Ausschaltung ist jetzt auch direkt links neben der Statusanzeige erreichbar. Stopp hält die Verarbeitung an. Die getrennte Option „Nach diesem Auftrag pausieren“ und die geregelte Popupauswahl lassen den laufenden Auftrag fertigwerden. **„Warteschlange leeren …“** entfernt nach Bestätigung Aufträge und ist absichtlich von Stopp getrennt. Das vollständige Beenden der App bleibt die eigene Tray-Aktion.
 
 ## Technik und Prüfung
 

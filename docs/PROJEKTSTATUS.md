@@ -1,5 +1,11 @@
 # Projektstatus VoxDrop
 
+## Direkter Überwachungsschalter und Stoppauswahl, 23.11.2026
+
+Geprüfter Funktionscode **`5405d8e365171e6cecbc636c586fba866b0a7f87`**, Branch `feat/watch-toggle-stop-options`, [PR #27](https://github.com/adriantagonist87/VoxDrop/pull/27): Ein-/Ausschalter links neben der Überwachungsanzeige; roter Stoppknopf öffnet erst die Auswahl „Transkription sofort stoppen?“, „Transkription geregelt fertigstellen und Warteschlange pausieren“ oder „Abbruch“. Start bleibt direkt, Öffnen/Abbruch verändern keine Verarbeitung. Bestehende Backendaktionen und Schutzpfade bleiben erhalten.
+
+Native Windows-QML → CLI → SQLite mit künstlicher aktiver Verarbeitung bei Mindestgröße und 100/125/150 % bestanden: unabhängiger Überwachungsschalter, geregelter Export genau eines Auftrags, sofortiger Stopp ohne Teiltext, erhaltene Folgequeue/Originale und wirkungsloser Abbruch. Finaler kombinierter Gesamtlauf: **280 Fälle, 268 bestanden/zwölf Skips in 153,465 s**; aktueller Windows-CI-Check erfolgreich. Lokales Zwei-Dateien-Update samt normalem EXE-Neustart und erneuter nativer Prüfung erhält Player, SMB-Fix, Downloadfortschritt und bisherige Pause; kein Release. Funktionscode bis nativer Mac-Gegenprüfung im PR, auf `main` nur Dokumentation. [Bedienung, endgültige Prüfnachweise, lokales Update und Mac-Aufgabe](UEBERWACHUNG_UND_STOPP.md).
+
 ## Modell-Downloads mit echten Bytewerten und Serverprüfung, 23.11.2026
 
 Geprüfter Funktionscode **`79d42538022573fc32d6927115c99ebf3c4dc9c3`**, Branch `fix/model-download-progress`, [PR #25](https://github.com/adriantagonist87/VoxDrop/pull/25): Größe, Datei-/Gesamtfortschritt, aktuelle Transferrate, Cache-/Prüfphasen und separate Prüfung der tatsächlich gewählten API-/CDN-Dateipfade. Vorher blockierte der Controller bis zum Prozessende und QML zeigte nur einen unbestimmten Balken. Unbekannte Größen bleiben ausdrücklich unbekannt; Cache und Resume zählen nicht als neuer Netzwerktransfer.
