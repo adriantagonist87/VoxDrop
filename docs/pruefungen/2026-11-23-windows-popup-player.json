@@ -1,0 +1,240 @@
+{
+  "date": "2026-11-23",
+  "code_commit": "6f0bb63d1afd843d5bacb9f1ef63026d23adca49",
+  "branch": "feat/popup-audio-player",
+  "pull_request": "https://github.com/adriantagonist87/VoxDrop/pull/29",
+  "source_base": "e74a65a04353d9ae876be9916c717cc6eaba35d9",
+  "player_prerequisite": {
+    "original": "6278335acb6589a97b4973c26cf0e931fb5ac369",
+    "cherry_pick": "3f28818aef8d13c1b3be44d72a241c1c59028a90"
+  },
+  "environment": {
+    "os": "Windows-11-10.0.26200-SP0",
+    "python": "3.12.13",
+    "qt": "6.10.2"
+  },
+  "focused_suite": {
+    "tests": 44,
+    "passed": 43,
+    "skipped": 1,
+    "seconds": 16.743
+  },
+  "final_combined_suite": {
+    "tests": 286,
+    "passed": 274,
+    "skipped": 12,
+    "seconds": 167.67
+  },
+  "preserved_local_fixes": [
+    "f43e27fdf74dda4b1a492513cc548b9f7a4a54f1",
+    "79d42538022573fc32d6927115c99ebf3c4dc9c3",
+    "5405d8e365171e6cecbc636c586fba866b0a7f87"
+  ],
+  "final_native_qml": [
+    {
+      "passed": true,
+      "scale": "1",
+      "qt_platform": "windows",
+      "minimum_window": [
+        1010,
+        630
+      ],
+      "installed_program_files": false,
+      "inline_player_absent": true,
+      "real_media": [
+        "wav",
+        "flv",
+        "opus"
+      ],
+      "normal_rate_ratio": 1.036,
+      "double_rate_ratio": 1.978,
+      "pitch_compensation_enabled": true,
+      "actual_rate_changes": true,
+      "native_mouse_seek": true,
+      "volume_and_mute": true,
+      "outside_click_closes_only_player": true,
+      "escape_closes_only_player": true,
+      "reopen": true,
+      "selected_detail_change_closes": true,
+      "file_handle_released": true,
+      "no_inference": true,
+      "theme": "dark_app",
+      "slim_non_circular_grips": true,
+      "large_slider_hit_areas": true,
+      "seek_only_after_drag_release": true
+    },
+    {
+      "passed": true,
+      "scale": "1.25",
+      "qt_platform": "windows",
+      "minimum_window": [
+        1010,
+        630
+      ],
+      "installed_program_files": false,
+      "inline_player_absent": true,
+      "real_media": [
+        "wav",
+        "flv",
+        "opus"
+      ],
+      "normal_rate_ratio": 1.036,
+      "double_rate_ratio": 1.978,
+      "pitch_compensation_enabled": true,
+      "actual_rate_changes": true,
+      "native_mouse_seek": true,
+      "volume_and_mute": true,
+      "outside_click_closes_only_player": true,
+      "escape_closes_only_player": true,
+      "reopen": true,
+      "selected_detail_change_closes": true,
+      "file_handle_released": true,
+      "no_inference": true,
+      "theme": "dark_app",
+      "slim_non_circular_grips": true,
+      "large_slider_hit_areas": true,
+      "seek_only_after_drag_release": true
+    },
+    {
+      "passed": true,
+      "scale": "1.5",
+      "qt_platform": "windows",
+      "minimum_window": [
+        1010,
+        630
+      ],
+      "installed_program_files": false,
+      "inline_player_absent": true,
+      "real_media": [
+        "wav",
+        "flv",
+        "opus"
+      ],
+      "normal_rate_ratio": 1.036,
+      "double_rate_ratio": 2.069,
+      "pitch_compensation_enabled": true,
+      "actual_rate_changes": true,
+      "native_mouse_seek": true,
+      "volume_and_mute": true,
+      "outside_click_closes_only_player": true,
+      "escape_closes_only_player": true,
+      "reopen": true,
+      "selected_detail_change_closes": true,
+      "file_handle_released": true,
+      "no_inference": true,
+      "theme": "dark_app",
+      "slim_non_circular_grips": true,
+      "large_slider_hit_areas": true,
+      "seek_only_after_drag_release": true
+    }
+  ],
+  "installed_native_qml": {
+    "passed": true,
+    "scale": "1",
+    "qt_platform": "windows",
+    "minimum_window": [
+      1010,
+      630
+    ],
+    "installed_program_files": true,
+    "inline_player_absent": true,
+    "real_media": [
+      "wav",
+      "flv",
+      "opus"
+    ],
+    "normal_rate_ratio": 1.036,
+    "double_rate_ratio": 1.978,
+    "pitch_compensation_enabled": true,
+    "actual_rate_changes": true,
+    "native_mouse_seek": true,
+    "volume_and_mute": true,
+    "outside_click_closes_only_player": true,
+    "escape_closes_only_player": true,
+    "reopen": true,
+    "selected_detail_change_closes": true,
+    "file_handle_released": true,
+    "no_inference": true,
+    "theme": "dark_app",
+    "slim_non_circular_grips": true,
+    "large_slider_hit_areas": true,
+    "seek_only_after_drag_release": true
+  },
+  "initial_popup_install": {
+    "passed": true,
+    "code_commit": "afa5167047cbecff84ebcc539f7d5b090925e2fa",
+    "base_package_code": "6278335acb6589a97b4973c26cf0e931fb5ac369",
+    "changed_files": 4,
+    "unchanged_previous_program_files": 97,
+    "manual_drop_download_and_watch_stop_fixes_preserved": true,
+    "private_profile_backed_up": true,
+    "queue_jobs_configuration_layout_preserved": true,
+    "models_and_runtime_preserved": true,
+    "previous_queue_pause_preserved": true,
+    "gui_was_running": true,
+    "public_release_created": false,
+    "overlay_files": [
+      {
+        "path": "Desktop/audio_preview.py",
+        "sha256": "e288800b458c1b5a5e01e01919df2c2dc517d15c56ed70906156e06b9e50f3dc"
+      },
+      {
+        "path": "Desktop/controller.py",
+        "sha256": "7dcda1cb623756fc124545955366f5f1be208f15e817aec4de34eb00835a6c64"
+      },
+      {
+        "path": "Desktop/qml/Main.qml",
+        "sha256": "fce6a2607a5a06a98699827efba7b88e915701512128bcddd665d9082f90d9d1"
+      },
+      {
+        "path": "Desktop/qml/AudioPreview.qml",
+        "sha256": "a3ab2e120e222bec719c89257163fb5003f551288780bf45fb3c61f1e949055a"
+      }
+    ]
+  },
+  "local_install": {
+    "passed": true,
+    "code_commit": "6f0bb63d1afd843d5bacb9f1ef63026d23adca49",
+    "base_package_code": "6278335acb6589a97b4973c26cf0e931fb5ac369",
+    "changed_files": 2,
+    "unchanged_previous_program_files": 99,
+    "manual_drop_download_and_watch_stop_fixes_preserved": true,
+    "private_profile_backed_up": true,
+    "queue_jobs_configuration_layout_preserved": true,
+    "models_and_runtime_preserved": true,
+    "previous_queue_pause_preserved": true,
+    "gui_was_running": true,
+    "public_release_created": false,
+    "overlay_files": [
+      {
+        "path": "Desktop/qml/Main.qml",
+        "sha256": "06c60538ec97237cd3711b7eb3fa3992eb063479ab507a4681b04f84a55a21a2"
+      },
+      {
+        "path": "Desktop/qml/AudioPreview.qml",
+        "sha256": "1b50b1bd8562f80b8a6c0e4c88d3144985948c3d2c1f0ae44fa6212392cf156d"
+      }
+    ]
+  },
+  "normal_exe": {
+    "passed": true,
+    "normal_exe_gui_registered": true,
+    "installed_qml_matches_tested_stage": true,
+    "previous_queue_pause_preserved": true,
+    "no_production_job_started": true
+  },
+  "public_release_created": false,
+  "macos_native": "UNGEPRÜFT",
+  "windows_ci": {
+    "status": "success",
+    "run_id": 45165205452,
+    "url": "https://github.com/adriantagonist87/VoxDrop/actions/runs/45165205452"
+  },
+  "boundaries": [
+    "Pitch compensation verified as supported/enabled by the actual Qt backend; playback position speed measured.",
+    "Muted playback; no acoustic/spectral endpoint measurement or capture of unrelated system audio.",
+    "Native QML/real file-probe CLI and real WAV/FLV/OPUS; no inference/models started.",
+    "Qt scale factors, not a change or certification of physical OS DPI settings.",
+    "No new physical reboot/autostart, clean uninstall/reinstall or multi-week soak certification."
+  ]
+}

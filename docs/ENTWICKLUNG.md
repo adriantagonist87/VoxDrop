@@ -1,5 +1,9 @@
 # Entwicklung auf macOS und Windows
 
+## Popup-Player mit Qt-Tonhöhenkorrektur
+
+Windows-geprüfter Code `6f0bb63d1afd843d5bacb9f1ef63026d23adca49`, [PR #29](https://github.com/adriantagonist87/VoxDrop/pull/29), enthält die bestehende Playerbasis aus #20 als Voraussetzung und ersetzt ihre eingebettete Bedienung durch ein eigenes Popup. Öffnen/Schließen über Controllersignale, separate Generation für ausstehende Play-Prüfungen, `QMediaPlayer.setPlaybackRate` mit ausdrücklich eingeschalteter `pitchCompensation`. Keine zusätzliche Abhängigkeit gegenüber dem Playerstand, vorhandene Qt-Addons weiter nötig. Kein Modell-/Runtime-/DB-Wechsel. [Architektur, Tests, lokaler kombinierter Stand und konkrete Mac-Übernahme](AUDIOPLAYER_POPUP.md). Kein Release.
+
 ## Überwachung im Header und explizite Stoppauswahl
 
 Windows-geprüfter Funktionscode `5405d8e365171e6cecbc636c586fba866b0a7f87`, [PR #27](https://github.com/adriantagonist87/VoxDrop/pull/27): `Main.qml` ergänzt den unmittelbar an den gespeicherten Überwachungszustand gebundenen Switch und den Stoppdialog; `PlaybackButton.qml` meldet dafür `stopRequested`. Starten, `setMonitoring`, `stopProcessing` und `pauseQueue(true)` nutzen die bestehenden Controller-/CLI-/SQLite-Pfade. Neue/angepasste Qt-Regressionen und Dialogaufnahme im 8.000-/20.000-Workspace-Test. Keine neue Datei im App-Paket, keine Abhängigkeit oder DB-Änderung. [Bedienung, native Prüfungen, kombinierter lokaler Stand und Mac-Gegenprüfung](UEBERWACHUNG_UND_STOPP.md). Kein Release.
