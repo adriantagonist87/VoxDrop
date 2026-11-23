@@ -4,7 +4,7 @@ Der Windows-Prüfstand 1.5.1 ergänzt den lokalen Audioplayer. Implementierung: 
 
 ## Bedienung
 
-Im Verlauf einen Vorgang öffnen und **Originaldatei abspielen** wählen. Der Player spielt nur die Tonspur und bietet **Play/Pause**, einen verschiebbaren **Zeitbalken**, aktuelle Position/Gesamtdauer und **Lautstärke**. Lange Aufnahmen zeigen auch Stunden. Die Lautstärke wird als App-Einstellung gespeichert. Details öffnen startet keine Wiedergabe; Schließen oder Wechseln der Details sowie App-Beenden gibt die Medienquelle frei.
+Im Verlauf einen Vorgang öffnen und **Originaldatei abspielen** wählen. Seit dem [neuen Popupstand vom 23.11.2026](AUDIOPLAYER_POPUP.md) bleibt der Player zunächst verborgen und öffnet sich erst über diesen Button als kompakte waagerechte Leiste. Er bietet **Play/Pause**, einen verschiebbaren **Zeitbalken**, aktuelle Position/Gesamtdauer, **Geschwindigkeit mit Tonhöhenkorrektur** und **Lautstärke/Stumm**. Außenklick oder Escape schließt nur den Player und gibt die Quelle frei; die Details bleiben offen. Lange Aufnahmen zeigen auch Stunden. Die Lautstärke wird als App-Einstellung gespeichert. Details öffnen startet keine Wiedergabe; Schließen oder Wechseln der Details sowie App-Beenden gibt die Medienquelle frei. Die folgenden 1.5.1-Prüfungen beschreiben die ursprüngliche Playerbasis; der neue Popup-Prüfstand steht separat im verlinkten Dokument.
 
 Für jeden Verlaufseintrag bleiben sechs Aktionen sichtbar:
 
