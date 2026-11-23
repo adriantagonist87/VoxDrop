@@ -1,0 +1,153 @@
+from contextlib import closing
+import hashlib
+import json
+from pathlib import Path
+import tempfile
+from threading import Event
+import unittest
+from unittest.mock import patch
+
+import record_delete as deletion
+import watch_service as service
+from desktop.transcript_search import search_transcripts
+
+
+class RecordDeleteTests(unittest.TestCase):
+    def setUp(self):
+        temporary=tempfile.TemporaryDirectory();self.addCleanup(temporary.cleanup)
+        self.root=Path(temporary.name).resolve();self.state=self.root/'service';self.bin=self.root/'fake-bin';self.bin.mkdir()
+        service.initialise(self.state);self.db=service.database(self.state);self.addCleanup(self.db.close)
+        self.settings=dict(watch_path=str(self.root),monitoring=True,include_subfolders=True)
+        self.calls=[]
+
+    def add(self,name='Original Ä.wav',*,origin=None,state='done',data=b'synthetic media'):
+        path=self.root/name;path.write_bytes(data);meta=path.stat()
+        with self.db:
+            identifier=self.db.execute('INSERT INTO jobs(source,completed_dir,size,mtime_ns,settings,detected,updated,state,origin_job_id,media_hash) VALUES (?,?,?,?,?,1,1,?,?,?)',
+                (str(path),str(self.root),meta.st_size,meta.st_mtime_ns,json.dumps(self.settings),state,origin,hashlib.sha256(data).hexdigest())).lastrowid
+        text=deletion.text_path(dict(self.db.execute('SELECT * FROM jobs WHERE id=?',(identifier,)).fetchone()))
+        text.write_text('Künstlicher Suchinhalt '+name,encoding='utf-8')
+        return identifier,path,text
+
+    def trash(self,path):
+        self.calls.append(path)
+        destination=self.bin/(str(len(self.calls))+'-'+path.name)
+        path.rename(destination)
+        return str(destination)
+
+    def test_confirmation_is_read_only_and_cancel_discards_only_the_plan(self):
+        identifier,source,text=self.add();plan=deletion.prepare(self.db,self.state,identifier)
+        self.assertTrue(source.exists() and text.exists());self.assertEqual(plan['recordCount'],1)
+        self.assertEqual(len(plan['files']),2)
+        deletion.discard(self.state,plan['token'])
+        self.assertTrue(source.exists() and text.exists())
+        self.assertEqual(self.db.execute('SELECT count(*) FROM jobs').fetchone()[0],1)
+
+    def test_trash_then_remove_all_selected_sql_and_search_records_only(self):
+        identifier,source,text=self.add();other,untouched,other_text=self.add('Andere.wav',data=b'other')
+        service.remember_result(self.db,other,'reused',other_text,prior_job_id=identifier);self.db.commit()
+        result=search_transcripts(self.state/'jobs.sqlite3',self.state/'transcript-search.sqlite3',self.state/'content-search-result.json',
+            'Suchinhalt',lambda job:deletion.text_path(job),Event())
+        self.assertEqual(result['matches'],2)
+        cache=self.state/'jobs'/str(identifier);cache.mkdir(parents=True);(cache/'transcript.txt').write_text('local cache')
+        before_pause=service.queue_paused(self.db)
+        plan=deletion.prepare(self.db,self.state,identifier)
+        deleted=deletion.execute(self.db,self.state,plan['token'],trash=self.trash)
+        self.assertEqual(deleted['deletedIds'],[identifier]);self.assertEqual(deleted['trashed'],3)
+        self.assertFalse(source.exists() or text.exists() or cache.exists())
+        self.assertTrue(untouched.exists() and other_text.exists())
+        self.assertEqual(self.db.execute('SELECT prior_job_id FROM known_results WHERE job_id=?',(other,)).fetchone()[0],None)
+        self.assertEqual(self.db.execute('SELECT count(*) FROM events WHERE job_id=?',(identifier,)).fetchone()[0],0)
+        self.assertFalse(self.db.execute('PRAGMA foreign_key_check').fetchall())
+        self.assertEqual(service.queue_paused(self.db),before_pause)
+        with closing(__import__('sqlite3').connect(self.state/'transcript-search.sqlite3')) as index:
+            self.assertEqual(index.execute('SELECT job_id FROM job_files').fetchall(),[(other,)])
+
+    def test_shared_transcript_and_retranscriptions_are_listed_and_deleted_together(self):
+        root,source,text=self.add()
+        child,_,child_text=self.add(origin=root)
+        alternate,alt,_=self.add('Original Ä.flv')
+        plan=deletion.prepare(self.db,self.state,child)
+        self.assertEqual(plan['recordCount'],3)
+        self.assertEqual(len([file for file in plan['files'] if file['role']=='original']),2)
+        deletion.execute(self.db,self.state,plan['token'],trash=self.trash)
+        self.assertEqual(self.db.execute('SELECT count(*) FROM jobs').fetchone()[0],0)
+        self.assertFalse(any(path.exists() for path in (source,text,child_text,alt)))
+
+    def test_network_paths_are_refused_before_any_mutation(self):
+        identifier,source,text=self.add()
+        with patch.object(deletion,'on_network_volume',return_value=True):
+            with self.assertRaisesRegex(ValueError,'Netzlaufwerken'):deletion.prepare(self.db,self.state,identifier)
+        self.assertTrue(source.exists() and text.exists())
+
+    def test_changed_media_or_confirmation_snapshot_is_never_deleted(self):
+        identifier,source,text=self.add();plan=deletion.prepare(self.db,self.state,identifier)
+        source.write_bytes(b'replacement recording')
+        with self.assertRaisesRegex(ValueError,'geändert'):deletion.execute(self.db,self.state,plan['token'],trash=self.trash)
+        self.assertEqual(self.calls,[])
+        with self.assertRaisesRegex(ValueError,'andere oder geänderte'):deletion.prepare(self.db,self.state,identifier)
+        self.assertTrue(source.exists() and text.exists())
+
+    def test_partial_trash_failure_keeps_sql_and_resumes_without_retrashing(self):
+        identifier,source,text=self.add();plan=deletion.prepare(self.db,self.state,identifier)
+        def fail_second(path):
+            if path==text:raise OSError('synthetic trash failure')
+            return self.trash(path)
+        with self.assertRaisesRegex(RuntimeError,'Datenbankeinträge bleiben'):
+            deletion.execute(self.db,self.state,plan['token'],trash=fail_second)
+        self.assertEqual(self.db.execute('SELECT count(*) FROM jobs').fetchone()[0],1)
+        self.assertFalse(source.exists());self.assertTrue(text.exists())
+        again=deletion.prepare(self.db,self.state,identifier)
+        self.assertTrue(again['partial']);self.assertEqual(again['token'],plan['token'])
+        deletion.execute(self.db,self.state,again['token'],trash=self.trash)
+        self.assertEqual(self.calls.count(source),1)
+        self.assertFalse(self.db.execute('SELECT 1 FROM jobs').fetchone())
+
+    def test_active_related_job_blocks_the_entire_batch(self):
+        identifier,source,text=self.add();self.add(origin=identifier,state='transcribing')
+        with self.assertRaisesRegex(ValueError,'Verarbeitung'):deletion.prepare(self.db,self.state,identifier)
+        self.assertTrue(source.exists() and text.exists())
+
+    def test_changed_sql_snapshot_requires_a_new_confirmation(self):
+        identifier,source,text=self.add();plan=deletion.prepare(self.db,self.state,identifier)
+        with self.db:self.db.execute('UPDATE jobs SET attempt=attempt+1 WHERE id=?',(identifier,))
+        with self.assertRaisesRegex(ValueError,'Datensatz hat sich geändert'):
+            deletion.execute(self.db,self.state,plan['token'],trash=self.trash)
+        self.assertEqual(self.calls,[]);self.assertTrue(source.exists() and text.exists())
+
+    def test_native_trash_failure_never_falls_back_to_permanent_deletion(self):
+        from PySide6 import QtCore
+        identifier,source,text=self.add();plan=deletion.prepare(self.db,self.state,identifier)
+        with patch.object(QtCore,'QFile') as native:
+            native.supportsMoveToTrash.return_value=True
+            native.return_value.moveToTrash.return_value=False
+            native.return_value.errorString.return_value='synthetic unsupported trash'
+            with self.assertRaisesRegex(OSError,'Nicht in den Papierkorb'):
+                deletion.execute(self.db,self.state,plan['token'])
+        self.assertTrue(source.exists() and text.exists())
+        self.assertEqual(self.db.execute('SELECT count(*) FROM jobs').fetchone()[0],1)
+
+    def test_missing_files_can_be_cleaned_from_history(self):
+        identifier,source,text=self.add();source.unlink();text.unlink()
+        plan=deletion.prepare(self.db,self.state,identifier)
+        result=deletion.execute(self.db,self.state,plan['token'],trash=self.trash)
+        self.assertEqual(result['trashed'],0);self.assertEqual(self.calls,[])
+
+    def test_replaced_file_at_old_source_is_protected_when_archive_is_valid(self):
+        identifier,source,text=self.add();archive=self.root/'archive';archive.mkdir()
+        archived=archive/source.name;source.rename(archived)
+        source.write_bytes(b'new unrelated media')
+        with self.db:self.db.execute('UPDATE jobs SET completed_dir=?,settings=? WHERE id=?',
+            (str(archive),json.dumps(dict(watch_path=str(self.root),move_media=True)),identifier))
+        plan=deletion.prepare(self.db,self.state,identifier)
+        self.assertTrue(any(file['protected'] for file in plan['files']))
+        deletion.execute(self.db,self.state,plan['token'],trash=self.trash)
+        self.assertEqual(source.read_bytes(),b'new unrelated media');self.assertFalse(archived.exists())
+
+    def test_symlink_cannot_turn_deletion_into_another_file(self):
+        identifier,source,text=self.add();victim=self.root/'unrelated.txt';victim.write_text('keep')
+        text.unlink()
+        try:text.symlink_to(victim)
+        except OSError:self.skipTest('Symlink creation unavailable')
+        with self.assertRaisesRegex(ValueError,'reguläre'):deletion.prepare(self.db,self.state,identifier)
+        self.assertEqual(victim.read_text(),'keep')

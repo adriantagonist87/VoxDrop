@@ -3,7 +3,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from PySide6.QtCore import QCoreApplication, QEvent, QObject, Qt, QUrl, QPoint, QPointF, QMetaObject
 from PySide6.QtQml import QQmlApplicationEngine
@@ -274,6 +274,159 @@ class DesktopWindowTests(unittest.TestCase):
             rows={row['label']:row['value'] for row in self.controller.detail['rows']}
             self.assertEqual(rows['Modell verwendet'],'Siehe Ursprungsauftrag')
 
+    def test_failed_details_keep_all_six_file_actions_visible(self):
+        from desktop.detail_files import locate_files
+        job = self.queue_fixture(1)[0]
+        job.update(state='failed', error='Die Stille-Erkennung hat keine Sprache gefunden.')
+        source = Path(job['source'])
+        source.write_bytes(b'synthetic original')
+        actions = ('revealOriginalButton', 'playOriginalButton', 'revealTranscriptButton',
+                   'openTranscriptButton', 'retranscribeButton', 'closeJobDialog')
+        callbacks = []
+        with patch.object(self.controller, 'submit', side_effect=lambda operation, callback: callbacks.append((operation, callback))):
+            self.controller.showDetails(job['id'])
+        callbacks.pop()[1](locate_files(job), None)
+        QTest.qWait(80)
+        for name in actions:
+            self.assertTrue(self.visual(name).property('visible'), name)
+        self.assertTrue(self.visual('playOriginalButton').property('enabled'))
+        self.assertTrue(self.visual('revealOriginalButton').property('enabled'))
+        self.assertFalse(self.visual('openTranscriptButton').property('enabled'))
+        self.assertFalse(self.visual('revealTranscriptButton').property('enabled'))
+        self.assertIsNone(self.controller.audio_preview._player)
+        self.assertFalse(self.window.findChild(QObject,'audioPreviewPopup').property('visible'))
+        source.with_suffix('.txt').write_text('protected existing result')
+        with patch.object(self.controller, 'submit', side_effect=lambda operation, callback: callbacks.append((operation, callback))):
+            self.controller.showDetails(job['id'])
+        callbacks.pop()[1](locate_files(job), None)
+        QTest.qWait(40)
+        self.assertTrue(self.visual('openTranscriptButton').property('enabled'))
+        self.assertTrue(self.visual('revealTranscriptButton').property('enabled'))
+
+    def test_original_playback_and_reveal_do_not_start_transcription(self):
+        from desktop.detail_files import locate_files
+        job = self.queue_fixture(1)[0]
+        job['state'] = 'failed'
+        Path(job['source']).write_bytes(b'media')
+        self.controller.selected = job
+        def immediate(operation, callback):
+            try:
+                result = operation()
+            except Exception as error:
+                callback(None, str(error))
+            else:
+                callback(result, None)
+        with patch.object(self.controller_module, 'probe_detail_files', return_value=locate_files(job)), \
+             patch.object(self.controller, 'submit', side_effect=immediate), \
+             patch.object(self.controller_module, 'command') as command, \
+             patch.object(self.controller.audio_preview, 'play_file') as played, \
+             patch.object(self.controller_module, 'reveal_in_explorer') as reveal, \
+             patch.object(self.controller_module.sys, 'platform', 'win32'):
+            self.controller.playOriginal()
+            played.assert_called_once_with(job['source'])
+            self.controller.revealOriginal()
+            reveal.assert_called_once_with(Path(job['source']))
+            command.assert_not_called()
+
+    def test_late_file_probe_cannot_reopen_a_closed_detail_player(self):
+        job = self.queue_fixture(1)[0]
+        callbacks = []
+        with patch.object(self.controller, 'submit', side_effect=lambda operation, callback: callbacks.append(callback)):
+            self.controller.showDetails(job['id'])
+            self.controller.playOriginal()
+        self.controller.closeDetails()
+        with patch.object(self.controller.audio_preview, 'play_file') as played:
+            for callback in callbacks:
+                callback(dict(original=job['source'], originalAvailable=True), None)
+            played.assert_not_called()
+        self.assertEqual(self.controller.detail_files, {})
+
+    def test_player_popup_outside_close_keeps_details_and_ignores_late_play_reply(self):
+        job=self.queue_fixture(1)[0]
+        files=dict(original=job['source'],originalAvailable=True,transcriptAvailable=False)
+        callbacks=[]
+        with patch.object(self.controller,'submit',side_effect=lambda operation,callback:callbacks.append(callback)):
+            self.controller.showDetails(job['id'])
+            callbacks.pop()(files,None)
+            self.controller.playOriginal()
+        popup=self.window.findChild(QObject,'audioPreviewPopup')
+        QTest.qWait(30);self.assertTrue(popup.property('visible'))
+        QTest.mouseClick(self.window,Qt.MouseButton.LeftButton,Qt.KeyboardModifier.NoModifier,QPoint(4,4))
+        QTest.qWait(40)
+        self.assertFalse(popup.property('visible'))
+        self.assertTrue(self.window.findChild(QObject,'jobDialog').property('visible'))
+        with patch.object(self.controller.audio_preview,'play_file') as played:
+            callbacks.pop()(files,None)
+            played.assert_not_called()
+            with patch.object(self.controller,'submit',side_effect=lambda operation,callback:callback(files,None)):
+                self.controller.playOriginal()
+            self.assertTrue(popup.property('visible'))
+            played.assert_called_once_with(job['source'])
+        self.controller.closeDetails()
+        self.assertFalse(popup.property('visible'))
+
+    def test_player_popup_escape_closes_without_closing_details(self):
+        job=self.queue_fixture(1)[0]
+        with patch.object(self.controller,'submit'):
+            self.controller.showDetails(job['id'])
+            self.controller.playOriginal()
+        popup=self.window.findChild(QObject,'audioPreviewPopup')
+        QTest.qWait(30)
+        QTest.keyClick(self.window,Qt.Key.Key_Escape);QTest.qWait(30)
+        self.assertFalse(popup.property('visible'))
+        self.assertTrue(self.window.findChild(QObject,'jobDialog').property('visible'))
+        self.assertFalse(self.controller.audio_requested)
+
+    def test_player_sliders_also_apply_accessibility_value_changes(self):
+        self.queue_fixture(1)
+        with patch.object(self.controller, 'submit'):
+            self.controller.showDetails(1)
+        preview = self.controller.audio_preview
+        backend = Mock()
+        backend.duration.return_value = 12_000
+        backend.position.return_value = 7000
+        backend.isPlaying.return_value = False
+        backend.isSeekable.return_value = True
+        preview._player = backend
+        preview._path = 'synthetic.wav'
+        self.controller.audioPreviewOpened.emit()
+        preview.changed.emit()
+        QTest.qWait(30)
+        self.visual('previewSeekSlider').setProperty('value', 3500)
+        QTest.qWait(30)
+        backend.setPosition.assert_called_with(3500)
+        self.visual('previewVolumeSlider').setProperty('value', 30)
+        QTest.qWait(30)
+        self.assertEqual(preview.state['volume'], 30)
+        self.controller.closeDetails()
+        self.assertFalse(preview.state['available'])
+
+    def test_player_scrubbing_previews_position_and_seeks_only_on_release(self):
+        self.queue_fixture(1)
+        with patch.object(self.controller,'submit'):
+            self.controller.showDetails(1)
+        preview=self.controller.audio_preview
+        backend=Mock(duration=Mock(return_value=12_000),position=Mock(return_value=7000),
+            isPlaying=Mock(return_value=False),isSeekable=Mock(return_value=True))
+        preview._player=backend;preview._path='synthetic.wav'
+        self.controller.audioPreviewOpened.emit();preview.changed.emit();QTest.qWait(40)
+        slider=self.visual('previewSeekSlider')
+        start=slider.mapToScene(QPointF(slider.width()*.3,slider.height()/2)).toPoint()
+        end=slider.mapToScene(QPointF(slider.width()*.7,slider.height()/2)).toPoint()
+        backend.setPosition.reset_mock()
+        QTest.mousePress(self.window,Qt.MouseButton.LeftButton,Qt.KeyboardModifier.NoModifier,start)
+        QTest.mouseMove(self.window,end,40)
+        before=slider.property('value')
+        self.assertTrue(slider.property('scrubbing'))
+        backend.position.return_value=8000;preview.changed.emit();QTest.qWait(30)
+        self.assertAlmostEqual(slider.property('value'),before)
+        backend.setPosition.assert_not_called()
+        QTest.mouseRelease(self.window,Qt.MouseButton.LeftButton,Qt.KeyboardModifier.NoModifier,end)
+        QTest.qWait(30)
+        backend.setPosition.assert_called_once()
+        self.assertAlmostEqual(backend.setPosition.call_args.args[0],before,delta=10)
+        self.assertFalse(slider.property('scrubbing'))
+
     def test_reveal_uses_known_transcript_path_and_reports_shell_failure(self):
         job = self.queue_fixture(1)[0]
         transcript = self.controller_module.PROFILE / 'Bestands TXT, Prüfung + Test.txt'
@@ -535,6 +688,69 @@ class DesktopWindowTests(unittest.TestCase):
             callbacks[0](dict(jobs=jobs,queue=[],history_counts=dict(all=1,done=1,errors=0)),None)
         self.assertFalse(self.controller.history)
         self.assertFalse(self.controller.queue)
+
+    def delete_fixture(self):
+        jobs=self.queue_fixture(3)
+        for job in jobs:job.update(state='done',attempt=1,finished=101)
+        self.controller.snapshot.update(jobs=jobs,queue=[],queue_paused=True)
+        self.controller.update_history();self.controller.update_queue()
+        self.controller.showDetails(1);QTest.qWait(30)
+        return dict(token='a'*32,name=Path(jobs[0]['source']).name,recordCount=2,
+            files=[dict(path=jobs[0]['source'],role='original')])
+
+    def test_record_delete_popup_is_explicit_red_green_and_cancel_preserves_history(self):
+        plan=self.delete_fixture()
+        def command(*args):return json.dumps(plan) if args[0]=='prepare-delete-record' else '{}'
+        with patch.object(self.controller_module,'command',side_effect=command) as sent, \
+             patch.object(self.controller,'submit',side_effect=lambda operation,finished:finished(operation(),None)):
+            button=self.visual('deleteRecordButton')
+            self.assertTrue(button.property('visible'));self.assertTrue(button.property('enabled'))
+            self.assertEqual(button.property('background').property('color').name(),'#b5303a')
+            QMetaObject.invokeMethod(button,'clicked');QTest.qWait(30)
+            popup=self.window.findChild(QObject,'deleteRecordDialog')
+            self.assertTrue(popup.property('visible'))
+            confirm=popup.findChild(QObject,'confirmDeleteRecordButton');cancel=popup.findChild(QObject,'cancelDeleteRecordButton')
+            self.assertTrue(confirm.property('enabled'))
+            self.assertEqual(confirm.property('background').property('color').name(),'#b5303a')
+            self.assertEqual(cancel.property('background').property('color').name(),'#8ac6a5')
+            self.assertEqual([call.args[0] for call in sent.call_args_list],['prepare-delete-record'])
+            QMetaObject.invokeMethod(cancel,'clicked');QTest.qWait(30)
+            self.assertFalse(popup.property('visible'))
+            self.assertEqual([call.args[0] for call in sent.call_args_list],['prepare-delete-record','discard-delete-record'])
+        self.assertEqual(len(self.controller.history),3)
+        self.assertTrue(self.controller.snapshot['queue_paused'])
+        self.assertEqual(self.controller.selected['id'],1)
+
+    def test_record_delete_cancelled_probe_cannot_restore_confirmation(self):
+        plan=self.delete_fixture();pending=[]
+        with patch.object(self.controller,'submit',side_effect=lambda operation,finished:pending.append((operation,finished))):
+            self.controller.requestRecordDeletion();self.controller.cancelRecordDeletion()
+            pending[0][1](plan,None)
+            self.assertFalse(self.controller.delete_plan)
+            self.assertFalse(self.controller.busy)
+            self.assertFalse(self.window.findChild(QObject,'deleteRecordDialog').property('visible'))
+            self.assertEqual(len(pending),2)
+
+    def test_record_delete_failure_keeps_details_then_success_removes_only_selected_ids(self):
+        plan=self.delete_fixture()
+        self.controller.delete_plan=plan;self.controller.recordDeletionOpened.emit()
+        pending=[]
+        with patch.object(self.controller,'submit',side_effect=lambda operation,finished:pending.append((operation,finished))):
+            self.controller.confirmRecordDeletion()
+            self.assertTrue(self.controller.deleting_record)
+            self.controller.cancelRecordDeletion();self.assertTrue(self.controller.delete_plan)
+            pending[0][1](None,'Die Datei ist gesperrt.')
+            self.assertEqual(self.controller.selected['id'],1)
+            self.assertEqual(len(self.controller.history),3)
+            self.assertTrue(self.controller.delete_plan)
+            self.assertIn('gesperrt',self.controller.delete_error)
+            self.controller.confirmRecordDeletion()
+            pending[1][1](dict(deletedIds=[1,2],trashed=3),None)
+        self.assertEqual([job['id'] for job in self.controller.history],[3])
+        self.assertIsNone(self.controller.selected)
+        self.assertTrue(self.controller.snapshot['queue_paused'])
+        self.assertFalse(self.controller.busy or self.controller.deleting_record)
+        self.assertFalse(self.window.findChild(QObject,'deleteRecordDialog').property('visible'))
 
     def test_window_x_hides_to_tray_without_stopping_app_or_work(self):
         self.presenter.show();QTest.qWait(30)
