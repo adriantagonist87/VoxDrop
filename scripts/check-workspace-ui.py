@@ -166,7 +166,7 @@ def main():
             dict(source=queue[i]['source'],kind='queued',status='Bereits in der Warteschlange') for i in range(100)])
         api.changed.emit();api.dropConflictOpened.emit();capture('drop-conflicts')
         QMetaObject.invokeMethod(window.findChild(QObject,'dropConflictDialog'),'close')
-        for name in ('aboutDialog','feedbackDialog','confirmClear','confirmImport'):
+        for name in ('aboutDialog','feedbackDialog','confirmClear','confirmImport','stopProcessingDialog'):
             if name=='feedbackDialog':api.notify('Beispiel einer vollständigen Rückmeldung.\n'*100,True)
             dialog=window.findChild(QObject,name)
             assert dialog is not None and QMetaObject.invokeMethod(dialog,'open'),name
