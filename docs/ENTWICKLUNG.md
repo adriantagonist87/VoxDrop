@@ -4,6 +4,12 @@
 
 Nutzerregel vom 23.11.2026: Neue öffentliche GitHub-Releases und neue für Dritte angebotene Builds werden nur auf eine ausdrückliche Release-Anweisung veröffentlicht. Bugfixes werden über Commits, Branches, PRs und lokale Tests entwickelt; ein erfolgreicher Test oder ein lokales Update löst keine Veröffentlichung aus. Weitere beauftragte Fehler werden ohne automatische Releases abgearbeitet. Die bereits veröffentlichte Windows-Vorschau 1.5.1 ist ein bestehender Stand, keine Freigabe für weitere Releases. Die Regel ist auch in `AGENTS.md` verbindlich festgehalten.
 
+## Unabhängige manuelle Drops und Windows-Pfadaliase
+
+In [PR #23](https://github.com/adriantagonist87/VoxDrop/pull/23), geprüfter funktionaler Code `f43e27fdf74dda4b1a492513cc548b9f7a4a54f1`, berücksichtigt `verify_source_directory` den ursprünglichen Quellstamm zusätzlich zu dessen kanonischem Pfad. Nur wenn dieser Stamm strikt zum erwarteten Stamm auflöst, werden seine relativen Unterordner anhand des kanonischen Stamms einzeln geprüft. Die gespeicherte Schreibweise bleibt erhalten; Unterordnerlinks werden nicht durch ein pauschales `parent.resolve()` verdeckt. Benachbarte Neutranskriptionen benutzen denselben Prüfpfad.
+
+Datei- und Ordner-Drops verwenden einen eigenen Quell-/Ausgabesnapshot statt der normalen Überwachungs-/Archivgrenzen. Neue Regressionen sichern moderne und alte Konfigurationen, Überwachung aus, beliebige Quellen, vorhandene Pause und unveränderte Originale. [Reproduktion, SMB-/ASR-Nachweise und Mac-Gegenprüfung](DRAG_DROP_PFADE.md). Keine Abhängigkeits-/Modell-/DB-Änderung, kein Release. Der lokale Windows-Entwicklungsstand kombiniert die vorhandene Player-Basis aus PR #20 mit ausschließlich dieser neuen Engine-Datei; `local-development.json` hält das Overlay fest. Der gemeinsame Fix bleibt bis zur nativen Mac-Prüfung in PR #23.
+
 ## Audioplayer im Windows-Prüfstand 1.5.1
 
 Die gemeinsame Implementierung liegt in [PR #20](https://github.com/adriantagonist87/VoxDrop/pull/20), geprüft unter Windows am Code `6278335acb6589a97b4973c26cf0e931fb5ac369`; bis zur nativen Mac-Gegenprüfung bleibt sie im Feature-PR. `desktop/audio_preview.py` und `AudioPreview.qml` verwenden lazy `QMediaPlayer`/`QAudioOutput` ohne Video-/Hardwaredecoder oder KI-Modelle. Dateiauflösung erfolgt über `detail_files.py` in einem appgebundenen Prozess mit Zeitlimit; vorhandene Dateien zählen unabhängig vom Jobstatus. Detailwechsel, Schließen und Beenden leeren die Medienquelle. [Architektur, Tests, Qt-Stop-Befund und Plattformgrenzen](AUDIOPLAYER.md).

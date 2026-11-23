@@ -1,5 +1,11 @@
 # Projektstatus VoxDrop
 
+## Drag-and-drop von beliebigen Pfaden und SMB-Laufwerken, 23.11.2026
+
+Manueller Datei-Drop vom gemappten SMB-Laufwerk scheiterte vor der Inferenz mit „Ordner liegt außerhalb des überwachten Pfads“. Derselbe Quellstamm erschien einmal mit Laufwerksbuchstaben und einmal als UNC. Korrektur im geprüften Code **`f43e27fdf74dda4b1a492513cc548b9f7a4a54f1`**, [Branch](https://github.com/adriantagonist87/VoxDrop/tree/fix/manual-drop-paths), [PR #23](https://github.com/adriantagonist87/VoxDrop/pull/23): Aliasgleichheit sicher prüfen, Auftragspfade und Unterordnerschutz erhalten. Einzelne Dateien sowie Ordner dürfen von überall kommen; TXT immer neben Original, unabhängig von normalen Überwachungs-/Archivoptionen.
+
+243 Regressionen: 231 bestanden/zwölf Skips in 143,062 s. Sieben neue Pfad-/Drop-Regressionen, echte SMB-Dateifälle mit Retry und geschützter Neutranskription sowie eine echte Whisper-CPU-Transkription vom Netzlaufwerk bestanden. Lokal nur die Engine-Datei aktualisiert, vorhandenen Audioplayer und übrige 97 Programmdateien erhalten; Profil/Queue/Modelle gesichert bzw. unverändert. EXE-Neustart und installierte SMB-Engine geprüft, vorhandene Queuepause erhalten. **Kein neuer Release.** Gemeinsamer Fix bis nativer Mac-Gegenprüfung im PR; `main` enthält diese Übergabe. [Ursache, Tests, lokales Overlay und Mac-Aufgabe](DRAG_DROP_PFADE.md).
+
 ## Windows-Audioplayer und Dateiaktionen, 23.11.2026
 
 Windows-Prüfstand **1.5.1**, funktionaler Code **`6278335acb6589a97b4973c26cf0e931fb5ac369`**: lokaler Audioplayer mit Play/Pause, Zeitbalken und Lautstärke in der Detailansicht. Original und TXT sind unabhängig vom Auftragsstatus erreichbar; alle sechs beauftragten Aktionen bleiben sichtbar, fehlende Dateien deaktivieren ihre Aktionen mit Erklärung. Auch Fehler ohne erkannte Sprache lassen sich direkt anhören. [Bedienung, Fehlerbefunde, genaue Prüfungen und Mac-Aufgabe](AUDIOPLAYER.md).

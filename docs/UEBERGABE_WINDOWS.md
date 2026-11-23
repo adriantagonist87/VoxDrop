@@ -1,5 +1,11 @@
 # Übergabeauftrag für Codex auf dem Windows-PC
 
+## Manueller Datei-/Ordner-Drop auf SMB, 23.11.2026
+
+Fehler „Ordner liegt außerhalb des überwachten Pfads“ für einen manuellen Datei-Drop von einem Netzlaufwerk reproduziert und im Code `f43e27fdf74dda4b1a492513cc548b9f7a4a54f1` behoben: Laufwerksbuchstabe und UNC-Auflösung desselben Stamms wurden als verschiedene Wurzeln behandelt. [PR #23](https://github.com/adriantagonist87/VoxDrop/pull/23), Branch `fix/manual-drop-paths`. Manuelle Quellen dürfen überall liegen; TXT neben Original unabhängig von normalen Überwachungs-/Ausgabeoptionen. Unterordner-/Dateischutz bleibt erhalten.
+
+Sieben neue Regressionen und vollständige 243 Fälle (231 bestanden/zwölf Skips), reale SMB-Dateifälle, Retry/Neutranskription und echte Whisper-CPU-Transkription einer künstlichen 15-Sekunden-Aufnahme bestanden. Lokal nur `Engine/watch_service.py` über die vorhandene Player-App gelegt; Basis/Overlay in `local-development.json`, übrige 97 Paketdateien erhalten. Profil/alte Engine gesichert, Queuepause erhalten, normale EXE neu gestartet und installierte Engine auf SMB nachgeprüft. **Kein Release veröffentlicht.** Auf `main` nur Regel/Übergabe/Nachweis; funktionaler Fix bis nativer Mac-Gegenprüfung im PR. [Vollständige Ursachen- und Prüfdetails sowie konkrete Mac-Aufgabe](DRAG_DROP_PFADE.md).
+
 ## Übergabe Audioplayer 1.5.1, 23.11.2026
 
 Geprüfter Code `6278335acb6589a97b4973c26cf0e931fb5ac369`, Branch `feat/history-media-player`, [PR #20](https://github.com/adriantagonist87/VoxDrop/pull/20). Neue Detailansicht: Play/Pause, Zeitbalken und Lautstärke sowie sechs durchgehend sichtbare Aktionen für Originaldatei, TXT, Neutranskription und Schließen. Fehler ohne Sprache erhalten denselben Zugriff auf das Original. Neue Qt-Addons-Abhängigkeit; keine neuen KI-Modelle oder DB-Migration. **Gemeinsamer Code bleibt bis zur Mac-Gegenprüfung im PR; auf main nur diese Übergabe und bereinigte Nachweise.**
