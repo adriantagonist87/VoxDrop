@@ -381,12 +381,86 @@ class WorkspaceTests(unittest.TestCase):
         pending = []
         with patch.object(self.controller, 'submit', side_effect=lambda operation, finished: pending.append((operation,finished))):
             self.click('queuePlaybackButton')
+            self.assertFalse(pending)
+            self.assertFalse(self.visual('finishCurrentThenPauseButton').property('enabled'))
+            self.click('stopProcessingNowButton')
             self.assertTrue(self.controller.state['processingStopping'])
             self.assertTrue(self.controller.busy)
             pending[0][1](dict(current_id=1,export_finishes=False), None)
         self.assertTrue(self.controller.busy)
         self.assertFalse(self.controller.stop_command_pending)
         self.assertTrue(self.controller.state['busy'])
+
+    def test_header_switch_saves_only_monitoring_and_tracks_both_controls(self):
+        jobs=self.queue_fixture();self.seed_config()
+        self.controller.setSetting('language','en')
+        self.controller.snapshot.update(running=True,current={**jobs[0],'state':'transcribing','started':100},queue_paused=False)
+        before=json.dumps(self.controller.snapshot,sort_keys=True)
+        self.controller.preview=False
+        self.addCleanup(setattr,self.controller,'preview',True)
+        with patch.object(self.controller_module,'command') as command, \
+             patch.object(self.controller,'refresh'), \
+             patch.object(self.controller,'submit',side_effect=lambda operation,finished:finished(operation(),None)):
+            switch=self.click('headerMonitoringSwitch')
+            self.assertTrue(switch.property('checked'))
+            self.assertTrue(json.loads(self.config_file.read_text())['monitoring'])
+            self.assertEqual(json.loads(self.config_file.read_text())['language'],'de')
+            self.assertEqual(self.controller.draft['language'],'en')
+            status=self.visual('folderStatusButton')
+            self.assertLess(switch.mapToScene(QPointF(switch.width(),0)).x(),status.mapToScene(QPointF(0,0)).x())
+            self.click('headerMonitoringSwitch')
+            self.assertFalse(switch.property('checked'))
+            self.assertFalse(json.loads(self.config_file.read_text())['monitoring'])
+            self.controller.setMonitoring(True);QTest.qWait(30)
+            self.assertTrue(switch.property('checked'))
+            self.assertTrue(all(call.args[0]=='validate-settings' for call in command.call_args_list))
+        self.assertEqual(before,json.dumps(self.controller.snapshot,sort_keys=True))
+
+    def test_stop_dialog_cancel_and_escape_leave_processing_unchanged(self):
+        jobs=self.queue_fixture();self.seed_config()
+        self.controller.snapshot.update(running=True,current={**jobs[0],'state':'transcribing','started':100},queue_paused=False)
+        self.controller.changed.emit()
+        before=json.dumps(self.controller.snapshot,sort_keys=True)
+        with patch.object(self.controller,'submit') as submit:
+            self.click('queuePlaybackButton')
+            dialog=self.window.findChild(QObject,'stopProcessingDialog')
+            self.assertTrue(dialog.property('visible'))
+            self.click('cancelStopProcessingButton')
+            self.assertFalse(dialog.property('visible'))
+            self.click('queuePlaybackButton')
+            QTest.keyClick(self.window,Qt.Key.Key_Escape);QTest.qWait(30)
+            self.assertFalse(dialog.property('visible'))
+            submit.assert_not_called()
+        self.assertEqual(before,json.dumps(self.controller.snapshot,sort_keys=True))
+
+    def test_stop_dialog_graceful_choice_pauses_queue_without_requesting_abort(self):
+        jobs=self.queue_fixture();self.seed_config()
+        self.controller.snapshot.update(running=True,current={**jobs[0],'state':'transcribing','started':100},queue_paused=False)
+        self.controller.changed.emit()
+        with patch.object(self.controller_module,'command',return_value='') as command, \
+             patch.object(self.controller,'action',side_effect=lambda operation,message:operation()):
+            self.click('queuePlaybackButton')
+            command.assert_not_called()
+            self.click('finishCurrentThenPauseButton')
+            command.assert_called_once_with('queue-pause','on')
+        self.assertFalse(self.window.findChild(QObject,'stopProcessingDialog').property('visible'))
+        self.assertFalse(self.controller.playback_stopping)
+
+    def test_stop_dialog_choices_wrap_inside_minimum_window(self):
+        jobs=self.queue_fixture()
+        self.controller.snapshot.update(running=True,current={**jobs[0],'state':'transcribing','started':100},queue_paused=False)
+        self.controller.changed.emit();self.window.resize(1010,630)
+        self.click('queuePlaybackButton')
+        dialog=self.window.findChild(QObject,'stopProcessingDialog')
+        self.assertLessEqual(dialog.property('width'),self.window.width()-32)
+        self.assertLessEqual(dialog.property('height'),self.window.height()-32)
+        for name in ('stopProcessingNowButton','finishCurrentThenPauseButton','cancelStopProcessingButton'):
+            choice=self.visual(name)
+            point=choice.mapToScene(QPointF(choice.width(),choice.height()))
+            self.assertLessEqual(point.x(),self.window.width(),name)
+            self.assertLessEqual(point.y(),self.window.height(),name)
+        self.assertEqual(self.visual('finishCurrentThenPauseButton').property('text'),
+            'Transkription geregelt fertigstellen und Warteschlange pausieren')
 
     def test_feedback_dialog_contains_complete_long_message_inside_window(self):
         self.queue_fixture()

@@ -277,6 +277,34 @@ ApplicationWindow {
             RowLayout {
                 anchors.fill: parent; anchors.leftMargin: 16; anchors.rightMargin: 16
                 spacing: 12
+                Switch {
+                    id: watchSwitch
+                    objectName: "headerMonitoringSwitch"
+                    Layout.preferredWidth: 44; Layout.preferredHeight: 30
+                    padding: 0
+                    enabled: viewState.ready && !viewState.busy
+                    Binding { target: watchSwitch; property: "checked"; value: viewState.monitoringEnabled }
+                    Accessible.name: "Ordnerüberwachung"
+                    Accessible.description: "Ordnerüberwachung sofort ein- oder ausschalten. Die Warteschlange wird separat gesteuert."
+                    ToolTip.visible: hovered
+                    ToolTip.text: checked ? "Ordnerüberwachung ausschalten" : "Ordnerüberwachung einschalten"
+                    ToolTip.delay: 700
+                    indicator: Rectangle {
+                        implicitWidth: 42; implicitHeight: 24
+                        x: 1; y: (watchSwitch.height - height) / 2
+                        radius: 12
+                        color: watchSwitch.checked ? window.accent : "#505055"
+                        opacity: watchSwitch.enabled ? 1 : 0.65
+                        border.color: watchSwitch.activeFocus ? window.textColor : "#68686b"
+                        border.width: watchSwitch.activeFocus ? 2 : 1
+                        Rectangle {
+                            x: watchSwitch.checked ? parent.width - width - 3 : 3
+                            y: 3; width: 18; height: 18; radius: 9
+                            color: watchSwitch.checked ? "#14231c" : window.textColor
+                        }
+                    }
+                    onClicked: api.setMonitoring(!viewState.monitoringEnabled)
+                }
                 AppActionButton {
                     objectName: "folderStatusButton"
                     text: "Überwachung " + (viewState.monitoringEnabled ? "an" : "aus") + " · Ordner " + viewState.availableFolderCount + "/" + (viewState.folderCount - viewState.pausedFolderCount) + (viewState.pausedFolderCount ? " · " + viewState.pausedFolderCount + " pausiert" : "")
@@ -354,7 +382,7 @@ ApplicationWindow {
             RowLayout {
                 anchors.fill: parent; anchors.margins: 14
                 spacing: 14
-                PlaybackButton { api: window.api; viewState: window.viewState; showLabel: false; Layout.preferredWidth: 44; Layout.maximumWidth: 44 }
+                PlaybackButton { api: window.api; viewState: window.viewState; showLabel: false; Layout.preferredWidth: 44; Layout.maximumWidth: 44; onStopRequested: stopOptions.open() }
                 ColumnLayout {
                     Layout.fillWidth: true; spacing: 4
                     Copy {
@@ -1020,6 +1048,47 @@ ApplicationWindow {
         objectName: "currentActionsMenu"
         x: window.width - width - 16; y: 120
         MenuItem { objectName: "cancelCurrentButton"; text: "Diesen Auftrag abbrechen …"; enabled: !viewState.busy && Boolean(viewState.current.canCancel); onTriggered: { confirmCurrent.jobId = viewState.current.id; confirmCurrent.jobName = viewState.current.name; confirmCurrent.open() } }
+    }
+    Dialog {
+        id: stopOptions
+        objectName: "stopProcessingDialog"
+        title: "Transkription stoppen"
+        modal: true
+        parent: Overlay.overlay
+        anchors.centerIn: parent
+        width: Math.min(620, window.width - 32)
+        closePolicy: Popup.CloseOnEscape
+        contentItem: ColumnLayout {
+            spacing: 10
+            AppActionButton {
+                objectName: "stopProcessingNowButton"
+                text: "Transkription sofort stoppen?"
+                Layout.fillWidth: true
+                enabled: viewState.canStopProcessing
+                onClicked: { stopOptions.close(); api.stopProcessing() }
+            }
+            AppActionButton {
+                id: finishChoice
+                objectName: "finishCurrentThenPauseButton"
+                text: "Transkription geregelt fertigstellen und Warteschlange pausieren"
+                Layout.fillWidth: true
+                implicitHeight: finishCaption.implicitHeight + topPadding + bottomPadding
+                enabled: viewState.ready && !viewState.busy && !viewState.processingStopping
+                contentItem: Copy {
+                    id: finishCaption
+                    text: finishChoice.text; font: finishChoice.font
+                    color: finishChoice.enabled ? window.textColor : window.muted
+                    horizontalAlignment: Text.AlignHCenter
+                }
+                onClicked: { stopOptions.close(); api.pauseQueue(true) }
+            }
+            AppActionButton {
+                objectName: "cancelStopProcessingButton"
+                text: "Abbruch"
+                Layout.fillWidth: true
+                onClicked: stopOptions.close()
+            }
+        }
     }
     Dialog {
         id: feedbackDialog; objectName: "feedbackDialog"; title: "VoxDrop – Rückmeldung"; modal: true
