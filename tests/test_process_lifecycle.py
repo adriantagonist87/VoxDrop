@@ -12,6 +12,16 @@ from platform_io import WINDOWS, child_process, process_options
 
 
 class ProcessLifecycleTests(unittest.TestCase):
+    def test_gui_file_probe_timeout_cancels_the_owned_process(self):
+        from desktop.command_process import CommandProcesses
+        commands = CommandProcesses()
+        started = time.monotonic()
+        with self.assertRaises(subprocess.TimeoutExpired):
+            commands.run([sys.executable, '-c', 'import time; time.sleep(20)'],
+                         stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=.15,
+                         **process_options())
+        commands.wait_idle(.2)
+        self.assertLess(time.monotonic() - started, 5)
     @unittest.skipUnless(WINDOWS, "Windows background console regression")
     def test_background_runtime_has_no_console_and_keeps_captured_streams(self):
         program = (

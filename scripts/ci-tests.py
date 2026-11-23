@@ -14,7 +14,7 @@ REFERENCE = 'https://github.com/adriantagonist87/VoxDrop/releases/download/v1.3.
 REFERENCE_SHA = 'be621da30940ab64ff3dfe14ac2d29a9c18b5a05ee6b76edc8deb0cfa8cc9775'
 # CI exercises synthetic media/SQLite/Qt/processes. CPU Torch supports synthetic
 # speaker tests; no CUDA libraries or model weights are downloaded.
-DEPENDENCIES = ('numpy','psutil','pyside6-essentials','av','faster-whisper',
+DEPENDENCIES = ('numpy','psutil','pyside6-essentials','pyside6-addons','av','faster-whisper',
                 'platformdirs','pyannote-core','scipy','intervaltree','click')
 
 
