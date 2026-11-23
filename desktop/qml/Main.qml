@@ -1059,9 +1059,10 @@ ApplicationWindow {
         modal: true
         title: "Auftragsdetails"
         anchors.centerIn: Overlay.overlay
-        width: Math.min(610, window.width - 48)
-        height: Math.min(window.height - 46, detailsContent.implicitHeight + 102)
+        width: Math.min(780, window.width - 48)
+        height: Math.min(window.height - 46, detailsContent.implicitHeight + detailFooter.implicitHeight + 72)
         padding: 14
+        onClosed: api.closeDetails()
         background: Rectangle { color: surface; radius: 9; border.color: line }
         contentItem: ScrollView {
             id: detailsScroll
@@ -1076,6 +1077,7 @@ ApplicationWindow {
                 spacing: 9
                 Heading { text: selected.name || ""; Layout.fillWidth: true }
                 Copy { text: selected.status || ""; font.weight: Font.DemiBold; Layout.fillWidth: true }
+                AudioPreview { objectName: "audioPreviewPanel"; player: api.audioPlayer; Layout.fillWidth: true }
                 Repeater {
                     model: selected.rows || []
                     delegate: RowLayout {
@@ -1085,21 +1087,28 @@ ApplicationWindow {
                         Copy { text: modelData.value; Layout.fillWidth: true; Layout.preferredWidth: 1 }
                     }
                 }
-                Muted { text: selected.path || ""; Layout.fillWidth: true }
+                Muted { text: "Originaldatei: " + (selected.originalPath || ""); Layout.fillWidth: true }
+                Muted { text: "Transkript: " + (selected.transcriptPath || ""); Layout.fillWidth: true }
+                Muted { text: selected.filesMessage || ""; visible: text.length > 0; Layout.fillWidth: true }
+                Copy { text: selected.fileError || ""; color: warningColor; visible: text.length > 0; Layout.fillWidth: true }
                 Copy { text: selected.error || ""; color: warningColor; visible: text.length > 0; Layout.fillWidth: true }
                 Muted { text: selected.note || ""; visible: text.length > 0; Layout.fillWidth: true }
             }
         }
         footer: Item {
+            id: detailFooter
             implicitHeight: detailActions.implicitHeight + 20
-            Flow {
+            GridLayout {
                 id: detailActions
-                x: 14; y: 10; width: parent.width - 28; spacing: 6
-                AppActionButton { objectName: "openTranscriptButton"; text: "Transkript öffnen"; primary: true; visible: selected.openTranscript || false; enabled: !viewState.busy; onClicked: api.openTranscript() }
-                AppActionButton { objectName: "revealTranscriptButton"; text: Qt.platform.os === "osx" ? "Im Finder zeigen" : "Im Explorer zeigen"; visible: selected.reveal || false; onClicked: api.revealOutput() }
-                AppActionButton { text: "Erneut versuchen"; visible: selected.retry || false; enabled: !viewState.busy; onClicked: { api.retryJob(false); detail.close() } }
-                AppActionButton { text: "Neu transkribieren"; visible: selected.repeat || false; enabled: !viewState.busy; onClicked: { api.retryJob(true); detail.close() } }
-                AppActionButton { objectName: "closeJobDialog"; text: "Schließen"; onClicked: detail.close() }
+                x: 14; y: 10; width: parent.width - 28
+                columns: 2; columnSpacing: 8; rowSpacing: 6
+                AppActionButton { objectName: "revealOriginalButton"; text: Qt.platform.os === "osx" ? "Originaldatei im Finder anzeigen" : "Originaldatei im Explorer anzeigen"; Layout.fillWidth: true; enabled: selected.canRevealOriginal || false; onClicked: api.revealOriginal() }
+                AppActionButton { objectName: "playOriginalButton"; text: "Originaldatei abspielen"; primary: true; Layout.fillWidth: true; enabled: selected.canPlayOriginal || false; onClicked: api.playOriginal() }
+                AppActionButton { objectName: "revealTranscriptButton"; text: Qt.platform.os === "osx" ? "Transkript im Finder anzeigen" : "Transkript im Explorer anzeigen"; Layout.fillWidth: true; enabled: selected.canRevealTranscript || false; onClicked: api.revealOutput() }
+                AppActionButton { objectName: "openTranscriptButton"; text: "Transkript öffnen"; Layout.fillWidth: true; enabled: selected.canOpenTranscript || false; onClicked: api.openTranscript() }
+                AppActionButton { objectName: "retranscribeButton"; text: "Neu transkribieren"; Layout.fillWidth: true; enabled: (selected.repeat || false) && (selected.canPlayOriginal || false) && !viewState.busy; onClicked: { api.retryJob(true); detail.close() } }
+                AppActionButton { objectName: "closeJobDialog"; text: "Schließen"; Layout.fillWidth: true; onClicked: detail.close() }
+                AppActionButton { objectName: "retryJobButton"; text: "Erneut versuchen"; visible: selected.retry || false; enabled: !viewState.busy; Layout.fillWidth: true; onClicked: { api.retryJob(false); detail.close() } }
             }
         }
     }

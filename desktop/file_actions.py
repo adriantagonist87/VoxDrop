@@ -11,7 +11,7 @@ def reveal_in_explorer(path):
     path = Path(path).absolute()
     if not path.is_file():
         raise FileNotFoundError(
-            "Die TXT-Datei ist nicht mehr am gespeicherten Ausgabeort vorhanden."
+            "Die Datei ist nicht mehr am gespeicherten Ort vorhanden."
         )
 
     import ctypes

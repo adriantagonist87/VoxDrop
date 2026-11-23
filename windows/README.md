@@ -11,6 +11,8 @@ VoxDrop überwacht mehrere Ordner und transkribiert neue Audio- und Videodateien
 
 Neue Aufträge werden automatisch verarbeitet, sofern die Warteschlange nicht gestoppt ist. **Play** setzt sie fort, **Stopp** hält kontrolliert an und erhält die Aufträge. **Nach diesem Auftrag pausieren** lässt den aktuellen Auftrag fertig werden. **Aktionen → Warteschlange leeren** entfernt wartende Aufträge separat. Auftragsdetails, Reihenfolge, Einzelentfernung, Wildcardsuche und explizite start-/stoppbare TXT-Detailsuche bleiben erreichbar. Der Verlauf enthält 250 Einträge je Seite; alle Seiten sind erreichbar.
 
+In den **Auftragsdetails** lässt sich jede vorhandene Originaldatei direkt anhören: **Originaldatei abspielen** lädt die Tonspur, der Player bietet Play/Pause, Zeitbalken und Lautstärke. Das funktioniert auch bei Fehlern oder nicht erkannter Sprache. **Originaldatei im Explorer anzeigen**, **Transkript im Explorer anzeigen**, **Transkript öffnen**, **Neu transkribieren** und **Schließen** bleiben für jeden Verlaufseintrag sichtbar; Aktionen für fehlende Dateien sind deaktiviert. Schließen der Details beendet die Wiedergabe. Die Vorschau startet keine Transkription und lädt keine KI-Modelle.
+
 **Einstellungen → App & Daten** enthält den vollständigen Datenbankreset mit Bestätigung. Aufnahmen und TXT bleiben erhalten; aktive Überwachung liest danach erneut ein. Fenster-X blendet in den Tray aus, Minimieren geht in die Taskleiste. **VoxDrop beenden** beendet auch Überwachung und Modellprozesse. Es gibt keinen unabhängigen automatisierten Dienst.
 
 Bei abgelegten Ordnern und bei aktiver Option **Unterordner mit einbeziehen** speichert VoxDrop die TXT-Dateien direkt neben den Aufnahmen. Die Originaldateien bleiben an ihrem Platz.

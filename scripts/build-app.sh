@@ -78,7 +78,7 @@ from importlib.metadata import version
 import av, ctranslate2, torch
 from aTrain_core.engine import decode
 assert sys.version_info[:3] == (3, 12, 13)
-for name, expected in {"ctranslate2":"4.9.0", "torch":"2.9.1", "faster-whisper":"1.2.1", "pyannote-audio":"4.0.7", "pyside6-essentials":"6.10.2", "shiboken6":"6.10.2"}.items():
+for name, expected in {"ctranslate2":"4.9.0", "torch":"2.9.1", "faster-whisper":"1.2.1", "pyannote-audio":"4.0.7", "pyside6-essentials":"6.10.2", "pyside6-addons":"6.10.2", "shiboken6":"6.10.2"}.items():
     assert version(name) == expected, (name, version(name), expected)
 '
 "$resources/Python/bin/python3.12" -BES -c '
@@ -95,7 +95,7 @@ import sys
 sys.path.append(sys.argv[1])
 from dover_lap.src.doverlap import DOVERLap
 ' "$resources/DoverPackages"
-"$resources/Python/bin/python3.12" -BEs -c 'from PySide6.QtQml import QQmlApplicationEngine; from PySide6.QtQuickControls2 import QQuickStyle'
+"$resources/Python/bin/python3.12" -BEs -c 'from PySide6.QtQml import QQmlApplicationEngine; from PySide6.QtQuickControls2 import QQuickStyle; from PySide6.QtMultimedia import QMediaPlayer, QAudioOutput'
 "$resources/Python/bin/python3.12" -BEs "$project_dir/scripts/verify-macos-bundle.py" "$app" --write --source "$project_dir"
 /usr/bin/codesign --force --sign - --timestamp=none "$app"
 /usr/bin/codesign --verify --strict "$app"
