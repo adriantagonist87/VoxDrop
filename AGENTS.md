@@ -44,6 +44,12 @@
 2. Aktualisiere `docs/ENTWICKLUNG.md` bei Änderungen an Architektur, Einrichtung, Start, Build, Tests, Abhängigkeiten oder Konfiguration. Pflege den Windows-Übergabeauftrag bei neuen Windows-Befunden.
 3. Dokumentiere je Fehler Reproduktion, betroffene Plattform und Version, beobachtete Ursache oder Hypothese, Änderung und nachweisbares Testergebnis. Markiere verbleibende Prüfungen.
 4. Verwende bei Prüfständen den tatsächlich getesteten Code-Commit. Bei reinen Dokumentationscommits bleibt der letzte funktional geprüfte Code-Commit bestehen. Neue Fixes erhalten den exakten getesteten SHA in einem anschließenden Statusupdate.
-5. Übergib den Branch, die Commits, betroffene Plattformen, Tests und offenen Punkte. Nutze vorhandene Nutzerautorisierungen für Push, Installation und Veröffentlichung. Führe geprüfte Änderungen im beauftragten Umfang auf `main` zusammen.
+5. Übergib den Branch, die Commits, betroffene Plattformen, Tests und offenen Punkte. Nutze vorhandene Nutzerautorisierungen für Push und lokale Installation. Führe geprüfte Änderungen im beauftragten Umfang auf `main` zusammen.
+
+## Öffentliche GitHub-Releases
+
+- Nutzerregel vom 23.11.2026: Der Nutzer bestimmt ausdrücklich, wann ein neuer öffentlicher GitHub-Release für Dritte veröffentlicht wird. Veröffentliche neue Releases oder neue öffentliche Builds erst auf eine konkrete Release-Anweisung.
+- Einzelne Bugfixes, Featureaufträge, erfolgreiche Tests und lokale App-Updates sind keine Release-Freigabe. Verwende GitHub für Commits, Branches, Pull Requests und die nachvollziehbare Entwicklung; veröffentliche nicht automatisch mit jedem Fehler ein neues Release.
+- Bis zur ausdrücklichen Release-Anweisung bleiben neue Builds lokale Testpakete. Arbeite die beauftragten Fehler weiter ab, ohne dafür jeweils eine Veröffentlichung anzubieten oder einzufordern. Erhalte die vorhandenen stabilen Downloads.
 
 Gemeinsame Änderungen werden über GitHub-Commits und diese Dokumentation abgeglichen. Der nächste Codex-Lauf liest und prüft diesen Stand vor seiner Aufgabe.
