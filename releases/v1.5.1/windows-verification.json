@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "platform": "windows-x64",
+  "verified_on": "2026-11-23",
+  "code_commit": "6278335acb6589a97b4973c26cf0e931fb5ac369",
+  "archive_sha256": "6dfd45c54df6134fb5b37e2f281368b1ba7b388b740f8d2c9d0219426dca4a63",
+  "source_regression": {
+    "cases": 251,
+    "passed": 239,
+    "skipped": 12,
+    "seconds": 140.551
+  },
+  "native_package_player": {
+    "passed": true,
+    "code_commit": "6278335acb6589a97b4973c26cf0e931fb5ac369",
+    "qt_platform": "windows",
+    "minimum_window": [
+      1010,
+      630
+    ],
+    "six_actions_visible": true,
+    "failed_flv_and_opus_played": true,
+    "pause_seek_volume": true,
+    "source_released_on_close": true,
+    "missing_transcript_disabled": true,
+    "no_transcription_started": true
+  },
+  "codecs": [
+    {
+      "format": "wav",
+      "played": true,
+      "seek": true,
+      "closed": true,
+      "video_disabled": true
+    },
+    {
+      "format": "flv",
+      "played": true,
+      "seek": true,
+      "closed": true,
+      "video_disabled": true
+    },
+    {
+      "format": "opus",
+      "played": true,
+      "seek": true,
+      "closed": true,
+      "video_disabled": true
+    }
+  ],
+  "native_layout": {
+    "scales": [
+      1,
+      1.25,
+      1.5
+    ],
+    "queue": 8000,
+    "history": 20000,
+    "all_passed": true
+  },
+  "source_windows_ui": {
+    "playback_seek_volume": true,
+    "original_explorer_selection": true,
+    "transcript_explorer": true,
+    "transcript_default_application": true
+  },
+  "exe_start": {
+    "isolated_profile": true,
+    "synthetic_history": true,
+    "app_owned_service": true
+  },
+  "macos_new_player": "UNGEPRÜFT; last native release remains 1.5.0 Build 27",
+  "installation": {
+    "passed": true,
+    "code_commit": "6278335acb6589a97b4973c26cf0e931fb5ac369",
+    "installed_files": 98,
+    "previous_active_job_completed_unchanged": true,
+    "queue_preserved": true,
+    "configuration_and_layout_preserved": true,
+    "model_metadata_preserved": true,
+    "profile_and_previous_program_backed_up": true,
+    "previous_runtime_retained": true,
+    "native_package_proof": true,
+    "queue_before_paused": false,
+    "queue_paused_for_restart": true,
+    "previous_queue_pause_restored": true,
+    "new_gui_owner_alive": true,
+    "normal_exe_restarted": true
+  }
+}
