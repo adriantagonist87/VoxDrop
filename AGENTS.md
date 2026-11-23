@@ -29,6 +29,8 @@
 
 ## Entwicklung und Prüfung auf beiden Systemen
 
+- Offener Vorfall vom 23.11.2026: Systemstillstand nach CUDA-Transkriptionsstart mit zeitnahem Grafik-Watchdog 193. Auf dem betroffenen Windows-PC App/Dienste beendet lassen, vorübergehenden CPU-Schutz und Queuepause erhalten und keine erneuten CUDA-Last-/Reproduktionstests selbsttätig starten. Modellfreie Prüfung bleibt möglich. Die 193-Erweiterung ist keine Behebung der unbekannten Kernelursache. [Belege und notwendige Dumpanalyse](docs/SYSTEMSTILLSTAND_2026-11-23.md).
+
 - Prüfe zuerst den normalen Einstiegspunkt der betroffenen Plattform. Ein Importtest oder ein auf macOS gebautes Windows-ZIP belegt jeweils diesen begrenzten Prüfumfang.
 - Kennzeichne Windows-Verhalten bis zum tatsächlichen Test auf Windows ausdrücklich als **UNGEPRÜFT unter Windows**. Pflege für jedes System den zuletzt geprüften vollständigen GitHub-Commit, Umgebung, Testbefehl und Ergebnis.
 - Führe bestehende relevante Tests aus. Ergänze gezielte Regressionstests, wenn vorhandene Tests den konkreten Fehler oder neuen Datenpfad verfehlen.
