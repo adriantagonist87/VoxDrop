@@ -1,0 +1,53 @@
+{
+  "date": "2026-11-23",
+  "platform": "Windows 11",
+  "status": "OPEN_SYSTEM_FREEZE_ROOT_CAUSE",
+  "tested_code_commit": "c0aa811345bd87d5680534dd5e30d0eef6e520e7",
+  "incident": {
+    "user_report": "System froze after transcription start; hard power-off required",
+    "transcription_start_local": "2026-11-23T13:05:05+01:00",
+    "model": "large-v3-turbo",
+    "hardware": "cuda",
+    "gpu_budget_percent": 100,
+    "watchdog_dump_minute_local": "2026-11-23T13:07+01:00",
+    "live_kernel_event": "193",
+    "report_id": "4804795b-e5cf-4cf3-9bf7-a5152f72cf8e",
+    "boot_local": "2026-11-23T13:10:01+01:00",
+    "kernel_power_bugcheck_code": 0,
+    "duplicate_reports_count_as_single_incident": true,
+    "dump_access": "DENIED",
+    "cause_proven": false
+  },
+  "model_free_tests": {
+    "cases": 41,
+    "passed": 41,
+    "skipped": 0,
+    "seconds": 12.774
+  },
+  "local_install": {
+    "passed": true,
+    "tested_code_commit": "c0aa811345bd87d5680534dd5e30d0eef6e520e7",
+    "changed_files": 1,
+    "unchanged_program_files": 101,
+    "real_incident_report_recognized": "Grafik-Watchdog (Windows-Fehlerbericht 193)",
+    "current_idle_time_no_false_positive": true,
+    "previous_fixes_preserved": true,
+    "cpu_protection_enabled": true,
+    "queue_paused": true,
+    "app_restarted": false,
+    "cuda_or_models_loaded": false,
+    "root_cause_resolved": false
+  },
+  "containment": {
+    "database_and_logs_backed_up": true,
+    "app_and_owned_services_stopped": true,
+    "queue_paused": true,
+    "all_job_states_preserved": true,
+    "windows_cpu_only_enabled_temporarily": true,
+    "other_settings_preserved": true,
+    "gui_or_cuda_restarted": false
+  },
+  "new_release": false,
+  "root_cause_resolved": false,
+  "native_mac_verification": "UNGEPR\u00dcFT"
+}

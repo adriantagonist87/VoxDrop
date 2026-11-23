@@ -1,5 +1,9 @@
 # Projektstatus VoxDrop
 
+## Offener Systemstillstand nach CUDA-Transkriptionsstart, 23.11.2026
+
+Nutzer meldete vollständigen PC-Stillstand nach Transkriptionsstart um 13:05; zeitnaher Grafik-Live-Dump 193 um 13:07, harter Neustart. **Ursache nicht geklärt, keine neue CUDA-Stabilitätsfreigabe.** App/Dienste beendet, Queue pausiert, vorhandener CPU-Schutz vorübergehend aktiv, Daten/Protokolle gesichert. Erweiterte 193-Erkennung im Code `c0aa811345bd87d5680534dd5e30d0eef6e520e7`, Branch `fix/windows-watchdog-193`: 41 modellfreie Fälle grün und installierte Erkennung am echten Ereignis geprüft, keine GPU-/GUI-Wiederholung. Dumpanalyse benötigt die vom Nutzer erstellte Administratorkopie; keine Systemberechtigungen verändert. [Vorfall, Belege, Grenzen und nächste Diagnoseschritte](SYSTEMSTILLSTAND_2026-11-23.md). Kein Release.
+
 ## Originalaufnahme im kompakten Popup-Player, 23.11.2026
 
 Geprüfter Funktionscode **`6f0bb63d1afd843d5bacb9f1ef63026d23adca49`**, Branch `feat/popup-audio-player`, [PR #29](https://github.com/adriantagonist87/VoxDrop/pull/29). Der bisher ständig sichtbare Player entfällt aus den Details. „Originaldatei abspielen“ öffnet eine kompakte Leiste im dunklen App-Stil mit schmalen Griffen und großen Bedienflächen: Play/Pause, dünner Zeitbalken, Position/Dauer, Geschwindigkeit mit Qt-Tonhöhenkorrektur und Lautstärke/Stumm. Außenklick/Escape schließt ausschließlich den Player und gibt die Datei frei; derselbe Button öffnet ihn erneut. Verspätete Dateiprüfung darf nach Schließen nicht mehr abspielen.
