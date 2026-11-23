@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "platform": "windows-x64",
+  "verified_on": "2026-11-23",
+  "code_commit": "f43e27fdf74dda4b1a492513cc548b9f7a4a54f1",
+  "source_regression": {
+    "cases": 243,
+    "passed": 231,
+    "skipped": 12,
+    "seconds": 143.062
+  },
+  "new_regressions": {
+    "cases": 7,
+    "passed": 7,
+    "seconds": 0.728
+  },
+  "ci": "https://github.com/adriantagonist87/VoxDrop/actions/runs/45148861471",
+  "before_fix": {
+    "passed": true,
+    "mapped_drive_resolves_to_unc": true,
+    "reproduced": true,
+    "engine_not_called": true,
+    "original_preserved": true
+  },
+  "smb_file_checks": {
+    "passed": true,
+    "mapped_drive_resolves_to_unc": true,
+    "mapped_file_outside_watched_root": true,
+    "old_mapped_drop_retry": true,
+    "unc_file_and_paused_queue": true,
+    "recursive_folder_drop": true,
+    "mapped_retranscription_protects_original_txt": true,
+    "settings_preserved": true,
+    "originals_preserved": true,
+    "txt_beside_original": true,
+    "inference": "fixed synthetic engine; real SMB I/O and worker path checks"
+  },
+  "real_asr": {
+    "passed": true,
+    "real_transcription": true,
+    "model": "large-v3-turbo",
+    "hardware": "cpu",
+    "synthetic_speech": true,
+    "mapped_smb_file": true,
+    "watch_roots_empty": true,
+    "monitoring": false,
+    "original_preserved": true,
+    "txt_beside_original": true,
+    "model_downloads": false,
+    "offline_model_mode": true,
+    "seconds": 15.109
+  },
+  "installed_smb_file_checks": {
+    "passed": true,
+    "mapped_drive_resolves_to_unc": true,
+    "mapped_file_outside_watched_root": true,
+    "old_mapped_drop_retry": true,
+    "unc_file_and_paused_queue": true,
+    "recursive_folder_drop": true,
+    "mapped_retranscription_protects_original_txt": true,
+    "settings_preserved": true,
+    "originals_preserved": true,
+    "txt_beside_original": true,
+    "inference": "fixed synthetic engine; real SMB I/O and worker path checks"
+  },
+  "local_install": {
+    "passed": true,
+    "code_commit": "f43e27fdf74dda4b1a492513cc548b9f7a4a54f1",
+    "base_package_code": "6278335acb6589a97b4973c26cf0e931fb5ac369",
+    "only_engine_file_changed": true,
+    "other_97_program_files_preserved": true,
+    "audio_player_preserved": true,
+    "profile_backed_up": true,
+    "queue_and_jobs_preserved": true,
+    "configuration_and_layout_preserved": true,
+    "models_and_runtime_preserved": true,
+    "previous_queue_pause_preserved": true,
+    "gui_was_running": true,
+    "public_release_created": false,
+    "normal_exe_restarted": true,
+    "queue_still_paused": true
+  },
+  "macos": "UNGEPRÜFT; native follow-up required in PR #23",
+  "public_release_created": false
+}
