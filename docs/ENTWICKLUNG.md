@@ -1,5 +1,11 @@
 # Entwicklung auf macOS und Windows
 
+## Audioplayer im Windows-Prüfstand 1.5.1
+
+Die gemeinsame Implementierung liegt in [PR #20](https://github.com/adriantagonist87/VoxDrop/pull/20), geprüft unter Windows am Code `6278335acb6589a97b4973c26cf0e931fb5ac369`; bis zur nativen Mac-Gegenprüfung bleibt sie im Feature-PR. `desktop/audio_preview.py` und `AudioPreview.qml` verwenden lazy `QMediaPlayer`/`QAudioOutput` ohne Video-/Hardwaredecoder oder KI-Modelle. Dateiauflösung erfolgt über `detail_files.py` in einem appgebundenen Prozess mit Zeitlimit; vorhandene Dateien zählen unabhängig vom Jobstatus. Detailwechsel, Schließen und Beenden leeren die Medienquelle. [Architektur, Tests, Qt-Stop-Befund und Plattformgrenzen](AUDIOPLAYER.md).
+
+PySide6-Addons **6.10.2** ist zusätzlich im Windows-Lockfile, in den Mac-Requirements mit Wheel-Hash und in den CI-Abhängigkeiten gepinnt. Die neue Windows-Runtime heißt `runtime-2ce5d3d2adcc`; Modellpins, Python-/Torch-/Essentials-Pins und DB bleiben erhalten. Mac benötigt einen frischen Bootstrap mit Addons; `--runtime-from` einer alten 1.5.0-App erfüllt die neue Builderprüfung nicht. Native Mac-Freigabe weiterhin 1.5.0 Build 27. Gegenprüfung und Signatur-/Lizenzaufgaben stehen in der [Mac-Checkliste](AUDIOPLAYER.md#nächste-mac-prüfung).
+
 ## Windows-CPU-Schutz und Grafikfehler
 
 Unter **Einstellungen → Transkription** wählt `windows_cpu_only` bei Übernahme des nächsten Auftrags CPU für alle Windows-CUDA-Aufträge. Die ursprüngliche Auftragswahl bleibt in `hardware`. `execution_hardware` zeichnet einen tatsächlich verwendeten CPU-Override auf. Die Anzeige unterscheidet geplantes und verwendetes Gerät. Windows-CPU-Worker verwenden niedrigere Prozesspriorität und bis zu sechs Threads für PyTorch/BLAS bzw. CTranslate2.
