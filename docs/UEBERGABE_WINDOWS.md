@@ -1,5 +1,11 @@
 # Übergabeauftrag für Codex auf dem Windows-PC
 
+## Popup-Player statt eingebetteter Playerfläche, 23.11.2026
+
+Funktionscode `6f0bb63d1afd843d5bacb9f1ef63026d23adca49`, Branch `feat/popup-audio-player`, [PR #29](https://github.com/adriantagonist87/VoxDrop/pull/29). Öffnen ausschließlich über „Originaldatei abspielen“; kompakte Leiste mit Play/Pause, Zeitbalken/-anzeige, Geschwindigkeit mit Pitch-Korrektur und Lautstärke. Außenklick/Escape stoppt/schließt nur den Player, Details bleiben offen. Eigene Play-Generation verhindert späte Wiedergabe nach Schließen.
+
+286 kombinierte Fälle (274 bestanden/zwölf Skips) und finale native WAV-/FLV-/OPUS-/Popupprüfungen bei drei Skalierungen bestanden. Lokal vier Desktopdateien installiert, vorherige Fixes/Profil/Modelle/Runtime/Queuepause erhalten; EXE-Neustart und installierte Dateien nachgeprüft. Kein Release. Auf `main` nur Dokumentation. Mac 1.5.0 Build 27 bleibt bestätigt; neue Bedienung dort ungeprüft. #29 enthält #20 als Voraussetzung: beim Mac-Abgleich nicht doppelt übernehmen. Pitch-Unterstützung/-Wirkung, Außenklick/Escape, langsame Dateiprüfung, Wiederöffnung, Datei-/Detailwechsel, Cmd-Q und Retina gegenprüfen. [Genaue Ergebnisse, Grenzen und Git-Abhängigkeit](AUDIOPLAYER_POPUP.md).
+
 ## Überwachungsschalter und Stoppdialog, 23.11.2026
 
 Funktionscode `5405d8e365171e6cecbc636c586fba866b0a7f87`, Branch `feat/watch-toggle-stop-options`, [PR #27](https://github.com/adriantagonist87/VoxDrop/pull/27). Links im Header eigener Überwachungsschalter; Stopp fragt ausdrücklich nach sofortigem Stopp, geregeltem Abschluss/Queuepause oder Abbruch. Gemeinsame QML, vorhandene Backendaktionen. Native Windows-UI-/CLI-/SQLite-Prüfungen bei 100/125/150 % mit aktiver künstlicher Engine bestanden; Originale/Queue und ungespeicherter Einstellungsentwurf geschützt. Lokales Update erhält sämtliche vorherigen Fixes und die vorhandene Pause. Kein Release.
