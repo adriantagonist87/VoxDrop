@@ -1,0 +1,259 @@
+{
+  "date": "2026-11-23",
+  "code_commit": "79d42538022573fc32d6927115c99ebf3c4dc9c3",
+  "branch": "fix/model-download-progress",
+  "pull_request": "https://github.com/adriantagonist87/VoxDrop/pull/25",
+  "environment": {
+    "os": "Windows-11-10.0.26200-SP0",
+    "python": "3.12.13",
+    "qt": "6.10.2",
+    "huggingface_hub": "1.33.0"
+  },
+  "full_source_suite_before_final_edge_cases": {
+    "tests": 251,
+    "passed": 239,
+    "skipped": 12,
+    "seconds": 154.982
+  },
+  "final_affected_suite": {
+    "tests": 48,
+    "passed": 47,
+    "skipped": 1,
+    "seconds": 16.725
+  },
+  "final_combined_suite": {
+    "tests": 276,
+    "passed": 264,
+    "skipped": 12,
+    "seconds": 155.678,
+    "audio_base": "6278335acb6589a97b4973c26cf0e931fb5ac369",
+    "manual_drop": "f43e27fdf74dda4b1a492513cc548b9f7a4a54f1"
+  },
+  "real_https": {
+    "passed": true,
+    "pinned_hub_version": "1.33.0",
+    "real_https_download": true,
+    "files": 2,
+    "bytes": 2483945,
+    "progress_events": 10,
+    "network_bytes": 2483945,
+    "file_hashes_match_pins": true,
+    "cached_repeat_has_zero_transfer": true,
+    "file_route_probe": true,
+    "seconds": 0.797
+  },
+  "real_xet": {
+    "passed": true,
+    "real_hub_binary": true,
+    "xet_metadata": true,
+    "bytes": 133852,
+    "network_bytes": 133876,
+    "hash_matches_pin": true,
+    "progress_events": 9
+  },
+  "disconnect_resume": {
+    "passed": true,
+    "real_http_stream": true,
+    "synthetic_bytes": 524288,
+    "forced_disconnect": true,
+    "resume_offset": 131072,
+    "content_hash_preserved": true,
+    "progress_before_completion": true,
+    "live_rate_measured": true,
+    "final_bytes": 524288,
+    "transfer_bytes": 524288
+  },
+  "native_qml": [
+    {
+      "passed": true,
+      "scale": "1",
+      "qt_platform": "windows",
+      "minimum_window": [
+        1010,
+        630
+      ],
+      "exact_progress": true,
+      "current_rate": true,
+      "long_filename": true,
+      "expanded_file_list": true,
+      "unknown_size_indeterminate": true,
+      "verification_not_download": true,
+      "real_server_button_worker_cli_signals": true,
+      "selected_model_file_routes_reachable": 3,
+      "combined_audio_and_drop_code": true
+    },
+    {
+      "passed": true,
+      "scale": "1.25",
+      "qt_platform": "windows",
+      "minimum_window": [
+        1010,
+        630
+      ],
+      "exact_progress": true,
+      "current_rate": true,
+      "long_filename": true,
+      "expanded_file_list": true,
+      "unknown_size_indeterminate": true,
+      "verification_not_download": true,
+      "real_server_button_worker_cli_signals": true,
+      "selected_model_file_routes_reachable": 3,
+      "combined_audio_and_drop_code": true
+    },
+    {
+      "passed": true,
+      "scale": "1.5",
+      "qt_platform": "windows",
+      "minimum_window": [
+        1010,
+        630
+      ],
+      "exact_progress": true,
+      "current_rate": true,
+      "long_filename": true,
+      "expanded_file_list": true,
+      "unknown_size_indeterminate": true,
+      "verification_not_download": true,
+      "real_server_button_worker_cli_signals": true,
+      "selected_model_file_routes_reachable": 3,
+      "combined_audio_and_drop_code": true
+    }
+  ],
+  "local_development_install": {
+    "passed": true,
+    "code_commit": "79d42538022573fc32d6927115c99ebf3c4dc9c3",
+    "base_package_code": "6278335acb6589a97b4973c26cf0e931fb5ac369",
+    "changed_files": 8,
+    "unchanged_previous_program_files": 93,
+    "audio_player_and_manual_drop_fix_preserved": true,
+    "private_profile_backed_up": true,
+    "queue_jobs_configuration_layout_preserved": true,
+    "models_and_runtime_preserved": true,
+    "previous_queue_pause_preserved": true,
+    "gui_was_running": true,
+    "public_release_created": false,
+    "overlay_files": [
+      {
+        "path": "Engine/voxdrop.py",
+        "sha256": "99cf654ad09a67c7d12f3ba67a02401802909079264d9435af3d64d45e739575"
+      },
+      {
+        "path": "Engine/qwen_backend.py",
+        "sha256": "e66551975ae9e6e8bb18e8d10a2bc36723d681fe3ba4208e3ab02d75998ef459"
+      },
+      {
+        "path": "Engine/model_download.py",
+        "sha256": "431fc7aea4dd637e4f27f63900ff1ef688f77c2088af86dc0b50dcda2e2dfe51"
+      },
+      {
+        "path": "Desktop/controller.py",
+        "sha256": "13d85358bf1424581e5a3907238e273bd6b4a80e3d83d0bc15281f45e253b10c"
+      },
+      {
+        "path": "Desktop/command_process.py",
+        "sha256": "e0ea241e05fc4e29073b60c96deb83cf3a71c4ab9537ebb1c63060140f9385e7"
+      },
+      {
+        "path": "Desktop/download_status.py",
+        "sha256": "d885e1abd24dbef470b8778ec80530390d5a91a6d6a18bcc723b4702f09f3e72"
+      },
+      {
+        "path": "Desktop/qml/Main.qml",
+        "sha256": "8bab04a909f6073aa9dac3e6e543df4dd95e32f76044cc1e822ba911024ac38a"
+      },
+      {
+        "path": "Desktop/qml/ModelDownload.qml",
+        "sha256": "7092e777c8a93ba51945cd0ff208a094768a9c28835c132609ad078df34172cb"
+      }
+    ]
+  },
+  "installed_checks": {
+    "passed": true,
+    "installed_models": [
+      {
+        "model": "large-v3-turbo",
+        "speakers": false,
+        "files": 7,
+        "verified_bytes": 1621440951,
+        "new_network_bytes": 0,
+        "seconds": 0.969
+      },
+      {
+        "model": "qwen3-asr-1.7b",
+        "speakers": true,
+        "files": 23,
+        "verified_bytes": 5968549656,
+        "new_network_bytes": 0,
+        "seconds": 3.469
+      }
+    ],
+    "normal_exe_gui_registered": true,
+    "queue_pause_preserved": true,
+    "all_existing_model_hashes_verified": true,
+    "offline_cache_setup_test": true,
+    "public_release_created": false
+  },
+  "macos_native": "UNGEPRÜFT",
+  "public_release_created": false,
+  "boundaries": [
+    "No new large weight download; small pinned real files plus all installed model hashes verified.",
+    "Forced disconnect/resume uses a synthetic local HTTP server and the real pinned HTTP transport.",
+    "Qt scaling tests use QT_SCALE_FACTOR; no claim of physical OS display settings changes.",
+    "No new restart/autostart, multi-week soak, clean reinstall or GPU transcription certification in this task."
+  ],
+  "real_selected_server_routes": [
+    {
+      "model": "speaker-detection",
+      "role": "api",
+      "host": "huggingface.co",
+      "state": "reachable",
+      "checkedAt": 1795429317.1910682,
+      "latencyMs": 156
+    },
+    {
+      "model": "speaker-detection",
+      "role": "files",
+      "host": "us.aws.cdn.hf.co",
+      "state": "reachable",
+      "checkedAt": 1795429317.5088983,
+      "latencyMs": 313
+    },
+    {
+      "model": "qwen3-asr-1.7b",
+      "role": "api",
+      "host": "huggingface.co",
+      "state": "reachable",
+      "checkedAt": 1795429317.615818,
+      "latencyMs": 109
+    },
+    {
+      "model": "qwen3-asr-1.7b",
+      "role": "files",
+      "host": "us.aws.cdn.hf.co",
+      "state": "reachable",
+      "checkedAt": 1795429317.68776,
+      "latencyMs": 63
+    },
+    {
+      "model": "qwen3-forced-aligner-0.6b",
+      "role": "api",
+      "host": "huggingface.co",
+      "state": "reachable",
+      "checkedAt": 1795429317.7954319,
+      "latencyMs": 94
+    },
+    {
+      "model": "qwen3-forced-aligner-0.6b",
+      "role": "files",
+      "host": "us.aws.cdn.hf.co",
+      "state": "reachable",
+      "checkedAt": 1795429317.8722963,
+      "latencyMs": 78
+    }
+  ],
+  "functional_commit_windows_ci": {
+    "status": "success",
+    "run_id": 45157030808,
+    "url": "https://github.com/adriantagonist87/VoxDrop/actions/runs/45157030808"
+  }
+}
