@@ -1822,7 +1822,7 @@ def clear_history(db, state):
         try:
             if db.execute("SELECT 1 FROM jobs WHERE state IN ('copying','transcribing','exporting')").fetchone():
                 raise ValueError('Der Verlauf kann nach Abschluss des aktiven Auftrags geleert werden.')
-            names=['jobs','transcript-search.sqlite3','transcript-search.sqlite3-wal',
+            names=['jobs','record-delete','transcript-search.sqlite3','transcript-search.sqlite3-wal',
                    'transcript-search.sqlite3-shm','content-search-result.json']
             artifacts=[state/name for name in names]+list(state.glob('.search-*'))
             for artifact in artifacts:
@@ -2338,6 +2338,9 @@ def main(argv=None):
     rerun.add_argument("job_id", type=int)
     rerun.add_argument("config", type=Path)
     commands.add_parser("clear-history")
+    commands.add_parser('prepare-delete-record').add_argument('job_id',type=int)
+    commands.add_parser('delete-record').add_argument('token')
+    commands.add_parser('discard-delete-record').add_argument('token')
     commands.add_parser('stop')
     commands.add_parser("enqueue-folders").add_argument("config", type=Path)
     commands.add_parser('prepare-drop').add_argument('config', type=Path)
@@ -2482,6 +2485,12 @@ def main(argv=None):
                 print(retranscribe(db, args.job_id, read_settings(args.config)))
             elif args.command == "clear-history":
                 clear_history(db, state)
+            elif args.command in ('prepare-delete-record','delete-record','discard-delete-record'):
+                import record_delete
+                if args.command=='prepare-delete-record':result=record_delete.prepare(db,state,args.job_id)
+                elif args.command=='delete-record':result=record_delete.execute(db,state,args.token)
+                else:record_delete.discard(state,args.token);result={}
+                print(json.dumps(result,ensure_ascii=True))
             elif args.command == "reconcile-folders":
                 print(reconcile_watched_jobs(db, read_settings(args.config)))
             elif args.command == "rescan-folders":

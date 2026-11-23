@@ -689,6 +689,69 @@ class DesktopWindowTests(unittest.TestCase):
         self.assertFalse(self.controller.history)
         self.assertFalse(self.controller.queue)
 
+    def delete_fixture(self):
+        jobs=self.queue_fixture(3)
+        for job in jobs:job.update(state='done',attempt=1,finished=101)
+        self.controller.snapshot.update(jobs=jobs,queue=[],queue_paused=True)
+        self.controller.update_history();self.controller.update_queue()
+        self.controller.showDetails(1);QTest.qWait(30)
+        return dict(token='a'*32,name=Path(jobs[0]['source']).name,recordCount=2,
+            files=[dict(path=jobs[0]['source'],role='original')])
+
+    def test_record_delete_popup_is_explicit_red_green_and_cancel_preserves_history(self):
+        plan=self.delete_fixture()
+        def command(*args):return json.dumps(plan) if args[0]=='prepare-delete-record' else '{}'
+        with patch.object(self.controller_module,'command',side_effect=command) as sent, \
+             patch.object(self.controller,'submit',side_effect=lambda operation,finished:finished(operation(),None)):
+            button=self.visual('deleteRecordButton')
+            self.assertTrue(button.property('visible'));self.assertTrue(button.property('enabled'))
+            self.assertEqual(button.property('background').property('color').name(),'#b5303a')
+            QMetaObject.invokeMethod(button,'clicked');QTest.qWait(30)
+            popup=self.window.findChild(QObject,'deleteRecordDialog')
+            self.assertTrue(popup.property('visible'))
+            confirm=popup.findChild(QObject,'confirmDeleteRecordButton');cancel=popup.findChild(QObject,'cancelDeleteRecordButton')
+            self.assertTrue(confirm.property('enabled'))
+            self.assertEqual(confirm.property('background').property('color').name(),'#b5303a')
+            self.assertEqual(cancel.property('background').property('color').name(),'#8ac6a5')
+            self.assertEqual([call.args[0] for call in sent.call_args_list],['prepare-delete-record'])
+            QMetaObject.invokeMethod(cancel,'clicked');QTest.qWait(30)
+            self.assertFalse(popup.property('visible'))
+            self.assertEqual([call.args[0] for call in sent.call_args_list],['prepare-delete-record','discard-delete-record'])
+        self.assertEqual(len(self.controller.history),3)
+        self.assertTrue(self.controller.snapshot['queue_paused'])
+        self.assertEqual(self.controller.selected['id'],1)
+
+    def test_record_delete_cancelled_probe_cannot_restore_confirmation(self):
+        plan=self.delete_fixture();pending=[]
+        with patch.object(self.controller,'submit',side_effect=lambda operation,finished:pending.append((operation,finished))):
+            self.controller.requestRecordDeletion();self.controller.cancelRecordDeletion()
+            pending[0][1](plan,None)
+            self.assertFalse(self.controller.delete_plan)
+            self.assertFalse(self.controller.busy)
+            self.assertFalse(self.window.findChild(QObject,'deleteRecordDialog').property('visible'))
+            self.assertEqual(len(pending),2)
+
+    def test_record_delete_failure_keeps_details_then_success_removes_only_selected_ids(self):
+        plan=self.delete_fixture()
+        self.controller.delete_plan=plan;self.controller.recordDeletionOpened.emit()
+        pending=[]
+        with patch.object(self.controller,'submit',side_effect=lambda operation,finished:pending.append((operation,finished))):
+            self.controller.confirmRecordDeletion()
+            self.assertTrue(self.controller.deleting_record)
+            self.controller.cancelRecordDeletion();self.assertTrue(self.controller.delete_plan)
+            pending[0][1](None,'Die Datei ist gesperrt.')
+            self.assertEqual(self.controller.selected['id'],1)
+            self.assertEqual(len(self.controller.history),3)
+            self.assertTrue(self.controller.delete_plan)
+            self.assertIn('gesperrt',self.controller.delete_error)
+            self.controller.confirmRecordDeletion()
+            pending[1][1](dict(deletedIds=[1,2],trashed=3),None)
+        self.assertEqual([job['id'] for job in self.controller.history],[3])
+        self.assertIsNone(self.controller.selected)
+        self.assertTrue(self.controller.snapshot['queue_paused'])
+        self.assertFalse(self.controller.busy or self.controller.deleting_record)
+        self.assertFalse(self.window.findChild(QObject,'deleteRecordDialog').property('visible'))
+
     def test_window_x_hides_to_tray_without_stopping_app_or_work(self):
         self.presenter.show();QTest.qWait(30)
         with patch.object(self.controller,'hasTray',return_value=True),patch.object(self.controller,'requestQuit') as quit_app:

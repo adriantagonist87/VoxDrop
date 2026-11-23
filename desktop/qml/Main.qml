@@ -1049,6 +1049,9 @@ ApplicationWindow {
         function onDetailsOpened() { detail.open() }
         function onAudioPreviewOpened() { audioPopup.open() }
         function onAudioPreviewClosed() { audioPopup.close() }
+        function onRecordDeletionOpened() { deleteRecord.open() }
+        function onRecordDeletionClosed() { deleteRecord.close() }
+        function onRecordDeleted() { detail.close() }
         function onDropConflictOpened() { dropConflicts.open() }
         function onDropResolved() { dropConflicts.close() }
     }
@@ -1130,7 +1133,51 @@ ApplicationWindow {
                 AppActionButton { objectName: "retranscribeButton"; text: "Neu transkribieren"; Layout.fillWidth: true; enabled: (selected.repeat || false) && (selected.canPlayOriginal || false) && !viewState.busy; onClicked: { api.retryJob(true); detail.close() } }
                 AppActionButton { objectName: "closeJobDialog"; text: "Schließen"; Layout.fillWidth: true; onClicked: detail.close() }
                 AppActionButton { objectName: "retryJobButton"; text: "Erneut versuchen"; visible: selected.retry || false; enabled: !viewState.busy; Layout.fillWidth: true; onClicked: { api.retryJob(false); detail.close() } }
+                AppActionButton { objectName: "deleteRecordButton"; text: "Datensatz löschen"; errorAlert: true; Layout.fillWidth: true; Layout.columnSpan: 2; enabled: (selected.canDeleteRecord || false) && viewState.ready && !viewState.busy; onClicked: api.requestRecordDeletion() }
             }
+        }
+    }
+
+    Dialog {
+        id: deleteRecord
+        objectName: "deleteRecordDialog"
+        property var deletion: api.recordDeletion
+        modal: true
+        title: "Datensatz löschen"
+        anchors.centerIn: Overlay.overlay
+        width: Math.min(650,window.width-48)
+        height: Math.min(window.height-48,deleteContent.implicitHeight+deleteButtons.implicitHeight+80)
+        closePolicy: deletion.deleting ? Popup.NoAutoClose : Popup.CloseOnEscape
+        background: Rectangle { color: surface; radius: 9; border.color: line }
+        onClosed: api.cancelRecordDeletion()
+        onOpened: cancelDeleteRecord.forceActiveFocus()
+        contentItem: ScrollView {
+            id: deleteScroll
+            clip: true; contentWidth: availableWidth
+            ColumnLayout {
+                id: deleteContent
+                width: deleteScroll.availableWidth
+                spacing: 10
+                Copy { Layout.fillWidth: true; text: "Es werden alle Dateien (auch das Original) und Datenbankeinträge gelöscht, der Vorgang kann nicht rückgängig gemacht werden!"; color: warningColor }
+                Copy { Layout.fillWidth: true; text: deleteRecord.deletion.plan.name || selected.name || ""; font.bold: true }
+                Copy { Layout.fillWidth: true; text: (deleteRecord.deletion.plan.recordCount || 0)>1 ? deleteRecord.deletion.plan.recordCount + " Vorgänge sind über Originaldateien oder Transkripte verknüpft und werden gemeinsam gelöscht." : "Originaldatei und Transkripte werden in den Papierkorb des Betriebssystems verschoben." }
+                Repeater {
+                    model: deleteRecord.deletion.plan.files || []
+                    delegate: Copy {
+                        required property var modelData
+                        Layout.fillWidth: true; wrapMode: Text.WrapAnywhere; font.pixelSize: 12
+                        text: (modelData.role === "original" ? "Originaldatei: " : modelData.role === "transcript" ? "Transkript: " : "Lokale Arbeitskopien: ") + modelData.path + (modelData.trashed ? " · bereits im Papierkorb" : modelData.protected ? " · andere/geänderte Datei, bleibt erhalten" : modelData.missing ? " · nicht mehr vorhanden" : "")
+                    }
+                }
+                Copy { Layout.fillWidth: true; visible: deleteRecord.deletion.preparing || deleteRecord.deletion.deleting; text: deleteRecord.deletion.preparing ? "Betroffene Dateien werden geprüft …" : "Dateien werden in den Papierkorb verschoben …" }
+                Copy { objectName: "deleteRecordError"; Layout.fillWidth: true; visible: text.length>0; color: warningColor; text: deleteRecord.deletion.error || "" }
+            }
+        }
+        footer: RowLayout {
+            id: deleteButtons
+            spacing: 10
+            AppActionButton { objectName: "confirmDeleteRecordButton"; text: "Jetzt löschen"; errorAlert: true; Layout.fillWidth: true; enabled: Boolean(deleteRecord.deletion.plan.token) && !deleteRecord.deletion.preparing && !deleteRecord.deletion.deleting && !viewState.busy; onClicked: api.confirmRecordDeletion() }
+            AppActionButton { id: cancelDeleteRecord; objectName: "cancelDeleteRecordButton"; text: "Abbrechen"; primary: true; Layout.fillWidth: true; enabled: !deleteRecord.deletion.deleting; onClicked: deleteRecord.close() }
         }
     }
 

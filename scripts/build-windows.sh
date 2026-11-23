@@ -29,7 +29,7 @@ cp "$project/LICENSE" "$app/LICENSE"
 rsync -a --exclude='__pycache__/' --exclude='*.pyc' "$project/desktop/" "$app/Desktop/"
 cp "$project/macos/VoxDropLogo.png" "$app/assets/"
 cp "$project/assets/VoxDrop.ico" "$app/assets/"
-for source in watch_service.py voxdrop.py transcription_worker.py silence.py smb_paths.py platform_io.py gpu_budget.py queue_control.py media_history.py history_store.py app_lifecycle.py runtime_logs.py login_agent.py \
+for source in watch_service.py voxdrop.py transcription_worker.py silence.py smb_paths.py platform_io.py gpu_budget.py queue_control.py media_history.py history_store.py record_delete.py app_lifecycle.py runtime_logs.py login_agent.py \
     qwen_backend.py qwen_cuda.py qwen-models.json qwen-windows-models.json speaker_diarization.py; do
     cp "$project/$source" "$app/Engine/"
 done
