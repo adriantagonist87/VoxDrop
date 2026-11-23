@@ -294,6 +294,7 @@ class DesktopWindowTests(unittest.TestCase):
         self.assertFalse(self.visual('openTranscriptButton').property('enabled'))
         self.assertFalse(self.visual('revealTranscriptButton').property('enabled'))
         self.assertIsNone(self.controller.audio_preview._player)
+        self.assertFalse(self.window.findChild(QObject,'audioPreviewPopup').property('visible'))
         source.with_suffix('.txt').write_text('protected existing result')
         with patch.object(self.controller, 'submit', side_effect=lambda operation, callback: callbacks.append((operation, callback))):
             self.controller.showDetails(job['id'])
@@ -340,6 +341,42 @@ class DesktopWindowTests(unittest.TestCase):
             played.assert_not_called()
         self.assertEqual(self.controller.detail_files, {})
 
+    def test_player_popup_outside_close_keeps_details_and_ignores_late_play_reply(self):
+        job=self.queue_fixture(1)[0]
+        files=dict(original=job['source'],originalAvailable=True,transcriptAvailable=False)
+        callbacks=[]
+        with patch.object(self.controller,'submit',side_effect=lambda operation,callback:callbacks.append(callback)):
+            self.controller.showDetails(job['id'])
+            callbacks.pop()(files,None)
+            self.controller.playOriginal()
+        popup=self.window.findChild(QObject,'audioPreviewPopup')
+        QTest.qWait(30);self.assertTrue(popup.property('visible'))
+        QTest.mouseClick(self.window,Qt.MouseButton.LeftButton,Qt.KeyboardModifier.NoModifier,QPoint(4,4))
+        QTest.qWait(40)
+        self.assertFalse(popup.property('visible'))
+        self.assertTrue(self.window.findChild(QObject,'jobDialog').property('visible'))
+        with patch.object(self.controller.audio_preview,'play_file') as played:
+            callbacks.pop()(files,None)
+            played.assert_not_called()
+            with patch.object(self.controller,'submit',side_effect=lambda operation,callback:callback(files,None)):
+                self.controller.playOriginal()
+            self.assertTrue(popup.property('visible'))
+            played.assert_called_once_with(job['source'])
+        self.controller.closeDetails()
+        self.assertFalse(popup.property('visible'))
+
+    def test_player_popup_escape_closes_without_closing_details(self):
+        job=self.queue_fixture(1)[0]
+        with patch.object(self.controller,'submit'):
+            self.controller.showDetails(job['id'])
+            self.controller.playOriginal()
+        popup=self.window.findChild(QObject,'audioPreviewPopup')
+        QTest.qWait(30)
+        QTest.keyClick(self.window,Qt.Key.Key_Escape);QTest.qWait(30)
+        self.assertFalse(popup.property('visible'))
+        self.assertTrue(self.window.findChild(QObject,'jobDialog').property('visible'))
+        self.assertFalse(self.controller.audio_requested)
+
     def test_player_sliders_also_apply_accessibility_value_changes(self):
         self.queue_fixture(1)
         with patch.object(self.controller, 'submit'):
@@ -352,6 +389,7 @@ class DesktopWindowTests(unittest.TestCase):
         backend.isSeekable.return_value = True
         preview._player = backend
         preview._path = 'synthetic.wav'
+        self.controller.audioPreviewOpened.emit()
         preview.changed.emit()
         QTest.qWait(30)
         self.visual('previewSeekSlider').setProperty('value', 3500)
