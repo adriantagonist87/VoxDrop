@@ -1,5 +1,9 @@
 # Projektstatus VoxDrop
 
+## Offener Systemstillstand nach CUDA-Transkriptionsstart, 23.11.2026
+
+Nutzer meldete vollständigen PC-Stillstand nach Transkriptionsstart um 13:05; zeitnaher Grafik-Live-Dump 193 um 13:07, harter Neustart. **Ursache nicht geklärt, keine neue CUDA-Stabilitätsfreigabe.** App/Dienste beendet, Queue pausiert, vorhandener CPU-Schutz vorübergehend aktiv, Daten/Protokolle gesichert. Erweiterte 193-Erkennung im Code `c0aa811345bd87d5680534dd5e30d0eef6e520e7`, Branch `fix/windows-watchdog-193`: 41 modellfreie Fälle grün und installierte Erkennung am echten Ereignis geprüft, keine GPU-/GUI-Wiederholung. Dumpanalyse benötigt die vom Nutzer erstellte Administratorkopie; keine Systemberechtigungen verändert. [Vorfall, Belege, Grenzen und nächste Diagnoseschritte](SYSTEMSTILLSTAND_2026-11-23.md). Kein Release.
+
 ## Datensatz mit Originaldatei löschen, 23.11.2026
 
 Windows-geprüfter Funktionscode `6b4722c394ca42844754e54b66283e3f6812e992`, Branch `feat/trash-history-record`, [PR #31](https://github.com/adriantagonist87/VoxDrop/pull/31). Jeder Verlaufseintrag erhält den roten Löschknopf und einen ausdrücklichen Bestätigungsdialog. Original/TXT gehen in den nativen Papierkorb, danach werden die verknüpften SQL-/Suchdaten entfernt. Auf Netzlaufwerken wird das Löschen entsprechend Nutzerentscheidung mit Erklärung verweigert. Dateiversions-/Sperrprüfungen, gruppierte Neutranskriptionen und fortsetzbare Teilfehler schützen die Daten.

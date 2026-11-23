@@ -1,5 +1,7 @@
 # Datensatz mit Originaldatei löschen
 
+**Offener Stabilitätsvorfall:** Nach dem späteren Start einer produktiven CUDA-Transkription meldete der Nutzer einen vollständigen PC-Stillstand. Die Ursache ist nicht geklärt. Die folgenden Funktionstests der Löschung sind keine CUDA-Dauerfreigabe. App beendet, Queue pausiert, CPU-Schutz vorübergehend aktiv. [Gesicherte Befunde und weitere Diagnose](SYSTEMSTILLSTAND_2026-11-23.md).
+
 ## Bedienung und Nutzerentscheidung vom 23.11.2026
 
 Jeder Verlaufseintrag einschließlich Fehlern und Bestand bietet in den Details den roten Button **Datensatz löschen**. Der Bestätigungsdialog zeigt den Dateinamen, alle betroffenen Dateipfade und die Warnung:

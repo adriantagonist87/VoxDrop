@@ -1,5 +1,9 @@
 # Übergabeauftrag für Codex auf dem Windows-PC
 
+## Offener Systemstillstand nach CUDA-Transkriptionsstart, 23.11.2026
+
+Nutzer meldete vollständigen PC-Stillstand nach Transkriptionsstart um 13:05; zeitnaher Grafik-Live-Dump 193 um 13:07, harter Neustart. **Ursache nicht geklärt, keine neue CUDA-Stabilitätsfreigabe.** App/Dienste beendet, Queue pausiert, vorhandener CPU-Schutz vorübergehend aktiv, Daten/Protokolle gesichert. Erweiterte 193-Erkennung im Code `c0aa811345bd87d5680534dd5e30d0eef6e520e7`, Branch `fix/windows-watchdog-193`: 41 modellfreie Fälle grün und installierte Erkennung am echten Ereignis geprüft, keine GPU-/GUI-Wiederholung. Dumpanalyse benötigt die vom Nutzer erstellte Administratorkopie; keine Systemberechtigungen verändert. [Vorfall, Belege, Grenzen und nächste Diagnoseschritte](SYSTEMSTILLSTAND_2026-11-23.md). Kein Release.
+
 ## Datensatz löschen einschließlich Originaldatei, 23.11.2026
 
 Funktionscode `6b4722c394ca42844754e54b66283e3f6812e992`, Branch `feat/trash-history-record`, [PR #31](https://github.com/adriantagonist87/VoxDrop/pull/31). Roter Löschknopf für alle Verlaufskategorien, exakte Warnung mit rotem Bestätigen/grünem Abbrechen. Lokale Originale/TXT und eigene Arbeitskopien in den Betriebssystem-Papierkorb, erst dann zugehörige SQL-/Suchdaten entfernen. Nutzerentscheidung: Netzlaufwerke mit Erklärung verweigern. Keine permanente Ersatzlöschung.
