@@ -68,7 +68,7 @@ rsync -a --exclude='__pycache__/' --exclude='*.pyc' --exclude='/bin/' \
 fi
 rsync -a --exclude='__pycache__/' --exclude='*.pyc' "$project_dir/desktop/" "$resources/Desktop/"
 cp "$project_dir/LICENSE" "$resources/LICENSE"
-for file in watch_service.py voxdrop.py transcription_worker.py silence.py smb_paths.py platform_io.py posix_guard.py gpu_budget.py queue_control.py media_history.py history_store.py app_lifecycle.py runtime_logs.py login_agent.py app_upgrade.py airdrop.example.json qwen_backend.py qwen-models.json speaker_diarization.py; do
+for file in watch_service.py voxdrop.py model_download.py transcription_worker.py silence.py smb_paths.py platform_io.py posix_guard.py gpu_budget.py queue_control.py media_history.py history_store.py app_lifecycle.py runtime_logs.py login_agent.py app_upgrade.py airdrop.example.json qwen_backend.py qwen-models.json speaker_diarization.py; do
     cp "$project_dir/$file" "$resources/Engine/"
 done
 cp "$reference/LICENSE" "$resources/Engine/aTrain-LICENSE.txt"

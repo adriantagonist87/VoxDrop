@@ -47,7 +47,7 @@ def require_models(data_dir):
     return model_root
 
 
-def provision_models(data_dir, source=None, cache=None):
+def provision_models(data_dir, source=None, cache=None, *, report=None):
     if source is None:
         from huggingface_hub import snapshot_download
 
@@ -55,7 +55,11 @@ def provision_models(data_dir, source=None, cache=None):
     model_root.mkdir(parents=True, exist_ok=True)
     for key, entry in model_manifest().items():
         destination = model_root / key
+        if report:
+            report.model(key)
         if destination.is_dir() and valid_model(destination, entry):
+            if report:
+                report.verified(key)
             continue
         if source is None:
             directory = Path(
@@ -70,6 +74,8 @@ def provision_models(data_dir, source=None, cache=None):
             )
         else:
             directory = source / "models" / key
+        if report:
+            report.verifying(key, installing=True)
         with tempfile.TemporaryDirectory(
             prefix=f".{key}-", dir=model_root
         ) as temporary:
@@ -77,6 +83,8 @@ def provision_models(data_dir, source=None, cache=None):
             staged.mkdir()
             for name in entry["files"]:
                 shutil.copyfile(directory / name, staged / name)
+            if report:
+                report.verifying(key)
             if not valid_model(staged, entry):
                 raise ValueError(f"Prüfsummenfehler bei {key}.")
             previous = Path(temporary) / "previous"
@@ -88,6 +96,8 @@ def provision_models(data_dir, source=None, cache=None):
                 if previous.exists():
                     previous.rename(destination)
                 raise
+        if report:
+            report.verified(key)
 
 
 def valid_model(directory, entry):
