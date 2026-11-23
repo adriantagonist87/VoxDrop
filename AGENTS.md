@@ -20,6 +20,7 @@
 
 ## Verbindliches Dateiverhalten
 
+- Nutzerauftrag vom 23.11.2026: Nur die ausdrücklich bestätigte Aktion „Datensatz löschen“ darf Originaldateien und zugehörige TXT aus dem Verlauf in den nativen Betriebssystem-Papierkorb verschieben und danach die zugehörigen SQL-/Suchdaten entfernen. Alle betroffenen Dateien und verknüpften Vorgänge müssen vor Bestätigung sichtbar sein. Kein dauerhaftes Löschen als Ersatz bei Papierkorbfehlern. Auf Netzlaufwerken/SMB wird diese Aktion mit Erklärung verweigert; Dateien und Datenbankeinträge bleiben erhalten. Die nachfolgenden Erhaltungsregeln gelten weiterhin für Verarbeitung, Drop und normale Verlaufsbereinigung. [Implementierung, Prüfstand und Mac-Aufgabe](docs/DATENSATZ_LOESCHEN.md).
 - Bei Drag-and-drop einzelner Dateien oder ganzer Ordner dürfen die Quellen überall liegen, auch außerhalb überwachter Pfade und auf SMB-Laufwerken. Ganze Ordner werden samt Unterordnern einmalig eingereiht. Die TXT-Datei gehört immer neben die Originalaufnahme. Originaldateien, Ordner und ihre Hierarchie bleiben erhalten. Diese Regel gilt unabhängig von den Einstellungen und Ausgabeoptionen der normalen überwachten Ordner.
 - Bei aktiver Option „Unterordner mit einbeziehen“ liegt jedes Transkript neben seiner Aufnahme. Beide Unterordner-Checkboxen bleiben anwählbar; das Einschalten einer Option schaltet die andere aus (Nutzerpräzisierung vom 21.11.2026).
 - Bei regulärer Überwachung ohne rekursive Option darf die aktivierte Zielunterordner-Option Aufnahme und Transkript gemeinsam in den gewählten Unterordner verschieben. Erhalte die vorhandenen Prüfungen, exklusiven Veröffentlichungen und Wiederanlaufpfade.
@@ -28,6 +29,8 @@
 - Die macOS-Distribution enthält den gemeinsamen Programmordner `VoxDrop` mit `VoxDrop.app` und dem später angelegten Modellspeicher `Modelle`. Modellgewichte und Download-Cache gehören in diesen Speicher. Erhalte bei Updates den vorhandenen Modellspeicher und die Benutzereinstellungen.
 
 ## Entwicklung und Prüfung auf beiden Systemen
+
+- Offener Vorfall vom 23.11.2026: Systemstillstand nach CUDA-Transkriptionsstart mit zeitnahem Grafik-Watchdog 193. Auf dem betroffenen Windows-PC App/Dienste beendet lassen, vorübergehenden CPU-Schutz und Queuepause erhalten und keine erneuten CUDA-Last-/Reproduktionstests selbsttätig starten. Modellfreie Prüfung bleibt möglich. Die 193-Erweiterung ist keine Behebung der unbekannten Kernelursache. [Belege und notwendige Dumpanalyse](docs/SYSTEMSTILLSTAND_2026-11-23.md).
 
 - Prüfe zuerst den normalen Einstiegspunkt der betroffenen Plattform. Ein Importtest oder ein auf macOS gebautes Windows-ZIP belegt jeweils diesen begrenzten Prüfumfang.
 - Kennzeichne Windows-Verhalten bis zum tatsächlichen Test auf Windows ausdrücklich als **UNGEPRÜFT unter Windows**. Pflege für jedes System den zuletzt geprüften vollständigen GitHub-Commit, Umgebung, Testbefehl und Ergebnis.

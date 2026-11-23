@@ -1,5 +1,15 @@
 # Übergabeauftrag für Codex auf dem Windows-PC
 
+## Offener Systemstillstand nach CUDA-Transkriptionsstart, 23.11.2026
+
+Nutzer meldete vollständigen PC-Stillstand nach Transkriptionsstart um 13:05; zeitnaher Grafik-Live-Dump 193 um 13:07, harter Neustart. **Ursache nicht geklärt, keine neue CUDA-Stabilitätsfreigabe.** App/Dienste beendet, Queue pausiert, vorhandener CPU-Schutz vorübergehend aktiv, Daten/Protokolle gesichert. Erweiterte 193-Erkennung im Code `c0aa811345bd87d5680534dd5e30d0eef6e520e7`, Branch `fix/windows-watchdog-193`: 41 modellfreie Fälle grün und installierte Erkennung am echten Ereignis geprüft, keine GPU-/GUI-Wiederholung. KD hat die vom Nutzer bereitgestellte Dump-Kopie mit Microsoft-Symbolen ausgewertet. Der Stack zeigt die Deadlock-Behandlung des DirectX-Grafikkernels. Der blockierte Thread und der Auslöser bleiben offen. [Vorfall, Belege, Grenzen und nächste Diagnoseschritte](SYSTEMSTILLSTAND_2026-11-23.md). Kein Release.
+
+## Datensatz löschen einschließlich Originaldatei, 23.11.2026
+
+Funktionscode `6b4722c394ca42844754e54b66283e3f6812e992`, Branch `feat/trash-history-record`, [PR #31](https://github.com/adriantagonist87/VoxDrop/pull/31). Roter Löschknopf für alle Verlaufskategorien, exakte Warnung mit rotem Bestätigen/grünem Abbrechen. Lokale Originale/TXT und eigene Arbeitskopien in den Betriebssystem-Papierkorb, erst dann zugehörige SQL-/Suchdaten entfernen. Nutzerentscheidung: Netzlaufwerke mit Erklärung verweigern. Keine permanente Ersatzlöschung.
+
+Native Windows-Prüfungen bei 100/125/150 %, realem Papierkorb, gesperrten Dateien, Abbrechen und Wiederherstellung bestanden. Lokal vier Dateien installiert, übrige 98 vorherige Programmdateien und alle bisherigen Fixes/Profil/Modelle/Runtime/Queuepause erhalten. Normaler EXE-Neustart und installierte QML→CLI→Papierkorb→SQL-Kette geprüft. Kein Release; auf `main` reine Dokumentationsübergabe. Mac 1.5.0 Build 27 bleibt bestätigt. #31 enthält Player-Voraussetzungen aus #20/#29; beim Mac-Abgleich nicht doppelt übernehmen. Dort Papierkorb/SMB-Ablehnung, Rechte, Dateiversionen, Gruppierung, Teilfehler/App-Ende, SQLite/Suche sowie Retina/Fokus/Cmd-Q nativ prüfen. [Genaue Ergebnisse und Grenzen](DATENSATZ_LOESCHEN.md).
+
 ## Popup-Player statt eingebetteter Playerfläche, 23.11.2026
 
 Funktionscode `6f0bb63d1afd843d5bacb9f1ef63026d23adca49`, Branch `feat/popup-audio-player`, [PR #29](https://github.com/adriantagonist87/VoxDrop/pull/29). Öffnen ausschließlich über „Originaldatei abspielen“; kompakte Leiste mit Play/Pause, Zeitbalken/-anzeige, Geschwindigkeit mit Pitch-Korrektur und Lautstärke. Außenklick/Escape stoppt/schließt nur den Player, Details bleiben offen. Eigene Play-Generation verhindert späte Wiedergabe nach Schließen.

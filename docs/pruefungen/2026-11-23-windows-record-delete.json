@@ -1,0 +1,162 @@
+{
+  "date": "2026-11-23",
+  "platform": "Windows 11",
+  "python": "3.12.13",
+  "qt_pyside": "6.10.2",
+  "tested_code_commit": "6b4722c394ca42844754e54b66283e3f6812e992",
+  "branch": "feat/trash-history-record",
+  "pull_request": "https://github.com/adriantagonist87/VoxDrop/pull/31",
+  "code_ci": {
+    "url": "https://github.com/adriantagonist87/VoxDrop/actions/runs/45170306204",
+    "conclusion": "success",
+    "head_sha": "6b4722c394ca42844754e54b66283e3f6812e992"
+  },
+  "targeted_suite": {
+    "cases": 52,
+    "passed": 50,
+    "skipped": 2,
+    "seconds": 19.545
+  },
+  "combined_suite": {
+    "cases": 301,
+    "passed": 288,
+    "skipped": 13,
+    "seconds": 174.965,
+    "overlays": [
+      "f43e27fdf74dda4b1a492513cc548b9f7a4a54f1",
+      "79d42538022573fc32d6927115c99ebf3c4dc9c3",
+      "5405d8e365171e6cecbc636c586fba866b0a7f87",
+      "afa5167047cbecff84ebcc539f7d5b090925e2fa",
+      "6f0bb63d1afd843d5bacb9f1ef63026d23adca49"
+    ]
+  },
+  "native_ui": [
+    {
+      "passed": true,
+      "scale": "1",
+      "qt_platform": "windows",
+      "minimum_window": [
+        1010,
+        630
+      ],
+      "installed_program_files": false,
+      "cancel_preserves_files_and_rows": true,
+      "red_confirm_green_cancel": true,
+      "locked_file_preflight": true,
+      "native_trash_receipts_and_hashes": true,
+      "qml_controller_cli_native_trash_sql": true,
+      "unrelated_files_rows_and_queue_pause_preserved": true,
+      "network_drive_and_unc_refused": true,
+      "sqlite_foreign_keys_ok": true
+    },
+    {
+      "passed": true,
+      "scale": "1.25",
+      "qt_platform": "windows",
+      "minimum_window": [
+        1010,
+        630
+      ],
+      "installed_program_files": false,
+      "cancel_preserves_files_and_rows": true,
+      "red_confirm_green_cancel": true,
+      "locked_file_preflight": true,
+      "native_trash_receipts_and_hashes": true,
+      "qml_controller_cli_native_trash_sql": true,
+      "unrelated_files_rows_and_queue_pause_preserved": true,
+      "network_drive_and_unc_refused": true,
+      "sqlite_foreign_keys_ok": true
+    },
+    {
+      "passed": true,
+      "scale": "1.5",
+      "qt_platform": "windows",
+      "minimum_window": [
+        1010,
+        630
+      ],
+      "installed_program_files": false,
+      "cancel_preserves_files_and_rows": true,
+      "red_confirm_green_cancel": true,
+      "locked_file_preflight": true,
+      "native_trash_receipts_and_hashes": true,
+      "qml_controller_cli_native_trash_sql": true,
+      "unrelated_files_rows_and_queue_pause_preserved": true,
+      "network_drive_and_unc_refused": true,
+      "sqlite_foreign_keys_ok": true
+    }
+  ],
+  "installed_native": {
+    "passed": true,
+    "scale": "1",
+    "qt_platform": "windows",
+    "minimum_window": [
+      1010,
+      630
+    ],
+    "installed_program_files": true,
+    "cancel_preserves_files_and_rows": true,
+    "red_confirm_green_cancel": true,
+    "locked_file_preflight": true,
+    "native_trash_receipts_and_hashes": true,
+    "qml_controller_cli_native_trash_sql": true,
+    "unrelated_files_rows_and_queue_pause_preserved": true,
+    "network_drive_and_unc_refused": true,
+    "network_error_in_popup_no_confirmation": true,
+    "native_trash_of_local_working_copy": true,
+    "sqlite_foreign_keys_ok": true
+  },
+  "native_recycle_restore": {
+    "passed": true,
+    "synthetic_items_restored": 17,
+    "other_recycle_items_untouched": true
+  },
+  "local_install": {
+    "passed": true,
+    "code_commit": "6b4722c394ca42844754e54b66283e3f6812e992",
+    "base_package_code": "6278335acb6589a97b4973c26cf0e931fb5ac369",
+    "changed_files": 4,
+    "unchanged_previous_program_files": 98,
+    "manual_drop_download_and_watch_stop_fixes_preserved": true,
+    "private_profile_backed_up": true,
+    "queue_jobs_configuration_layout_preserved": true,
+    "models_and_runtime_preserved": true,
+    "previous_queue_pause_preserved": true,
+    "gui_was_running": true,
+    "public_release_created": false,
+    "overlay_files": [
+      {
+        "path": "Engine/record_delete.py",
+        "sha256": "f2e9de1c85abfa3f853909228b290300e1ff2b705cd5d0724d4eb6b6a174f74e"
+      },
+      {
+        "path": "Engine/watch_service.py",
+        "sha256": "9ae777bda013f011cb6c86269b5ad01072c901fcca063526721a0a2f138004c3"
+      },
+      {
+        "path": "Desktop/controller.py",
+        "sha256": "874a1854f02f2ffeeb27ef61f619e5bab6b99f71efcac32cbfd5c3de646c2e07"
+      },
+      {
+        "path": "Desktop/qml/Main.qml",
+        "sha256": "76c8a8c76b703ca9e177186d489935aa79f067c9e165278f74713c4a22852d72"
+      }
+    ]
+  },
+  "normal_exe": {
+    "passed": true,
+    "normal_exe_gui_registered": true,
+    "installed_qml_matches_tested_stage": true,
+    "previous_queue_pause_preserved": true,
+    "no_production_job_started": true
+  },
+  "private_media_used": false,
+  "production_media_deleted": false,
+  "new_public_release": false,
+  "new_public_package": false,
+  "main_integration": "documentation_only_pending_native_mac_verification",
+  "macos": {
+    "status": "UNGEPRÜFT",
+    "last_verified": "1.5.0 Build 27"
+  }
+}

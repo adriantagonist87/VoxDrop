@@ -1,5 +1,13 @@
 # Entwicklung auf macOS und Windows
 
+## Offener Systemstillstand nach CUDA-Transkriptionsstart, 23.11.2026
+
+Nutzer meldete vollständigen PC-Stillstand nach Transkriptionsstart um 13:05; zeitnaher Grafik-Live-Dump 193 um 13:07, harter Neustart. **Ursache nicht geklärt, keine neue CUDA-Stabilitätsfreigabe.** App/Dienste beendet, Queue pausiert, vorhandener CPU-Schutz vorübergehend aktiv, Daten/Protokolle gesichert. Erweiterte 193-Erkennung im Code `c0aa811345bd87d5680534dd5e30d0eef6e520e7`, Branch `fix/windows-watchdog-193`: 41 modellfreie Fälle grün und installierte Erkennung am echten Ereignis geprüft, keine GPU-/GUI-Wiederholung. KD hat die vom Nutzer bereitgestellte Dump-Kopie mit Microsoft-Symbolen ausgewertet. Der Stack zeigt die Deadlock-Behandlung des DirectX-Grafikkernels. Der blockierte Thread und der Auslöser bleiben offen. [Vorfall, Belege, Grenzen und nächste Diagnoseschritte](SYSTEMSTILLSTAND_2026-11-23.md). Kein Release.
+
+## Bestätigte Datensatzlöschung in den nativen Papierkorb
+
+Windows-geprüfter Code `6b4722c394ca42844754e54b66283e3f6812e992`, [PR #31](https://github.com/adriantagonist87/VoxDrop/pull/31): neues Engine-Modul `record_delete.py`, von allen drei Buildern übernommen; `prepare-delete-record`/`delete-record`/`discard-delete-record` über asynchronen Controller und gemeinsamen QML-Dialog. Exakter Datei-/SQL-Snapshot, lokale native Qt-Papierkorboperation mit dauerhaftem Teilvorgangsjournal, danach selektive SQL-/Suchbereinigung unter Speichersperre. Kein permanenter Löschfallback; SMB/Netzlaufwerke werden nach Nutzerentscheidung verweigert. Keine neue Pin-/Schemaänderung. Lokaler kombinierter Stand installiert; keine Veröffentlichung. [Architektur, Grenzen, native Prüfungen und Mac-Gegenprüfung](DATENSATZ_LOESCHEN.md).
+
 ## Popup-Player mit Qt-Tonhöhenkorrektur
 
 Windows-geprüfter Code `6f0bb63d1afd843d5bacb9f1ef63026d23adca49`, [PR #29](https://github.com/adriantagonist87/VoxDrop/pull/29), enthält die bestehende Playerbasis aus #20 als Voraussetzung und ersetzt ihre eingebettete Bedienung durch ein eigenes Popup. Öffnen/Schließen über Controllersignale, separate Generation für ausstehende Play-Prüfungen, `QMediaPlayer.setPlaybackRate` mit ausdrücklich eingeschalteter `pitchCompensation`. Keine zusätzliche Abhängigkeit gegenüber dem Playerstand, vorhandene Qt-Addons weiter nötig. Kein Modell-/Runtime-/DB-Wechsel. [Architektur, Tests, lokaler kombinierter Stand und konkrete Mac-Übernahme](AUDIOPLAYER_POPUP.md). Kein Release.
