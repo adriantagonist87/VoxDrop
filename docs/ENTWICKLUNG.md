@@ -1,5 +1,9 @@
 # Entwicklung auf macOS und Windows
 
+## Bestätigte Datensatzlöschung in den nativen Papierkorb
+
+Windows-geprüfter Code `6b4722c394ca42844754e54b66283e3f6812e992`, [PR #31](https://github.com/adriantagonist87/VoxDrop/pull/31): neues Engine-Modul `record_delete.py`, von allen drei Buildern übernommen; `prepare-delete-record`/`delete-record`/`discard-delete-record` über asynchronen Controller und gemeinsamen QML-Dialog. Exakter Datei-/SQL-Snapshot, lokale native Qt-Papierkorboperation mit dauerhaftem Teilvorgangsjournal, danach selektive SQL-/Suchbereinigung unter Speichersperre. Kein permanenter Löschfallback; SMB/Netzlaufwerke werden nach Nutzerentscheidung verweigert. Keine neue Pin-/Schemaänderung. Lokaler kombinierter Stand installiert; keine Veröffentlichung. [Architektur, Grenzen, native Prüfungen und Mac-Gegenprüfung](DATENSATZ_LOESCHEN.md).
+
 ## Popup-Player mit Qt-Tonhöhenkorrektur
 
 Windows-geprüfter Code `6f0bb63d1afd843d5bacb9f1ef63026d23adca49`, [PR #29](https://github.com/adriantagonist87/VoxDrop/pull/29), enthält die bestehende Playerbasis aus #20 als Voraussetzung und ersetzt ihre eingebettete Bedienung durch ein eigenes Popup. Öffnen/Schließen über Controllersignale, separate Generation für ausstehende Play-Prüfungen, `QMediaPlayer.setPlaybackRate` mit ausdrücklich eingeschalteter `pitchCompensation`. Keine zusätzliche Abhängigkeit gegenüber dem Playerstand, vorhandene Qt-Addons weiter nötig. Kein Modell-/Runtime-/DB-Wechsel. [Architektur, Tests, lokaler kombinierter Stand und konkrete Mac-Übernahme](AUDIOPLAYER_POPUP.md). Kein Release.

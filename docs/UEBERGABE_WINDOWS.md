@@ -1,5 +1,11 @@
 # Übergabeauftrag für Codex auf dem Windows-PC
 
+## Datensatz löschen einschließlich Originaldatei, 23.11.2026
+
+Funktionscode `6b4722c394ca42844754e54b66283e3f6812e992`, Branch `feat/trash-history-record`, [PR #31](https://github.com/adriantagonist87/VoxDrop/pull/31). Roter Löschknopf für alle Verlaufskategorien, exakte Warnung mit rotem Bestätigen/grünem Abbrechen. Lokale Originale/TXT und eigene Arbeitskopien in den Betriebssystem-Papierkorb, erst dann zugehörige SQL-/Suchdaten entfernen. Nutzerentscheidung: Netzlaufwerke mit Erklärung verweigern. Keine permanente Ersatzlöschung.
+
+Native Windows-Prüfungen bei 100/125/150 %, realem Papierkorb, gesperrten Dateien, Abbrechen und Wiederherstellung bestanden. Lokal vier Dateien installiert, übrige 98 vorherige Programmdateien und alle bisherigen Fixes/Profil/Modelle/Runtime/Queuepause erhalten. Normaler EXE-Neustart und installierte QML→CLI→Papierkorb→SQL-Kette geprüft. Kein Release; auf `main` reine Dokumentationsübergabe. Mac 1.5.0 Build 27 bleibt bestätigt. #31 enthält Player-Voraussetzungen aus #20/#29; beim Mac-Abgleich nicht doppelt übernehmen. Dort Papierkorb/SMB-Ablehnung, Rechte, Dateiversionen, Gruppierung, Teilfehler/App-Ende, SQLite/Suche sowie Retina/Fokus/Cmd-Q nativ prüfen. [Genaue Ergebnisse und Grenzen](DATENSATZ_LOESCHEN.md).
+
 ## Popup-Player statt eingebetteter Playerfläche, 23.11.2026
 
 Funktionscode `6f0bb63d1afd843d5bacb9f1ef63026d23adca49`, Branch `feat/popup-audio-player`, [PR #29](https://github.com/adriantagonist87/VoxDrop/pull/29). Öffnen ausschließlich über „Originaldatei abspielen“; kompakte Leiste mit Play/Pause, Zeitbalken/-anzeige, Geschwindigkeit mit Pitch-Korrektur und Lautstärke. Außenklick/Escape stoppt/schließt nur den Player, Details bleiben offen. Eigene Play-Generation verhindert späte Wiedergabe nach Schließen.
