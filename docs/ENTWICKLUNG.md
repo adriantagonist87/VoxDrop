@@ -1,5 +1,9 @@
 # Entwicklung auf macOS und Windows
 
+## Freigabe öffentlicher Releases
+
+Nutzerregel vom 23.11.2026: Neue öffentliche GitHub-Releases und neue für Dritte angebotene Builds werden nur auf eine ausdrückliche Release-Anweisung veröffentlicht. Bugfixes werden über Commits, Branches, PRs und lokale Tests entwickelt; ein erfolgreicher Test oder ein lokales Update löst keine Veröffentlichung aus. Weitere beauftragte Fehler werden ohne automatische Releases abgearbeitet. Die bereits veröffentlichte Windows-Vorschau 1.5.1 ist ein bestehender Stand, keine Freigabe für weitere Releases. Die Regel ist auch in `AGENTS.md` verbindlich festgehalten.
+
 ## Audioplayer im Windows-Prüfstand 1.5.1
 
 Die gemeinsame Implementierung liegt in [PR #20](https://github.com/adriantagonist87/VoxDrop/pull/20), geprüft unter Windows am Code `6278335acb6589a97b4973c26cf0e931fb5ac369`; bis zur nativen Mac-Gegenprüfung bleibt sie im Feature-PR. `desktop/audio_preview.py` und `AudioPreview.qml` verwenden lazy `QMediaPlayer`/`QAudioOutput` ohne Video-/Hardwaredecoder oder KI-Modelle. Dateiauflösung erfolgt über `detail_files.py` in einem appgebundenen Prozess mit Zeitlimit; vorhandene Dateien zählen unabhängig vom Jobstatus. Detailwechsel, Schließen und Beenden leeren die Medienquelle. [Architektur, Tests, Qt-Stop-Befund und Plattformgrenzen](AUDIOPLAYER.md).
