@@ -332,6 +332,8 @@ class Controller(QObject):
     dropConflictOpened = Signal()
     dropResolved = Signal()
     detailsOpened = Signal()
+    audioPreviewOpened = Signal()
+    audioPreviewClosed = Signal()
     importPreviewOpened = Signal()
     transferProgress = Signal(str)
     windowRequested = Signal()
@@ -366,6 +368,8 @@ class Controller(QObject):
         self.detail_file_error = ""
         self.detail_checking = False
         self.detail_generation = 0
+        self.audio_generation = 0
+        self.audio_requested = False
         self.audio_preview = AudioPreview(self, volume=self.preferences.value("audioPreview/volume", 70, type=float))
         self.audio_preview.volumeChanged.connect(lambda volume: self.preferences.setValue("audioPreview/volume", volume))
         QApplication.instance().aboutToQuit.connect(self.audio_preview.close)
@@ -1727,7 +1731,15 @@ class Controller(QObject):
     @Slot()
     def closeDetails(self):
         self.detail_generation += 1
+        self.closeAudioPreview()
+
+    @Slot()
+    def closeAudioPreview(self):
+        self.audio_generation += 1
         self.audio_preview.close()
+        if self.audio_requested:
+            self.audio_requested = False
+            self.audioPreviewClosed.emit()
 
     def detail_error(self, message):
         self.detail_file_error = message
@@ -1736,7 +1748,15 @@ class Controller(QObject):
 
     @Slot()
     def playOriginal(self):
+        if self.selected is None:
+            return
+        self.closeAudioPreview()
+        generation = self.audio_generation
+        self.audio_requested = True
+        self.audioPreviewOpened.emit()
         def play(files):
+            if generation != self.audio_generation or not self.audio_requested:
+                return
             if files["originalAvailable"]:
                 self.audio_preview.play_file(files["original"])
             else:
