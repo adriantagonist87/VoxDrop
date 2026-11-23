@@ -334,6 +334,9 @@ class Controller(QObject):
     detailsOpened = Signal()
     audioPreviewOpened = Signal()
     audioPreviewClosed = Signal()
+    recordDeletionOpened = Signal()
+    recordDeletionClosed = Signal()
+    recordDeleted = Signal()
     importPreviewOpened = Signal()
     transferProgress = Signal(str)
     windowRequested = Signal()
@@ -368,6 +371,11 @@ class Controller(QObject):
         self.detail_file_error = ""
         self.detail_checking = False
         self.detail_generation = 0
+        self.delete_plan = {}
+        self.delete_preparing = False
+        self.deleting_record = False
+        self.delete_error = ''
+        self.delete_generation = 0
         self.audio_generation = 0
         self.audio_requested = False
         self.audio_preview = AudioPreview(self, volume=self.preferences.value("audioPreview/volume", 70, type=float))
@@ -454,6 +462,8 @@ class Controller(QObject):
     queueModel = Property(QObject, lambda self:self.queue_model, constant=True)
     historyModel = Property(QObject, lambda self:self.history_model, constant=True)
     audioPlayer = Property(QObject, lambda self: self.audio_preview, constant=True)
+    recordDeletion = Property('QVariantMap',lambda self:dict(plan=self.delete_plan,preparing=self.delete_preparing,
+        deleting=self.deleting_record,error=self.delete_error),notify=changed)
     dropPlan = Property('QVariantMap', lambda self: self.drop_plan, notify=changed)
     transfer = Property('QVariantMap', lambda self: dict(running=self.transfer_running, status=self.transfer_status,
         exportOptions=self.export_options, importOptions=self.import_options, preview=self.import_preview,
@@ -602,6 +612,7 @@ class Controller(QObject):
             "originalPath": files.get("original", str(output_path(job))),
             "transcriptPath": files.get("transcript", str(output_path(job, transcript=True))),
             "canPlayOriginal": files.get("originalAvailable", False),
+            "canDeleteRecord": history_category(job) is not None,
             "canRevealOriginal": files.get("originalAvailable", False),
             "canOpenTranscript": files.get("transcriptAvailable", False),
             "canRevealTranscript": files.get("transcriptAvailable", False),
@@ -1732,6 +1743,7 @@ class Controller(QObject):
     def closeDetails(self):
         self.detail_generation += 1
         self.closeAudioPreview()
+        self.cancelRecordDeletion()
 
     @Slot()
     def closeAudioPreview(self):
@@ -1815,6 +1827,60 @@ class Controller(QObject):
             else:
                 QDesktopServices.openUrl(QUrl.fromLocalFile(str(path.parent)))
         self.check_detail_files(reveal)
+
+    @Slot()
+    def requestRecordDeletion(self):
+        if not self.selected or not self.detail.get('canDeleteRecord') or not self.ready or self.busy or self.stop_command_pending:
+            return
+        self.closeAudioPreview()
+        self.delete_generation+=1;generation=self.delete_generation
+        identifier=self.selected['id']
+        self.delete_plan={};self.delete_error='';self.delete_preparing=True;self.busy=True
+        self.changed.emit();self.recordDeletionOpened.emit()
+        def prepared(plan,error):
+            if generation!=self.delete_generation:
+                if plan and plan.get('token'):
+                    self.submit(lambda:command('discard-delete-record',plan['token']),lambda *_:None)
+                return
+            self.delete_preparing=False;self.busy=False
+            self.delete_plan=plan or {};self.delete_error=error or ''
+            self.changed.emit()
+        self.submit(lambda:json.loads(command('prepare-delete-record',identifier)),prepared)
+
+    @Slot()
+    def cancelRecordDeletion(self):
+        if self.deleting_record or (not self.delete_preparing and not self.delete_plan and not self.delete_error):return
+        token=self.delete_plan.get('token')
+        self.delete_generation+=1
+        if self.delete_preparing:self.busy=False
+        self.delete_preparing=False;self.delete_plan={};self.delete_error=''
+        self.changed.emit();self.recordDeletionClosed.emit()
+        if token:self.submit(lambda:command('discard-delete-record',token),lambda *_:None)
+
+    @Slot()
+    def confirmRecordDeletion(self):
+        token=self.delete_plan.get('token')
+        if not token or self.busy or self.stop_command_pending or self.deleting_record or self.delete_preparing:return
+        self.busy=True;self.deleting_record=True;self.delete_error='';self.clearing=True
+        self.reset_generation+=1;self.history_search_timer.stop();self.content_cancel.set();self.content_token=''
+        self.changed.emit()
+        def remove():
+            if not self.content_done.wait(10):raise RuntimeError('Die Detailsuche konnte noch nicht beendet werden. Bitte erneut versuchen.')
+            return json.loads(command('delete-record',token))
+        def removed(result,error):
+            self.busy=False;self.deleting_record=False;self.clearing=False
+            if error:
+                self.delete_error=error;self.changed.emit();return
+            identifiers=set(result['deletedIds'])
+            self.delete_plan={};self.delete_error='';self.closeDetails();self.selected=None
+            for section in ('jobs','queue'):
+                self.snapshot[section]=[job for job in self.snapshot.get(section,[]) if job['id'] not in identifiers]
+            self.history_page=0;self.content_status='';self.drop_plan={};self.drop_backlog=[]
+            self.dropResolved.emit();self.update_history();self.update_queue()
+            self.recordDeletionClosed.emit();self.recordDeleted.emit()
+            self.notify('Dateien in den Papierkorb verschoben und Datensatz gelöscht.')
+            self.refresh()
+        self.submit(remove,removed)
 
     @Slot()
     def clearHistory(self):
