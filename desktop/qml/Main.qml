@@ -1065,7 +1065,7 @@ ApplicationWindow {
         modal: true
         focus: true
         closePolicy: Popup.CloseOnPressOutside | Popup.CloseOnEscape
-        background: Rectangle { color: "#ffffff"; radius: 14 }
+        background: Rectangle { color: "#292b2a"; radius: 10 }
         Overlay.modal: Rectangle { color: "#38000000" }
         onClosed: api.closeAudioPreview()
         contentItem: AudioPreview {
