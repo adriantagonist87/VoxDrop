@@ -53,7 +53,9 @@ class AppLifecycleTests(unittest.TestCase):
 
     def test_bounded_stop_kills_only_matching_profile_and_its_descendants(self):
         engine=self.root/'watch_service.py'
-        engine.write_text("import subprocess,sys,time; p=subprocess.Popen([sys.executable,'-c','import time;time.sleep(60)']); print(p.pid,flush=True); time.sleep(60)")
+        # Cold process enumeration on a busy native Windows desktop can exceed
+        # a minute. Keep the unrelated profile alive throughout that check.
+        engine.write_text("import subprocess,sys,time; p=subprocess.Popen([sys.executable,'-c','import time;time.sleep(180)']); print(p.pid,flush=True); time.sleep(180)")
         other=self.root/'other';service.initialise(other)
         processes=[]
         try:
