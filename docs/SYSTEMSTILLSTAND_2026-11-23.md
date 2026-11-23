@@ -8,12 +8,20 @@ Zeitlicher Abgleich auf dem betroffenen Windows-PC (Europe/Berlin):
 
 - Das lokale Papierkorb-Update und seine isolierten nativen Tests waren um 13:03 abgeschlossen.
 - Der produktive Auftrag begann um **13:05:05**, Whisper Large v3 Turbo, `hardware=cuda`, 100 % GPU-Arbeitsbudget, CPU-Schutz ausgeschaltet. Das letzte Dienstlog zeigt Whisper-Fortschritt bis ungefähr 25 % der 136 Sekunden erkannten Sprache. Daraus lässt sich der spätere Kernelzustand nicht bestimmen.
-- Windows meldet einen **WATCHDOG-Bericht vom 23.11. um 13:07**, `LiveKernelEvent 193`, Berichtskennung `4804795b-e5cf-4cf3-9bf7-a5152f72cf8e`. Meldungen um 13:10 und 13:13 verwenden dieselbe Kennung und denselben Dump: ein Vorfall, keine zwei weiteren Abstürze.
+- Windows erzeugte den Watchdog-Dump um **13:07:53,731** (UTC+1), 2 Minuten und 48 Sekunden nach Auftragsstart. Die WER-Meldungen um 13:10 und 13:13 verweisen auf diesen einen Dump mit `LiveKernelEvent 193` und Berichtskennung `4804795b-e5cf-4cf3-9bf7-a5152f72cf8e`.
 - Neustart um **13:10:01**, Kernel-Power 41 mit `BugcheckCode=0`. Das ist kein nachgewiesener neuer Bluescreen. Die ebenfalls erneut gemeldeten alten 141/117-/193-Berichte und der Bluescreen vom 20.11. werden nicht als Ursache dieses Vorfalls gewertet.
 
 Laut [Microsoft: VIDEO_DXGKRNL_LIVEDUMP 0x193](https://learn.microsoft.com/en-us/windows-hardware/drivers/debugger/bug-check-0x193--video-dxgkrnl-livedump) stammt dieser Live-Dump vom DirectX-Grafikkernel; der Code ist selbst kein Bugcheck. Der zeitliche Zusammenhang stützt die Untersuchung des Grafik-/CUDA-Pfads, beweist aber weder einen bestimmten Treiberdefekt noch VRAM-Mangel oder eine konkrete fehlerhafte Modellphase. Ein Kernelstillstand kann durch einen später reagierenden App-Watchdog nicht zuverlässig verhindert werden.
 
-Der aktuelle Dump und `Report.wer` sind für das normale Benutzerkonto **nicht lesbar (Zugriff verweigert)**. Es wurden keine Zugriffsrechte, Treiber, Registry-TDR-Werte oder Firewallregeln geändert. Ein privates Skript für die vom Nutzer auszuführende Administratorkopie genau dieses Dumps liegt im Diagnoseordner außerhalb des Repositorys bereit. Danach `!analyze -v` mit WinDbg sowie Stack/Modul-/Zeitabgleich ausführen; den Dump und private Medien nicht veröffentlichen.
+## Auswertung der Dump-Kopie
+
+Der Nutzer kopierte den 280.936 Byte großen Dump mit Administratorrechten in den privaten Arbeitsordner. Mit den lokalen Windows-Modulen und passenden öffentlichen Microsoft-Symbolen lief `!analyze -v` in KD erfolgreich. Der erste Lauf ohne lokale Windows-Module konnte das Kernelsymbol nicht zuordnen. Die Auswertung hier beruht auf dem zweiten Lauf mit aufgelöstem Stack.
+
+- Der Live-Dump hat Code `0x193 VIDEO_DXGKRNL_LIVEDUMP` und Reason Code `0x810`. Die Microsoft-Referenz erläutert diesen konkreten Reason Code nicht. Der Stack zeigt `dxgkrnl!ProcessDeadlockThread+0xe4` im Prozess `System` und die Erfassung des Dumps. WinDbg gruppiert ihn als `LKD_0x193_dxgkrnl!ProcessDeadlockThread`. [Microsoft-Referenz zu 0x193](https://learn.microsoft.com/en-us/windows-hardware/drivers/debugger/bug-check-0x193--video-dxgkrnl-livedump)
+- `dxgkrnl.sys` hat Version `10.0.26100.9444`. Der NVIDIA-Kerneltreiber `nvlddmkm.sys` (596.36, Windows-Version `32.0.15.9636`) ist in der Modulliste geladen. Im aufgezeichneten Stack steht kein NVIDIA-Treiberframe. Die Modulliste allein erlaubt keine Zuordnung des Fehlers zum NVIDIA-Treiber.
+- Der kleine Dump zeigt den Windows-Thread, der den Bericht erfasst hat. Abfragen mit `!thread`, `!process` und `!locks` konnten die beteiligten Sperren und den blockierten Auftragsthread wegen fehlender Speicherseiten nicht rekonstruieren. Ob Treiber, GPU, VRAM-Druck oder ein bestimmter Aufruf den Stillstand ausgelöst hat, bleibt offen. [Microsoft zur Auswertung kleiner Kernel-Dumps](https://learn.microsoft.com/en-us/windows-hardware/drivers/debugger/small-memory-dump)
+
+Dump und Debuggerprotokolle bleiben lokal. Die Diagnose verwendet die vorhandene Datei und startet keine GPU-Verarbeitung.
 
 ## Sofortmaßnahmen auf dem betroffenen PC
 
