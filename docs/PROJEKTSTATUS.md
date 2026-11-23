@@ -1,5 +1,15 @@
 # Projektstatus VoxDrop
 
+## Windows-Audioplayer und Dateiaktionen, 23.11.2026
+
+Windows-Prüfstand **1.5.1**, funktionaler Code **`6278335acb6589a97b4973c26cf0e931fb5ac369`**: lokaler Audioplayer mit Play/Pause, Zeitbalken und Lautstärke in der Detailansicht. Original und TXT sind unabhängig vom Auftragsstatus erreichbar; alle sechs beauftragten Aktionen bleiben sichtbar, fehlende Dateien deaktivieren ihre Aktionen mit Erklärung. Auch Fehler ohne erkannte Sprache lassen sich direkt anhören. [Bedienung, Fehlerbefunde, genaue Prüfungen und Mac-Aufgabe](AUDIOPLAYER.md).
+
+Arbeitsbranch [`feat/history-media-player`](https://github.com/adriantagonist87/VoxDrop/tree/feat/history-media-player), [Feature-PR #20](https://github.com/adriantagonist87/VoxDrop/pull/20). **Die gemeinsame Implementierung bleibt bis zur nativen Mac-Gegenprüfung im PR**; die Übergabe auf `main` enthält ausschließlich Dokumentation und Prüfnachweise. Windows-Vorschau: [v1.5.1-windows](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.5.1-windows). Vorhandene stabile Windows-/Mac-Release-Dateien bleiben unverändert.
+
+251 native Windows-Regressionen: 239 bestanden/zwölf Plattform-Skips in 140,551 s. Reale WAV-/FLV-/OPUS-Wiedergabe, die Playerfunktion des gebauten Pakets, Quellfensterbedienung einschließlich Explorer/TXT-Standardanwendung und Paketlayouts bei 100/125/150 % Qt-Skalierung bestanden. [98-Dateien-Manifest](../releases/v1.5.1/windows-release.json), [Prüfnachweis](../releases/v1.5.1/windows-verification.json); ZIP-SHA-256 `6dfd45c54df6134fb5b37e2f281368b1ba7b388b740f8d2c9d0219426dca4a63`. Neue Abhängigkeit PySide6-Addons 6.10.2; keine Modellpin-/DB-Änderung. **Neue Mac-Playerfunktion UNGEPRÜFT**; letzter bestätigter Mac bleibt 1.5.0 Build 27.
+
+Die Windows-Vorschau ist lokal installiert und über den normalen EXE-Einstieg neu gestartet. Der vorher aktive Auftrag wurde regulär fertig; Profil/Programmstand gesichert, Queue/Einstellungen/Modelle erhalten und alle 98 installierten Dateien geprüft. Die Wartungspause ist aufgehoben. Installationsnachweis im verlinkten Prüfnachweis; der öffentliche Download wird zusätzlich gegen dasselbe Manifest geprüft.
+
 ## Stabile Veröffentlichung 1.5.0
 
 Der gemeinsame [Stable-Release v1.5.0](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.5.0) bündelt die bereits plattformspezifisch abgenommenen Pakete für macOS auf Apple Silicon und Windows 11 auf x64. SHA-256, Paketmanifeste und der Mac-Verifikationsnachweis werden mitgeliefert. Die ursprünglichen Plattform-Releases bleiben als Herkunftsnachweise und direkte Downloadziele verfügbar.

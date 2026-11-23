@@ -1,5 +1,11 @@
 # Übergabeauftrag für Codex auf dem Windows-PC
 
+## Übergabe Audioplayer 1.5.1, 23.11.2026
+
+Geprüfter Code `6278335acb6589a97b4973c26cf0e931fb5ac369`, Branch `feat/history-media-player`, [PR #20](https://github.com/adriantagonist87/VoxDrop/pull/20). Neue Detailansicht: Play/Pause, Zeitbalken und Lautstärke sowie sechs durchgehend sichtbare Aktionen für Originaldatei, TXT, Neutranskription und Schließen. Fehler ohne Sprache erhalten denselben Zugriff auf das Original. Neue Qt-Addons-Abhängigkeit; keine neuen KI-Modelle oder DB-Migration. **Gemeinsamer Code bleibt bis zur Mac-Gegenprüfung im PR; auf main nur diese Übergabe und bereinigte Nachweise.**
+
+251 Windows-Regressionen (239 bestanden/zwölf Plattform-Skips), Codec-Prüfung WAV/FLV/OPUS, nativer Player-Pakettest bei Mindestgröße mit langem Unicode-Namen, Explorer-/TXT-Bedienung im Quellfenster sowie Paketlayouts bei 100/125/150 % bestanden. Normale EXE mit isoliertem Profil gestartet. Grenzen der physischen Paketbedienung, exakte Reproduktion, Dateimanifest und Windows-Vorschau sind in [AUDIOPLAYER.md](AUDIOPLAYER.md) dokumentiert. Mac 1.5.0 Build 27 bleibt bestätigt; neue Playerfunktion **UNGEPRÜFT auf macOS**. Dort Addons-Runtime frisch aufbauen und die verlinkte native Mac-Checkliste abarbeiten.
+
 ## Windows 1.5.0
 
 Mac-Funktionsabgleich auf Basis von `e9307cc301223a129de7dc48b172bfa89a74185c`. Import/Export und Ordneroptionen stehen jetzt auch im Windows-Paket. Nach dokumentierten Grafik-Timeouts ist **CPU-Schutz für alle wartenden und neuen Aufträge** der Betriebspfad für den betroffenen PC. Zur späteren CUDA-Dauerabnahme mehrere Stunden mit gleichem Rechner und KVM prüfen und Zeitpunkt, Windows-Ereigniscodes, Auftragsphase, Gerätewahl und GPU-/RAM-Messwerte erfassen. Ein kurzer Funktionslauf allein belegt diese Dauerstabilität nicht.
