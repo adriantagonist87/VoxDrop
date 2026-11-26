@@ -1,5 +1,6 @@
 """History categories and coordination for an explicit local data reset."""
 from contextlib import contextmanager
+import os
 
 from platform_io import lock_service
 
@@ -12,6 +13,10 @@ HISTORY_FILTERS = {
 }
 HISTORY_FILTERS['all'] = '(' + ' OR '.join(HISTORY_FILTERS[key] for key in ('errors','done','cancelled')) + ')'
 TRANSCRIPT_SCOPE = '(' + HISTORY_FILTERS['all'] + ' OR ' + HISTORY_FILTERS['existing'] + ')'
+
+
+def media_path_key(path):
+    return os.path.normcase(os.path.abspath(path))
 
 
 def history_category(job):

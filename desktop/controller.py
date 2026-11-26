@@ -2003,16 +2003,19 @@ class Controller(QObject):
         self.changed.emit();self.recordDeletionClosed.emit()
         if token:self.submit(lambda:command('discard-delete-record',token),lambda *_:None)
 
-    @Slot()
-    def confirmRecordDeletion(self):
+    @Slot(bool)
+    def confirmRecordDeletion(self, keep_original):
         token=self.delete_plan.get('token')
         if not token or self.busy or self.stop_command_pending or self.deleting_record or self.delete_preparing:return
+        if self.delete_plan.get('lockedMode') and keep_original!=self.delete_plan['keepOriginal']:return
+        self.delete_plan={**self.delete_plan, 'lockedMode':True, 'keepOriginal':keep_original}
         self.busy=True;self.deleting_record=True;self.delete_error='';self.clearing=True
         self.reset_generation+=1;self.history_search_timer.stop();self.content_cancel.set();self.content_token=''
         self.changed.emit()
         def remove():
             if not self.content_done.wait(10):raise RuntimeError('Die Detailsuche konnte noch nicht beendet werden. Bitte erneut versuchen.')
-            return json.loads(command('delete-record',token))
+            options=('--keep-original',) if keep_original else ()
+            return json.loads(command('delete-record',token,*options))
         def removed(result,error):
             self.busy=False;self.deleting_record=False;self.clearing=False
             if error:
@@ -2024,7 +2027,10 @@ class Controller(QObject):
             self.history_page=0;self.content_status='';self.drop_plan={};self.drop_backlog=[]
             self.dropResolved.emit();self.update_history();self.update_queue()
             self.recordDeletionClosed.emit();self.recordDeleted.emit()
-            self.notify('Dateien in den Papierkorb verschoben und Datensatz gelöscht.')
+            if keep_original:
+                self.notify('Datensatz gelöscht. Originaldateien bleiben erhalten.')
+            else:
+                self.notify('Dateien in den Papierkorb verschoben und Datensatz gelöscht.')
             self.refresh()
         self.submit(remove,removed)
 

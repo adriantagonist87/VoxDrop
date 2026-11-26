@@ -1288,6 +1288,8 @@ ApplicationWindow {
         id: deleteRecord
         objectName: "deleteRecordDialog"
         property var deletion: api.recordDeletion
+        property bool keepOriginal: true
+        readonly property bool keepsOriginal: deletion.plan.lockedMode ? deletion.plan.keepOriginal : keepOriginal
         modal: true
         title: "Datensatz löschen"
         anchors.centerIn: Overlay.overlay
@@ -1296,7 +1298,10 @@ ApplicationWindow {
         closePolicy: deletion.deleting ? Popup.NoAutoClose : Popup.CloseOnEscape
         background: Rectangle { color: surface; radius: 9; border.color: line }
         onClosed: api.cancelRecordDeletion()
-        onOpened: cancelDeleteRecord.forceActiveFocus()
+        onOpened: {
+            keepOriginal = true
+            cancelDeleteRecord.forceActiveFocus()
+        }
         contentItem: ScrollView {
             id: deleteScroll
             clip: true; contentWidth: availableWidth
@@ -1304,15 +1309,38 @@ ApplicationWindow {
                 id: deleteContent
                 width: deleteScroll.availableWidth
                 spacing: 10
-                Copy { Layout.fillWidth: true; text: "Es werden alle Dateien (auch das Original) und Datenbankeinträge gelöscht, der Vorgang kann nicht rückgängig gemacht werden!"; color: warningColor }
                 Copy { Layout.fillWidth: true; text: deleteRecord.deletion.plan.name || selected.name || ""; font.bold: true }
-                Copy { Layout.fillWidth: true; text: (deleteRecord.deletion.plan.recordCount || 0)>1 ? deleteRecord.deletion.plan.recordCount + " Vorgänge sind über Originaldateien oder Transkripte verknüpft und werden gemeinsam gelöscht." : "Originaldatei und Transkripte werden in den Papierkorb des Betriebssystems verschoben." }
+                Toggle {
+                    objectName: "keepOriginalToggle"
+                    Layout.fillWidth: true
+                    text: "Originaldatei behalten"
+                    checked: deleteRecord.keepsOriginal
+                    enabled: Boolean(deleteRecord.deletion.plan.token) && !deleteRecord.deletion.plan.lockedMode && !deleteRecord.deletion.deleting
+                    onToggled: deleteRecord.keepOriginal = checked
+                }
+                Copy {
+                    objectName: "deleteRecordWarning"
+                    Layout.fillWidth: true
+                    color: warningColor
+                    text: deleteRecord.keepsOriginal
+                        ? "Transkripte werden in den Papierkorb verschoben. Die Datenbankeinträge werden unwiderruflich gelöscht."
+                        : "Originaldateien und Transkripte werden in den Papierkorb verschoben. Die Datenbankeinträge werden unwiderruflich gelöscht."
+                }
+                Copy {
+                    Layout.fillWidth: true
+                    visible: (deleteRecord.deletion.plan.recordCount || 0) > 1
+                    text: deleteRecord.deletion.plan.recordCount + " verknüpfte Vorgänge werden gemeinsam gelöscht."
+                }
                 Repeater {
                     model: deleteRecord.deletion.plan.files || []
                     delegate: Copy {
                         required property var modelData
                         Layout.fillWidth: true; wrapMode: Text.WrapAnywhere; font.pixelSize: 12
-                        text: (modelData.role === "original" ? "Originaldatei: " : modelData.role === "transcript" ? "Transkript: " : "Lokale Arbeitskopien: ") + modelData.path + (modelData.trashed ? " · bereits im Papierkorb" : modelData.protected ? " · andere/geänderte Datei, bleibt erhalten" : modelData.missing ? " · nicht mehr vorhanden" : "")
+                        text: (modelData.role === "original" ? "Originaldatei: " : modelData.role === "transcript" ? "Transkript: " : "Lokale Arbeitskopien: ") + modelData.path
+                            + (modelData.trashed ? " · bereits im Papierkorb"
+                                : modelData.protected ? " · andere/geänderte Datei, bleibt erhalten"
+                                : modelData.missing ? " · nicht mehr vorhanden"
+                                : modelData.role === "original" && deleteRecord.keepsOriginal ? " · bleibt erhalten" : "")
                     }
                 }
                 Copy { Layout.fillWidth: true; visible: deleteRecord.deletion.preparing || deleteRecord.deletion.deleting; text: deleteRecord.deletion.preparing ? "Betroffene Dateien werden geprüft …" : "Dateien werden in den Papierkorb verschoben …" }
@@ -1322,7 +1350,7 @@ ApplicationWindow {
         footer: RowLayout {
             id: deleteButtons
             spacing: 10
-            AppActionButton { objectName: "confirmDeleteRecordButton"; text: "Jetzt löschen"; errorAlert: true; Layout.fillWidth: true; enabled: Boolean(deleteRecord.deletion.plan.token) && !deleteRecord.deletion.preparing && !deleteRecord.deletion.deleting && !viewState.busy; onClicked: api.confirmRecordDeletion() }
+            AppActionButton { objectName: "confirmDeleteRecordButton"; text: "Jetzt löschen"; errorAlert: true; Layout.fillWidth: true; enabled: Boolean(deleteRecord.deletion.plan.token) && !deleteRecord.deletion.preparing && !deleteRecord.deletion.deleting && !viewState.busy; onClicked: api.confirmRecordDeletion(deleteRecord.keepsOriginal) }
             AppActionButton { id: cancelDeleteRecord; objectName: "cancelDeleteRecordButton"; text: "Abbrechen"; primary: true; Layout.fillWidth: true; enabled: !deleteRecord.deletion.deleting; onClicked: deleteRecord.close() }
         }
     }

@@ -51,7 +51,7 @@ from queue_control import (
     WATCHED_JOB, WATCH_PATH,
 )
 from media_history import MediaBusy, initialise_media_history, remember_result, previously_transcribed
-from history_store import HISTORY_FILTERS, search_storage_lock, storage_generation
+from history_store import HISTORY_FILTERS, media_path_key, search_storage_lock, storage_generation
 from app_lifecycle import initialise_lifecycle, stopping, register_owner, lifecycle_lock, watch_owner, stop_service
 from voxdrop import (
     DEFAULT_DATA,
@@ -177,6 +177,9 @@ CREATE TABLE IF NOT EXISTS storage_state (
     id INTEGER PRIMARY KEY CHECK(id=1), generation INTEGER NOT NULL DEFAULT 0
 );
 INSERT OR IGNORE INTO storage_state VALUES (1,0);
+CREATE TABLE IF NOT EXISTS retained_media (
+    source TEXT PRIMARY KEY, size INTEGER NOT NULL, mtime_ns INTEGER NOT NULL
+);
 """
 )
 
@@ -634,6 +637,11 @@ def scan(db, settings, now=None, *, inspect=inspect_folders, generation=None, co
             if path not in enabled_watch_paths(latest) or folder_profile(latest, path) != settings:
                 return
         for candidate in versions:
+            if db.execute(
+                'SELECT 1 FROM retained_media WHERE source=? AND size=? AND mtime_ns=?',
+                (media_path_key(candidate[0]), *candidate[1:]),
+            ).fetchone():
+                continue
             destination = (
                 str(Path(candidate[0]).parent)
                 if settings.get("include_subfolders")
@@ -1844,7 +1852,7 @@ def clear_history(db, state):
             for table in ('job_retries','events','transcription_measurements','speaker_diarization',
                           'audio_durations','copy_claims','copy_exports','known_results','queue_positions',
                           'cancel_requests','preemptions','immediate_jobs','drop_batches','folder_status',
-                          'folder_refresh','connection','service','queue_graphics_hold','jobs'):
+                          'folder_refresh','connection','service','queue_graphics_hold','retained_media','jobs'):
                 db.execute(f'DELETE FROM {table}')
             # Retain monotonic job IDs and the user's pause, never old file/search records.
             db.execute('UPDATE storage_state SET generation=generation+1 WHERE id=1')
@@ -2348,7 +2356,9 @@ def main(argv=None):
     rerun.add_argument("config", type=Path)
     commands.add_parser("clear-history")
     commands.add_parser('prepare-delete-record').add_argument('job_id',type=int)
-    commands.add_parser('delete-record').add_argument('token')
+    delete_record = commands.add_parser('delete-record')
+    delete_record.add_argument('token')
+    delete_record.add_argument('--keep-original',action='store_true')
     commands.add_parser('discard-delete-record').add_argument('token')
     commands.add_parser('stop')
     commands.add_parser("enqueue-folders").add_argument("config", type=Path)
@@ -2497,7 +2507,7 @@ def main(argv=None):
             elif args.command in ('prepare-delete-record','delete-record','discard-delete-record'):
                 import record_delete
                 if args.command=='prepare-delete-record':result=record_delete.prepare(db,state,args.job_id)
-                elif args.command=='delete-record':result=record_delete.execute(db,state,args.token)
+                elif args.command=='delete-record':result=record_delete.execute(db,state,args.token,keep_original=args.keep_original)
                 else:record_delete.discard(state,args.token);result={}
                 print(json.dumps(result,ensure_ascii=True))
             elif args.command == "reconcile-folders":

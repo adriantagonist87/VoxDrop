@@ -74,6 +74,72 @@ class RecordDeleteTests(unittest.TestCase):
         self.assertEqual(self.db.execute('SELECT count(*) FROM jobs').fetchone()[0],0)
         self.assertFalse(any(path.exists() for path in (source,text,child_text,alt)))
 
+    def test_keep_original_trashes_transcripts_and_cache_only(self):
+        root,source,text=self.add()
+        _,_,child_text=self.add(origin=root)
+        _,second_source,_=self.add('Original Ä.flv')
+        cache=self.state/'jobs'/str(root);cache.mkdir(parents=True)
+        (cache/'copy.wav').write_bytes(b'synthetic copy')
+        plan=deletion.prepare(self.db,self.state,root)
+        self.assertTrue(plan['keepOriginal'])
+        self.assertFalse(plan['lockedMode'])
+        with patch.object(deletion,'check_delete_access') as preflight:
+            result=deletion.execute(self.db,self.state,plan['token'],keep_original=True,trash=self.trash)
+        self.assertCountEqual(self.calls,[text,child_text,cache])
+        self.assertCountEqual([call.args[0] for call in preflight.call_args_list],self.calls)
+        self.assertEqual(result['trashed'],3)
+        for original in (source,second_source):
+            self.assertEqual(original.read_bytes(),b'synthetic media')
+        self.assertFalse(self.db.execute('SELECT 1 FROM jobs').fetchone())
+        self.assertFalse(self.db.execute('PRAGMA foreign_key_check').fetchall())
+
+    def test_keep_original_survives_rescan_and_accepts_explicit_drop_or_changed_file(self):
+        first,source,_=self.add()
+        second,changed,_=self.add('Zweite.wav')
+        for identifier in (first,second):
+            plan=deletion.prepare(self.db,self.state,identifier)
+            deletion.execute(self.db,self.state,plan['token'],keep_original=True,trash=self.trash)
+        service.initialise(self.state)
+        settings={**self.settings,'folders':[str(self.root)],'interval_seconds':1,'require_smb':False}
+
+        def inspect(settings):
+            versions=[(str(path),path.stat().st_size,path.stat().st_mtime_ns) for path in (source,changed)]
+            return str(self.root),str(self.root),versions,''
+
+        with closing(service.database(self.state)) as reopened:
+            service.scan(reopened,settings,inspect=inspect)
+            self.assertFalse(reopened.execute('SELECT 1 FROM jobs').fetchone())
+            changed.write_bytes(b'different media version')
+            service.scan(reopened,settings,inspect=inspect)
+            self.assertEqual([row['source'] for row in reopened.execute('SELECT source FROM jobs')],[str(changed)])
+            batch=service.prepare_drop(reopened,settings,[str(source)])
+            self.assertEqual(service.resolve_drop(reopened,batch['token'],'queue')['queued'],1)
+            row=reopened.execute('SELECT state,settings FROM jobs WHERE source=?',(str(source),)).fetchone()
+            self.assertEqual(row['state'],'ready')
+            self.assertTrue(json.loads(row['settings'])['folder_drop'])
+
+    def test_partial_keep_original_resumes_without_allowing_a_mode_change(self):
+        root,source,text=self.add()
+        _,_,child_text=self.add(origin=root)
+        plan=deletion.prepare(self.db,self.state,root)
+
+        def fail_last(path):
+            if path==child_text:
+                raise OSError('synthetic trash failure')
+            return self.trash(path)
+
+        with self.assertRaisesRegex(RuntimeError,'Datenbankeinträge bleiben'):
+            deletion.execute(self.db,self.state,plan['token'],keep_original=True,trash=fail_last)
+        self.assertFalse(self.db.execute('SELECT 1 FROM retained_media').fetchone())
+        resumed=deletion.prepare(self.db,self.state,root)
+        self.assertTrue(resumed['lockedMode'] and resumed['keepOriginal'] and resumed['partial'])
+        self.assertEqual(resumed['token'],plan['token'])
+        with self.assertRaisesRegex(RuntimeError,'bereits bestätigte Auswahl'):
+            deletion.execute(self.db,self.state,resumed['token'],keep_original=False,trash=self.trash)
+        deletion.execute(self.db,self.state,resumed['token'],keep_original=True,trash=self.trash)
+        self.assertEqual(self.calls,[text,child_text])
+        self.assertTrue(source.exists())
+
     def test_network_paths_are_refused_before_any_mutation(self):
         identifier,source,text=self.add()
         with patch.object(deletion,'on_network_volume',return_value=True):
@@ -99,6 +165,7 @@ class RecordDeleteTests(unittest.TestCase):
         self.assertFalse(source.exists());self.assertTrue(text.exists())
         again=deletion.prepare(self.db,self.state,identifier)
         self.assertTrue(again['partial']);self.assertEqual(again['token'],plan['token'])
+        self.assertTrue(again['lockedMode']);self.assertFalse(again['keepOriginal'])
         deletion.execute(self.db,self.state,again['token'],trash=self.trash)
         self.assertEqual(self.calls.count(source),1)
         self.assertFalse(self.db.execute('SELECT 1 FROM jobs').fetchone())

@@ -11,14 +11,11 @@ import tempfile
 import time
 import uuid
 
-from history_store import history_category, search_storage_lock
+from history_store import history_category, media_path_key, search_storage_lock
 from platform_io import is_reparse_point, open_regular
 from smb_paths import on_network_volume
 
 ACTIVE={'copying','transcribing','exporting'}
-
-
-def key(path):return os.path.normcase(os.path.abspath(path))
 
 
 def media_paths(job):
@@ -52,18 +49,18 @@ def group(all_rows,identifier):
         if root['id'] in seen:raise ValueError('Die Verknüpfungen dieser Aufnahme sind ungültig.')
         seen.add(root['id']);root=by_id[root['origin_job_id']]
     identifiers={root['id'],identifier}
-    paths={key(path) for job in (root,selected) for path in media_paths(job)}
-    texts={key(text_path(job)) for job in (root,selected)}
+    paths={media_path_key(path) for job in (root,selected) for path in media_paths(job)}
+    texts={media_path_key(text_path(job)) for job in (root,selected)}
     # Include aliases of this root, without probing every unrelated library path.
     for path in media_paths(selected):
-        try:paths.add(key(path.resolve(strict=True)))
+        try:paths.add(media_path_key(path.resolve(strict=True)))
         except FileNotFoundError:pass
     while True:
         previous=set(identifiers)
         for row in all_rows:
-            if row['origin_job_id'] in identifiers or key(text_path(row)) in texts or any(key(p) in paths for p in media_paths(row)):
+            if row['origin_job_id'] in identifiers or media_path_key(text_path(row)) in texts or any(media_path_key(p) in paths for p in media_paths(row)):
                 identifiers.add(row['id'])
-                paths.update(key(p) for p in media_paths(row));texts.add(key(text_path(row)))
+                paths.update(media_path_key(p) for p in media_paths(row));texts.add(media_path_key(text_path(row)))
         if previous==identifiers:break
     found=[row for row in all_rows if row['id'] in identifiers]
     if any(row['state'] in ACTIVE for row in found):
@@ -129,6 +126,7 @@ def load(state,token):
 def public(plan):
     return dict(token=plan['token'],jobId=plan['selected'],name=plan['name'],recordCount=len(plan['rows']),
         files=[dict(path=f['path'],role=f['role'],missing=f['status']=='missing',trashed=f['status']=='trashed',protected=f['status']=='protected') for f in plan['files']],
+        lockedMode=plan['confirmed'],keepOriginal=plan.get('keepOriginal',not plan['confirmed']),
         partial=any(f['status']=='trashed' for f in plan['files']))
 
 
@@ -159,13 +157,19 @@ def prepare(db,state,identifier):
             file=snapshot_file(path,'original')
             if file['identity'] is None:continue
             if Path(file['canonical']).is_relative_to(state):raise ValueError('Die Originaldatei verweist auf interne Arbeitsdaten.')
-            filekey=key(file['canonical']);originals[filekey]=file;owners.setdefault(filekey,[]).append(job)
+            filekey=media_path_key(file['canonical'])
+            original=originals.setdefault(filekey,file)
+            if original is file:
+                original['paths']=[file['canonical']]
+            if file['path'] not in original['paths']:
+                original['paths'].append(file['path'])
+            owners.setdefault(filekey,[]).append(job)
         text=text_path(job)
         if text.suffix.casefold()!='.txt':raise ValueError('Der gespeicherte Transkriptpfad ist keine TXT-Datei.')
-        file=snapshot_file(text,'transcript');files.setdefault(key(file['canonical']),file)
+        file=snapshot_file(text,'transcript');files.setdefault(media_path_key(file['canonical']),file)
         cache=state/'jobs'/str(job['id'])
         if cache.exists() or cache.is_symlink():
-            file=snapshot_file(cache,'cache');files.setdefault(key(file['canonical']),file)
+            file=snapshot_file(cache,'cache');files.setdefault(media_path_key(file['canonical']),file)
     valid_original=False
     for filekey,file in originals.items():
         candidates=owners[filekey];path=Path(file['path'])
@@ -179,7 +183,7 @@ def prepare(db,state,identifier):
         raise ValueError('Am gespeicherten Ort liegt inzwischen eine andere oder geänderte Originaldatei. Es wurde nichts gelöscht.')
     if not originals:
         for job in selected:
-            file=snapshot_file(media_paths(job)[0],'original');files.setdefault(key(file['canonical']),file)
+            file=snapshot_file(media_paths(job)[0],'original');files.setdefault(media_path_key(file['canonical']),file)
     plan=dict(schema=1,token=uuid.uuid4().hex,created=time.time(),selected=identifier,
         name=Path(next(row for row in selected if row['id']==identifier)['source']).name,rows=selected,
         files=sorted(files.values(),key=lambda file:{'original':0,'transcript':1,'cache':2}[file['role']]),confirmed=False)
@@ -240,14 +244,20 @@ def clean_search_index(state,identifiers):
             path.unlink()
 
 
-def execute(db,state,token,*,trash=native_trash):
+def execute(db,state,token,*,keep_original=False,trash=native_trash):
     state=state.resolve()
     with search_storage_lock(state):
         db.execute('BEGIN IMMEDIATE')
         try:
             plan=load(state,token)
+            if plan['confirmed'] and keep_original!=plan.get('keepOriginal',False):
+                raise ValueError('Beim Fortsetzen gilt die bereits bestätigte Auswahl für die Originaldatei.')
             current=group(rows(db),plan['selected'])
             if current!=plan['rows']:raise ValueError('Der Datensatz hat sich geändert. Bitte Löschbestätigung erneut öffnen.')
+            if keep_original:
+                for file in plan['files']:
+                    if file['role']=='original' and file['status']=='pending':
+                        file['status']='retained'
             # Validate the entire batch before the first OS operation.
             for file in plan['files']:
                 path=Path(file['path']);check_network(path)
@@ -257,8 +267,9 @@ def execute(db,state,token,*,trash=native_trash):
                     if path.exists():raise ValueError(f'Am früheren Ort liegt eine neue Datei; sie wird nicht gelöscht: {path}')
                 elif fingerprint(path,directory=file['role']=='cache')!=file['identity']:
                     raise ValueError(f'Die Datei hat sich seit der Bestätigung geändert: {path}')
-                else:check_delete_access(path)
-            plan['confirmed']=True;save(state,plan)
+                elif file['status']=='pending':check_delete_access(path)
+            plan.update(confirmed=True,keepOriginal=keep_original)
+            save(state,plan)
             for file in plan['files']:
                 if file['status']!='pending':continue
                 path=Path(file['path'])
@@ -272,6 +283,14 @@ def execute(db,state,token,*,trash=native_trash):
                 db.execute(f'DELETE FROM {table} WHERE job_id IN ({marks})',identifiers)
             db.execute('DELETE FROM drop_batches')
             db.execute(f'DELETE FROM jobs WHERE id IN ({marks})',identifiers)
+            db.executemany(
+                'INSERT OR REPLACE INTO retained_media(source,size,mtime_ns) VALUES (?,?,?)',
+                (
+                    (media_path_key(path), *file['identity'][2:4])
+                    for file in plan['files'] if file['status']=='retained'
+                    for path in file.get('paths',(file['path'],file['canonical']))
+                ),
+            )
             db.execute('UPDATE storage_state SET generation=generation+1 WHERE id=1')
             db.commit()
         except BaseException as error:

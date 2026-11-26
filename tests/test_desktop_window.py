@@ -773,6 +773,9 @@ class DesktopWindowTests(unittest.TestCase):
             popup=self.window.findChild(QObject,'deleteRecordDialog')
             self.assertTrue(popup.property('visible'))
             confirm=popup.findChild(QObject,'confirmDeleteRecordButton');cancel=popup.findChild(QObject,'cancelDeleteRecordButton')
+            keep=popup.findChild(QObject,'keepOriginalToggle')
+            self.assertTrue(keep.property('checked'))
+            self.assertTrue(keep.property('enabled'))
             self.assertTrue(confirm.property('enabled'))
             self.assertEqual(confirm.property('background').property('color').name(),'#b5303a')
             self.assertEqual(cancel.property('background').property('color').name(),'#8ac6a5')
@@ -783,6 +786,32 @@ class DesktopWindowTests(unittest.TestCase):
         self.assertEqual(len(self.controller.history),3)
         self.assertTrue(self.controller.snapshot['queue_paused'])
         self.assertEqual(self.controller.selected['id'],1)
+
+    def test_record_delete_choice_controls_the_warning_and_cli_flag(self):
+        plan=self.delete_fixture()
+        replies={'prepare-delete-record':plan,'delete-record':dict(deletedIds=[],trashed=0)}
+        for keep_original in (False,True):
+            with (
+                self.subTest(keep_original=keep_original),
+                patch.object(self.controller_module,'command',side_effect=lambda name,*args:json.dumps(replies[name])) as sent,
+                patch.object(self.controller,'submit',side_effect=lambda operation,finished:finished(operation(),None)),
+                patch.object(self.controller,'refresh'),
+            ):
+                self.controller.showDetails(1);QTest.qWait(30)
+                self.controller.requestRecordDeletion();QTest.qWait(30)
+                popup=self.window.findChild(QObject,'deleteRecordDialog')
+                keep=popup.findChild(QObject,'keepOriginalToggle')
+                self.assertTrue(keep.property('checked'))
+                if not keep_original:
+                    point=keep.mapToScene(QPointF(8,keep.height()/2)).toPoint()
+                    QTest.mouseClick(self.window,Qt.MouseButton.LeftButton,Qt.KeyboardModifier.NoModifier,point)
+                    QTest.qWait(30)
+                self.assertEqual(keep.property('checked'),keep_original)
+                warning=popup.findChild(QObject,'deleteRecordWarning').property('text')
+                self.assertEqual(warning.startswith('Originaldateien'),not keep_original)
+                QMetaObject.invokeMethod(popup.findChild(QObject,'confirmDeleteRecordButton'),'clicked')
+                options=('--keep-original',) if keep_original else ()
+                self.assertEqual(sent.call_args.args,('delete-record',plan['token'],*options))
 
     def test_record_delete_cancelled_probe_cannot_restore_confirmation(self):
         plan=self.delete_fixture();pending=[]
@@ -799,7 +828,7 @@ class DesktopWindowTests(unittest.TestCase):
         self.controller.delete_plan=plan;self.controller.recordDeletionOpened.emit()
         pending=[]
         with patch.object(self.controller,'submit',side_effect=lambda operation,finished:pending.append((operation,finished))):
-            self.controller.confirmRecordDeletion()
+            self.controller.confirmRecordDeletion(True)
             self.assertTrue(self.controller.deleting_record)
             self.controller.cancelRecordDeletion();self.assertTrue(self.controller.delete_plan)
             pending[0][1](None,'Die Datei ist gesperrt.')
@@ -807,7 +836,7 @@ class DesktopWindowTests(unittest.TestCase):
             self.assertEqual(len(self.controller.history),3)
             self.assertTrue(self.controller.delete_plan)
             self.assertIn('gesperrt',self.controller.delete_error)
-            self.controller.confirmRecordDeletion()
+            self.controller.confirmRecordDeletion(True)
             pending[1][1](dict(deletedIds=[1,2],trashed=3),None)
         self.assertEqual([job['id'] for job in self.controller.history],[3])
         self.assertIsNone(self.controller.selected)
