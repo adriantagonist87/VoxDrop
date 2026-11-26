@@ -73,6 +73,41 @@ class WorkspaceTests(unittest.TestCase):
         self.assertLessEqual(dialog.property('height'),self.window.height()-35)
         QMetaObject.invokeMethod(dialog,'close')
 
+    def test_model_tab_confirms_deletion_and_keeps_other_settings(self):
+        from model_inventory import WHISPER, catalog
+
+        self.queue_fixture()
+        self.seed_config()
+        self.window.resize(1010, 630)
+        root = self.controller_module.MODEL_DATA / 'models' / WHISPER
+        for name in catalog()[WHISPER][1]:
+            path = root / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(b'synthetic model')
+        self.controller.setSetting('language', 'en')
+
+        def wait_for_inventory():
+            deadline = monotonic() + 8
+            while (self.controller.model_inventory_loading or self.controller.busy) and monotonic() < deadline:
+                QTest.qWait(20)
+            self.assertFalse(self.controller.model_inventory_loading or self.controller.busy)
+            self.assertFalse(self.controller.model_inventory_error, self.controller.model_inventory_error)
+
+        self.click('settingsButton')
+        self.click('modelSettingsTab')
+        wait_for_inventory()
+        self.assertLess(self.visual('modelSettingsTab').x(), self.visual('transferSettingsTab').x())
+        self.click('deleteModel-' + WHISPER)
+        self.click('cancelModelDelete')
+        self.assertTrue(root.is_dir())
+        self.click('deleteModel-' + WHISPER)
+        self.click('acceptModelDelete')
+        wait_for_inventory()
+        self.assertFalse(root.exists())
+        self.assertFalse(self.controller.message_error, self.controller.message)
+        self.assertEqual(self.controller.draft['language'], 'en')
+        self.assertTrue(self.controller.state['settingsDirty'])
+
     def test_folder_checkboxes_allow_switching_directly_in_both_directions(self):
         self.queue_fixture();self.seed_config()
         self.click('settingsButton');self.click('folderSettingsTab')

@@ -4,7 +4,7 @@ import json
 import os
 import subprocess
 import sys
-from contextlib import suppress
+from contextlib import nullcontext, suppress
 from datetime import datetime
 from pathlib import Path
 from tempfile import NamedTemporaryFile
@@ -14,6 +14,7 @@ from time import time
 from model_storage import data_directory
 from file_actions import reveal_in_explorer
 from transcript_search import path_matches, run_content_search, transcript_path, history_category
+from model_inventory import inventory, model_use, remove_model
 from command_process import CommandProcesses
 from rows_model import StableRows
 from network_wait import NetworkPermissionError, retry_network_permission
@@ -379,6 +380,10 @@ class Controller(QObject):
         self.ready = preview
         self.busy = False
         self.downloading = False
+        self.model_items = []
+        self.model_inventory_loading = False
+        self.model_removing = False
+        self.model_inventory_error = ""
         self.waiting_for_network = False
         self.network_cancel = Event()
         self.networkPermissionChanged.connect(self.network_permission_changed)
@@ -402,6 +407,56 @@ class Controller(QObject):
         self.history_search_timer.timeout.connect(self.refresh)
 
     settings = Property("QVariantMap", lambda self: self.draft, notify=changed)
+
+    def can_remove_model(self):
+        return (
+            self.ready and not self.busy and not self.stop_command_pending and not self.quitting
+            and not self.snapshot.get("current") and not self.snapshot.get("immediate_count")
+            and (not self.snapshot.get("running") or self.snapshot.get("queue_paused"))
+        )
+
+    @Property("QVariantMap", notify=changed)
+    def modelStore(self):
+        return {
+            "items": self.model_items, "loading": self.model_inventory_loading,
+            "removing": self.model_removing, "error": self.model_inventory_error,
+            "canRemove": bool(self.can_remove_model() and not self.model_inventory_loading),
+        }
+
+    @Slot()
+    def reloadModelInventory(self):
+        if self.model_inventory_loading or self.busy or self.quitting:
+            return
+        self.model_inventory_loading = True
+        self.model_inventory_error = ""
+        self.changed.emit()
+
+        def updated(items, error):
+            self.model_inventory_loading = False
+            self.model_items = items or []
+            self.model_inventory_error = error or ""
+            self.changed.emit()
+
+        self.submit(lambda: inventory(MODEL_DATA), updated)
+
+    @Slot(str, str)
+    def deleteInstalledModel(self, key, token):
+        if not self.can_remove_model() or self.model_inventory_loading:
+            return
+        item = next((row for row in self.model_items
+                     if row["id"] == key and row["present"] and row["token"] == token), None)
+        if item is None:
+            return
+        self.busy = self.model_removing = True
+        self.changed.emit()
+
+        def finished(_result, error):
+            self.model_removing = self.busy = False
+            self.notify(error or f"{item['name']} wurde gelöscht.", bool(error))
+            self.reloadModelInventory()
+            self.refresh()
+
+        self.submit(lambda: remove_model(MODEL_DATA, PROFILE / "service/jobs.sqlite3", key, token), finished)
 
     @property
     def drop_message(self):
@@ -669,6 +724,8 @@ class Controller(QObject):
             if not error:
                 self.refresh_saved_settings()
             self.notify(error or success, bool(error))
+            if downloading and self.model_items:
+                self.reloadModelInventory()
             self.refresh()
 
         self.submit(operation, finished)
@@ -1814,8 +1871,11 @@ class Controller(QObject):
             if missing:
                 text += f' · {missing} nicht erreichbare Medienordner fehlen; siehe Sicherungsmanifest.'
             self.set_transfer_progress(text); self.notify(text, bool(missing))
-        self.run_transfer(lambda: profile_transfer.export_backup(PROFILE, MODEL_DATA, filename, options,
-            cancel=self.transfer_cancel, progress=self.transferProgress.emit), completed)
+        def export():
+            with model_use(MODEL_DATA) if options["models"] else nullcontext():
+                return profile_transfer.export_backup(PROFILE, MODEL_DATA, filename, options,
+                    cancel=self.transfer_cancel, progress=self.transferProgress.emit)
+        self.run_transfer(export, completed)
 
     @Slot()
     def chooseImportBackup(self):
@@ -1889,9 +1949,10 @@ class Controller(QObject):
             if service_was_running:
                 command('stop')
             try:
-                return profile_transfer.restore_backup(PROFILE, MODEL_DATA, archive, options,
-                    mappings=mappings, media_destination=media, hardware=GPU, cancel=self.transfer_cancel,
-                    progress=self.transferProgress.emit)
+                with model_use(MODEL_DATA) if options["models"] else nullcontext():
+                    return profile_transfer.restore_backup(PROFILE, MODEL_DATA, archive, options,
+                        mappings=mappings, media_destination=media, hardware=GPU, cancel=self.transfer_cancel,
+                        progress=self.transferProgress.emit)
             finally:
                 if (was_running or service_was_running) and CONFIG.is_file() and not self.quitting:
                     command('start', CONFIG)
