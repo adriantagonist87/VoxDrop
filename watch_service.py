@@ -2355,7 +2355,7 @@ def main(argv=None):
     rerun.add_argument("job_id", type=int)
     rerun.add_argument("config", type=Path)
     commands.add_parser("clear-history")
-    commands.add_parser('prepare-delete-record').add_argument('job_id',type=int)
+    commands.add_parser('prepare-delete-record').add_argument('job_ids',type=int,nargs='+')
     delete_record = commands.add_parser('delete-record')
     delete_record.add_argument('token')
     delete_record.add_argument('--keep-original',action='store_true')
@@ -2506,7 +2506,7 @@ def main(argv=None):
                 clear_history(db, state)
             elif args.command in ('prepare-delete-record','delete-record','discard-delete-record'):
                 import record_delete
-                if args.command=='prepare-delete-record':result=record_delete.prepare(db,state,args.job_id)
+                if args.command=='prepare-delete-record':result=record_delete.prepare(db,state,*args.job_ids)
                 elif args.command=='delete-record':result=record_delete.execute(db,state,args.token,keep_original=args.keep_original)
                 else:record_delete.discard(state,args.token);result={}
                 print(json.dumps(result,ensure_ascii=True))

@@ -389,6 +389,7 @@ class Controller(QObject):
         self.deleting_record = False
         self.delete_error = ''
         self.delete_generation = 0
+        self.delete_selection_count = 0
         self.audio_generation = 0
         self.audio_requested = False
         self.audio_preview = AudioPreview(self, volume=self.preferences.value("audioPreview/volume", 70, type=float))
@@ -473,7 +474,6 @@ class Controller(QObject):
         return (
             self.ready and not self.busy and not self.stop_command_pending and not self.quitting
             and not self.snapshot.get("current") and not self.snapshot.get("immediate_count")
-            and (not self.snapshot.get("running") or self.snapshot.get("queue_paused"))
         )
 
     @Property("QVariantMap", notify=changed)
@@ -481,6 +481,7 @@ class Controller(QObject):
         return {
             "items": self.model_items, "loading": self.model_inventory_loading,
             "removing": self.model_removing, "error": self.model_inventory_error,
+            "processing": bool(self.snapshot.get("current") or self.snapshot.get("immediate_count")),
             "canRemove": bool(self.can_remove_model() and not self.model_inventory_loading),
         }
 
@@ -538,7 +539,7 @@ class Controller(QObject):
     historyModel = Property(QObject, lambda self:self.history_model, constant=True)
     audioPlayer = Property(QObject, lambda self: self.audio_preview, constant=True)
     recordDeletion = Property('QVariantMap',lambda self:dict(plan=self.delete_plan,preparing=self.delete_preparing,
-        deleting=self.deleting_record,error=self.delete_error),notify=changed)
+        deleting=self.deleting_record,error=self.delete_error,selectionCount=self.delete_selection_count),notify=changed)
     dropPlan = Property('QVariantMap', lambda self: self.drop_plan, notify=changed)
     transfer = Property('QVariantMap', lambda self: dict(running=self.transfer_running, status=self.transfer_status,
         exportOptions=self.export_options, importOptions=self.import_options, preview=self.import_preview,
@@ -1976,11 +1977,20 @@ class Controller(QObject):
 
     @Slot()
     def requestRecordDeletion(self):
-        if not self.selected or not self.detail.get('canDeleteRecord') or not self.ready or self.busy or self.stop_command_pending:
+        if self.selected and self.detail.get('canDeleteRecord'):
+            self._request_record_deletion((self.selected['id'],))
+
+    @Slot('QVariantList')
+    def requestHistoryDeletion(self, identifiers):
+        if identifiers:
+            self._request_record_deletion(tuple(dict.fromkeys(identifiers)))
+
+    def _request_record_deletion(self, identifiers):
+        if not self.ready or self.busy or self.stop_command_pending:
             return
         self.closeAudioPreview()
         self.delete_generation+=1;generation=self.delete_generation
-        identifier=self.selected['id']
+        self.delete_selection_count=len(identifiers)
         self.delete_plan={};self.delete_error='';self.delete_preparing=True;self.busy=True
         self.changed.emit();self.recordDeletionOpened.emit()
         def prepared(plan,error):
@@ -1991,7 +2001,7 @@ class Controller(QObject):
             self.delete_preparing=False;self.busy=False
             self.delete_plan=plan or {};self.delete_error=error or ''
             self.changed.emit()
-        self.submit(lambda:json.loads(command('prepare-delete-record',identifier)),prepared)
+        self.submit(lambda:json.loads(command('prepare-delete-record',*identifiers)),prepared)
 
     @Slot()
     def cancelRecordDeletion(self):
@@ -2000,6 +2010,7 @@ class Controller(QObject):
         self.delete_generation+=1
         if self.delete_preparing:self.busy=False
         self.delete_preparing=False;self.delete_plan={};self.delete_error=''
+        self.delete_selection_count=0
         self.changed.emit();self.recordDeletionClosed.emit()
         if token:self.submit(lambda:command('discard-delete-record',token),lambda *_:None)
 
@@ -2022,15 +2033,14 @@ class Controller(QObject):
                 self.delete_error=error;self.changed.emit();return
             identifiers=set(result['deletedIds'])
             self.delete_plan={};self.delete_error='';self.closeDetails();self.selected=None
+            self.delete_selection_count=0
             for section in ('jobs','queue'):
                 self.snapshot[section]=[job for job in self.snapshot.get(section,[]) if job['id'] not in identifiers]
             self.history_page=0;self.content_status='';self.drop_plan={};self.drop_backlog=[]
             self.dropResolved.emit();self.update_history();self.update_queue()
             self.recordDeletionClosed.emit();self.recordDeleted.emit()
-            if keep_original:
-                self.notify('Datensatz gelöscht. Originaldateien bleiben erhalten.')
-            else:
-                self.notify('Dateien in den Papierkorb verschoben und Datensatz gelöscht.')
+            message='Datensatz gelöscht.' if len(identifiers)==1 else f'{len(identifiers)} Datensätze gelöscht.'
+            self.notify(message + (' Originaldateien bleiben erhalten.' if keep_original else ' Dateien wurden in den Papierkorb verschoben.'))
             self.refresh()
         self.submit(remove,removed)
 

@@ -93,6 +93,65 @@ class RecordDeleteTests(unittest.TestCase):
         self.assertFalse(self.db.execute('SELECT 1 FROM jobs').fetchone())
         self.assertFalse(self.db.execute('PRAGMA foreign_key_check').fetchall())
 
+    def test_delete_twenty_selected_records_keeps_originals_and_unselected_results(self):
+        selected=[self.add(f'Aufnahme {index}.wav') for index in range(20)]
+        other,source,text=self.add('Unbeteiligt.wav')
+        identifiers=[identifier for identifier,_,_ in selected]
+        plan=deletion.prepare(self.db,self.state,*identifiers)
+        self.assertEqual(plan['selectedCount'],20)
+        self.assertEqual(len(plan['files']),40)
+        result=deletion.execute(self.db,self.state,plan['token'],keep_original=True,trash=self.trash)
+        self.assertEqual(result['deletedIds'],identifiers)
+        self.assertEqual(result['trashed'],20)
+        self.assertCountEqual(self.calls,[transcript for _,_,transcript in selected])
+        self.assertTrue(all(path.read_bytes()==b'synthetic media' for _,path,_ in selected))
+        self.assertTrue(source.exists() and text.exists())
+        self.assertEqual(self.db.execute('SELECT id FROM jobs').fetchone()[0],other)
+        self.assertEqual(self.db.execute('SELECT count(*) FROM retained_media').fetchone()[0],20)
+
+    def test_batch_groups_shared_transcript_and_refuses_replaced_original_in_another_group(self):
+        first,source,text=self.add()
+        shared,alternate,_=self.add('Original Ä.flv')
+        third,changed,_=self.add('Geändert.wav')
+        changed.write_bytes(b'different original')
+        with self.assertRaisesRegex(ValueError,'andere oder geänderte Originaldatei'):
+            deletion.prepare(self.db,self.state,first,shared,third)
+        self.assertTrue(source.exists() and alternate.exists() and text.exists())
+        plan=deletion.prepare(self.db,self.state,first,shared)
+        self.assertEqual(plan['selectedCount'],2)
+        self.assertEqual(plan['recordCount'],2)
+        self.assertEqual(len(plan['files']),3)
+        deletion.execute(self.db,self.state,plan['token'],trash=self.trash)
+        self.assertEqual(self.calls.count(text),1)
+        self.assertFalse(source.exists() or alternate.exists())
+        self.assertTrue(changed.exists())
+
+    def test_partial_batch_resumes_from_member_without_merging_unrelated_record(self):
+        first,source,text=self.add()
+        second,second_source,second_text=self.add('Zweite.wav')
+        third,third_source,third_text=self.add('Dritte.wav')
+        other_plan=deletion.prepare(self.db,self.state,second,third)
+        plan=deletion.prepare(self.db,self.state,first,second)
+
+        def fail_second(path):
+            if path==second_text:
+                raise OSError('synthetic recycle error')
+            return self.trash(path)
+
+        with self.assertRaisesRegex(RuntimeError,'Datenbankeinträge bleiben'):
+            deletion.execute(self.db,self.state,plan['token'],keep_original=True,trash=fail_second)
+        with self.assertRaisesRegex(ValueError,'begonnenen Löschung'):
+            deletion.prepare(self.db,self.state,first,third)
+        with self.assertRaisesRegex(ValueError,'begonnenen Löschung'):
+            deletion.execute(self.db,self.state,other_plan['token'],trash=self.trash)
+        resumed=deletion.prepare(self.db,self.state,second)
+        self.assertEqual(resumed['token'],plan['token'])
+        self.assertEqual(resumed['selectedCount'],2)
+        self.assertTrue(resumed['keepOriginal'] and resumed['lockedMode'])
+        deletion.execute(self.db,self.state,resumed['token'],keep_original=True,trash=self.trash)
+        self.assertEqual(self.calls,[text,second_text])
+        self.assertTrue(source.exists() and second_source.exists() and third_source.exists() and third_text.exists())
+
     def test_keep_original_survives_rescan_and_accepts_explicit_drop_or_changed_file(self):
         first,source,_=self.add()
         second,changed,_=self.add('Zweite.wav')

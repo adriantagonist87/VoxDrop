@@ -10,6 +10,8 @@ ApplicationWindow {
     property var settings: api.settings
     property var selected: api.detail
     property bool historySearchOpen: false
+    property bool historySelecting: false
+    property var historySelectedIds: []
     property bool settingsOpen: false
     property int settingsTab: 0
     property int workTab: 0
@@ -24,6 +26,13 @@ ApplicationWindow {
     function openSettings(tab) { settingsTab = tab; settingsOpen = true }
     function showHistory() { settingsOpen = false; workTab = 1 }
     function showQueue() { settingsOpen = false; workTab = 0 }
+    function toggleHistorySelection(id) {
+        const selection = historySelectedIds.slice()
+        const index = selection.indexOf(id)
+        if (index === -1) selection.push(id)
+        else selection.splice(index, 1)
+        historySelectedIds = selection
+    }
     readonly property color canvas: "#1e1e1e"
     readonly property color sidebar: "#242424"
     readonly property color surface: "#292929"
@@ -571,6 +580,28 @@ ApplicationWindow {
                                 onActivated: index => api.setOrder(index === 1 ? "asc" : "desc")
                             }
                         }
+                        RowLayout {
+                            Layout.fillWidth: true
+                            visible: window.historySelecting || jobs.count > 0
+                            AppActionButton {
+                                objectName: "toggleHistorySelection"
+                                text: window.historySelecting ? "Auswahl beenden" : "Auswählen"
+                                onClicked: {
+                                    window.historySelecting = !window.historySelecting
+                                    window.historySelectedIds = []
+                                }
+                            }
+                            Item { Layout.fillWidth: true }
+                            AppActionButton {
+                                objectName: "deleteSelectedHistory"
+                                visible: window.historySelecting
+                                text: "Löschen (" + window.historySelectedIds.length + ")"
+                                Accessible.name: window.historySelectedIds.length + " ausgewählte Einträge löschen"
+                                errorAlert: true
+                                enabled: window.historySelectedIds.length > 0 && viewState.ready && !viewState.busy
+                                onClicked: api.requestHistoryDeletion(window.historySelectedIds)
+                            }
+                        }
                         Muted { text: "Keine Aufträge"; visible: jobs.count === 0; Layout.fillWidth: true }
                         ListView {
                             id: jobs
@@ -584,30 +615,47 @@ ApplicationWindow {
                             delegate: ItemDelegate {
                                 id: job
                                 required property var modelData
+                                objectName: "historyJob-" + modelData.id
+                                readonly property bool marked: window.historySelectedIds.indexOf(modelData.id) !== -1
                                 width: ListView.view.width - (jobs.ScrollBar.vertical.visible ? 10 : 0)
                                 padding: 8
                                 implicitHeight: jobInfo.implicitHeight + 16
-                                Accessible.name: "Auftragsdetails " + modelData.name
-                                onClicked: api.showDetails(modelData.id)
+                                Accessible.name: (window.historySelecting ? "Auswahl ändern: " : "Auftragsdetails ") + modelData.name
+                                onClicked: {
+                                    if (window.historySelecting) window.toggleHistorySelection(modelData.id)
+                                    else api.showDetails(modelData.id)
+                                }
                                 background: Rectangle {
                                     radius: 5
-                                    color: job.hovered || job.activeFocus ? "#303030" : "transparent"
+                                    color: job.marked ? "#29372e" : job.hovered || job.activeFocus ? "#303030" : "transparent"
                                     border.color: job.activeFocus ? accent : "transparent"
                                     Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: line }
                                 }
-                                contentItem: ColumnLayout {
-                                    id: jobInfo
-                                    spacing: 3
-                                    Copy { text: job.modelData.name; font.pixelSize: 14; font.weight: Font.DemiBold; Layout.fillWidth: true; maximumLineCount: 1; elide: Text.ElideMiddle }
-                                    Muted { text: "Neutranskription"; visible: job.modelData.repeat; Layout.fillWidth: true }
-                                    Muted { text: job.modelData.path; Layout.fillWidth: true; maximumLineCount: 1; elide: Text.ElideMiddle }
-                                    Muted { text: "Aufnahme " + job.modelData.audio + " · Verarbeitung " + job.modelData.elapsed; Layout.fillWidth: true; maximumLineCount: 1; elide: Text.ElideRight }
-                                    Muted { text: window.completionTime(job.modelData); Layout.fillWidth: true }
-                                    Copy { text: job.modelData.errorText || ""; visible: text.length > 0; color: warningColor; Layout.fillWidth: true; maximumLineCount: 2; elide: Text.ElideRight }
-                                    RowLayout {
+                                contentItem: RowLayout {
+                                    Toggle {
+                                        objectName: "selectHistoryJob-" + job.modelData.id
+                                        visible: window.historySelecting
+                                        checked: job.marked
+                                        Accessible.name: job.modelData.name + " auswählen"
+                                        Layout.alignment: Qt.AlignTop
+                                        Layout.preferredWidth: 23
+                                        onToggled: window.toggleHistorySelection(job.modelData.id)
+                                    }
+                                    ColumnLayout {
+                                        id: jobInfo
                                         Layout.fillWidth: true
-                                        Muted { text: job.modelData.status; color: job.modelData.error ? warningColor : muted; Layout.fillWidth: true }
-                                        Muted { text: job.modelData.updated }
+                                        spacing: 3
+                                        Copy { text: job.modelData.name; font.pixelSize: 14; font.weight: Font.DemiBold; Layout.fillWidth: true; maximumLineCount: 1; elide: Text.ElideMiddle }
+                                        Muted { text: "Neutranskription"; visible: job.modelData.repeat; Layout.fillWidth: true }
+                                        Muted { text: job.modelData.path; Layout.fillWidth: true; maximumLineCount: 1; elide: Text.ElideMiddle }
+                                        Muted { text: "Aufnahme " + job.modelData.audio + " · Verarbeitung " + job.modelData.elapsed; Layout.fillWidth: true; maximumLineCount: 1; elide: Text.ElideRight }
+                                        Muted { text: window.completionTime(job.modelData); Layout.fillWidth: true }
+                                        Copy { text: job.modelData.errorText || ""; visible: text.length > 0; color: warningColor; Layout.fillWidth: true; maximumLineCount: 2; elide: Text.ElideRight }
+                                        RowLayout {
+                                            Layout.fillWidth: true
+                                            Muted { text: job.modelData.status; color: job.modelData.error ? warningColor : muted; Layout.fillWidth: true }
+                                            Muted { text: job.modelData.updated }
+                                        }
                                     }
                                 }
                             }
@@ -960,10 +1008,11 @@ ApplicationWindow {
                                 Muted { Layout.fillWidth: true; wrapMode: Text.WrapAnywhere; text: api.modelLocation }
                                 Muted {
                                     Layout.fillWidth: true
-                                    visible: modelSettings.store.loading || modelSettings.store.removing || viewState.processingActive
+                                    objectName: "modelStoreStatus"
+                                    visible: modelSettings.store.loading || modelSettings.store.removing || modelSettings.store.processing
                                     text: modelSettings.store.removing ? "Modell wird gelöscht …" :
                                         modelSettings.store.loading ? "Modellspeicher wird gelesen …" :
-                                        "Pausiere die Verarbeitung, um Modelle zu löschen."
+                                        "Modelle können gelöscht werden, sobald die aktive Verarbeitung beendet ist."
                                 }
                                 Copy { Layout.fillWidth: true; visible: text.length > 0; text: modelSettings.store.error; color: warningColor }
                                 Repeater {
@@ -1197,7 +1246,11 @@ ApplicationWindow {
         function onAudioPreviewClosed() { audioPopup.close() }
         function onRecordDeletionOpened() { deleteRecord.open() }
         function onRecordDeletionClosed() { deleteRecord.close() }
-        function onRecordDeleted() { detail.close() }
+        function onRecordDeleted() {
+            detail.close()
+            window.historySelecting = false
+            window.historySelectedIds = []
+        }
         function onDropConflictOpened() { dropConflicts.open() }
         function onDropResolved() { dropConflicts.close() }
     }
@@ -1289,9 +1342,11 @@ ApplicationWindow {
         objectName: "deleteRecordDialog"
         property var deletion: api.recordDeletion
         property bool keepOriginal: true
+        readonly property int selectionCount: deletion.plan.selectedCount || deletion.selectionCount
+        readonly property bool multiple: selectionCount > 1
         readonly property bool keepsOriginal: deletion.plan.lockedMode ? deletion.plan.keepOriginal : keepOriginal
         modal: true
-        title: "Datensatz löschen"
+        title: multiple ? "Datensätze löschen" : "Datensatz löschen"
         anchors.centerIn: Overlay.overlay
         width: Math.min(650,window.width-48)
         height: Math.min(window.height-48,deleteContent.implicitHeight+deleteButtons.implicitHeight+80)
@@ -1302,18 +1357,18 @@ ApplicationWindow {
             keepOriginal = true
             cancelDeleteRecord.forceActiveFocus()
         }
-        contentItem: ScrollView {
-            id: deleteScroll
-            clip: true; contentWidth: availableWidth
-            ColumnLayout {
+        contentItem: ColumnLayout {
                 id: deleteContent
-                width: deleteScroll.availableWidth
                 spacing: 10
-                Copy { Layout.fillWidth: true; text: deleteRecord.deletion.plan.name || selected.name || ""; font.bold: true }
+                Copy {
+                    Layout.fillWidth: true
+                    text: deleteRecord.deletion.plan.name || (deleteRecord.multiple ? deleteRecord.selectionCount + " ausgewählte Einträge" : selected.name || "")
+                    font.bold: true
+                }
                 Toggle {
                     objectName: "keepOriginalToggle"
                     Layout.fillWidth: true
-                    text: "Originaldatei behalten"
+                    text: deleteRecord.multiple ? "Originaldateien behalten" : "Originaldatei behalten"
                     checked: deleteRecord.keepsOriginal
                     enabled: Boolean(deleteRecord.deletion.plan.token) && !deleteRecord.deletion.plan.lockedMode && !deleteRecord.deletion.deleting
                     onToggled: deleteRecord.keepOriginal = checked
@@ -1328,24 +1383,37 @@ ApplicationWindow {
                 }
                 Copy {
                     Layout.fillWidth: true
-                    visible: (deleteRecord.deletion.plan.recordCount || 0) > 1
-                    text: deleteRecord.deletion.plan.recordCount + " verknüpfte Vorgänge werden gemeinsam gelöscht."
+                    visible: (deleteRecord.deletion.plan.recordCount || 0) > deleteRecord.selectionCount
+                    text: "Mit verknüpften Aufträgen werden insgesamt " + deleteRecord.deletion.plan.recordCount + " Datensätze gelöscht."
                 }
-                Repeater {
-                    model: deleteRecord.deletion.plan.files || []
-                    delegate: Copy {
-                        required property var modelData
-                        Layout.fillWidth: true; wrapMode: Text.WrapAnywhere; font.pixelSize: 12
-                        text: (modelData.role === "original" ? "Originaldatei: " : modelData.role === "transcript" ? "Transkript: " : "Lokale Arbeitskopien: ") + modelData.path
-                            + (modelData.trashed ? " · bereits im Papierkorb"
-                                : modelData.protected ? " · andere/geänderte Datei, bleibt erhalten"
-                                : modelData.missing ? " · nicht mehr vorhanden"
-                                : modelData.role === "original" && deleteRecord.keepsOriginal ? " · bleibt erhalten" : "")
+                ScrollView {
+                    id: deleteScroll
+                    objectName: "deleteRecordFileList"
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    Layout.preferredHeight: deleteFiles.implicitHeight
+                    visible: deleteFiles.implicitHeight > 0
+                    clip: true
+                    contentWidth: availableWidth
+                    ColumnLayout {
+                        id: deleteFiles
+                        width: deleteScroll.availableWidth
+                        Repeater {
+                            model: deleteRecord.deletion.plan.files || []
+                            delegate: Copy {
+                                required property var modelData
+                                Layout.fillWidth: true; wrapMode: Text.WrapAnywhere; font.pixelSize: 12
+                                text: (modelData.role === "original" ? "Originaldatei: " : modelData.role === "transcript" ? "Transkript: " : "Lokale Arbeitskopien: ") + modelData.path
+                                    + (modelData.trashed ? " · bereits im Papierkorb"
+                                        : modelData.protected ? " · andere/geänderte Datei, bleibt erhalten"
+                                        : modelData.missing ? " · nicht mehr vorhanden"
+                                        : modelData.role === "original" && deleteRecord.keepsOriginal ? " · bleibt erhalten" : "")
+                            }
+                        }
                     }
                 }
                 Copy { Layout.fillWidth: true; visible: deleteRecord.deletion.preparing || deleteRecord.deletion.deleting; text: deleteRecord.deletion.preparing ? "Betroffene Dateien werden geprüft …" : "Dateien werden in den Papierkorb verschoben …" }
-                Copy { objectName: "deleteRecordError"; Layout.fillWidth: true; visible: text.length>0; color: warningColor; text: deleteRecord.deletion.error || "" }
-            }
+                Copy { objectName: "deleteRecordError"; Layout.fillWidth: true; visible: text.length>0; wrapMode: Text.WrapAnywhere; color: warningColor; text: deleteRecord.deletion.error || "" }
         }
         footer: RowLayout {
             id: deleteButtons

@@ -78,6 +78,9 @@ class WorkspaceTests(unittest.TestCase):
 
         self.queue_fixture()
         self.seed_config()
+        self.controller.snapshot.update(running=True, queue_paused=False, queue=[], current=None)
+        self.controller.update_queue()
+        self.controller.changed.emit()
         self.window.resize(1010, 630)
         root = self.controller_module.MODEL_DATA / 'models' / WHISPER
         for name in catalog()[WHISPER][1]:
@@ -97,6 +100,13 @@ class WorkspaceTests(unittest.TestCase):
         self.click('modelSettingsTab')
         wait_for_inventory()
         self.assertLess(self.visual('modelSettingsTab').x(), self.visual('transferSettingsTab').x())
+        self.assertFalse(self.visual('modelStoreStatus').property('visible'))
+        self.controller.snapshot['immediate_count'] = 1
+        self.controller.changed.emit()
+        self.assertFalse(self.visual('deleteModel-' + WHISPER).property('enabled'))
+        self.assertTrue(self.visual('modelStoreStatus').property('visible'))
+        self.controller.snapshot['immediate_count'] = 0
+        self.controller.changed.emit()
         self.click('deleteModel-' + WHISPER)
         self.click('cancelModelDelete')
         self.assertTrue(root.is_dir())

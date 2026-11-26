@@ -823,6 +823,54 @@ class DesktopWindowTests(unittest.TestCase):
             self.assertFalse(self.window.findChild(QObject,'deleteRecordDialog').property('visible'))
             self.assertEqual(len(pending),2)
 
+    def test_history_multi_selection_shares_confirmation_and_cancel_keeps_selection(self):
+        jobs=self.queue_fixture(3)
+        for job in jobs:
+            job.update(state='done',attempt=1,finished=101)
+        self.controller.snapshot.update(jobs=jobs,queue=[],queue_paused=True)
+        self.controller.update_history()
+        self.window.resize(1010,630)
+        self.presenter.show();QTest.qWait(30)
+        QMetaObject.invokeMethod(self.visual('historyTab'),'clicked')
+        QMetaObject.invokeMethod(self.visual('toggleHistorySelection'),'clicked')
+        QTest.qWait(45)
+        history_list=self.visual('historyList')
+        for identifier in (3,2):
+            row=self.visual('selectHistoryJob-'+str(identifier))
+            self.assertIsNotNone(row)
+            row_position=row.mapToItem(history_list.property('contentItem'),QPointF(0,0)).y()
+            history_list.setProperty('contentY',row_position)
+            QTest.qWait(30)
+            point=row.mapToScene(QPointF(row.width()/2,row.height()/2)).toPoint()
+            QTest.mouseClick(self.window,Qt.MouseButton.LeftButton,Qt.KeyboardModifier.NoModifier,point)
+            QTest.qWait(30)
+            self.assertTrue(row.property('checked'))
+        plan=dict(token='a'*32,name='2 ausgewählte Einträge',selectedCount=2,recordCount=2,
+                  files=[dict(role='original',path='C:/synthetic/Sehr langer Pfad/'*8+str(index)) for index in range(40)])
+        replies={'prepare-delete-record':plan,'discard-delete-record':{},'delete-record':dict(deletedIds=[2,3],trashed=2)}
+        with (
+            patch.object(self.controller_module,'command',side_effect=lambda name,*args:json.dumps(replies[name])) as sent,
+            patch.object(self.controller,'submit',side_effect=lambda operation,finished:finished(operation(),None)),
+            patch.object(self.controller,'refresh'),
+        ):
+            action=self.visual('deleteSelectedHistory')
+            self.assertEqual(action.property('text'),'Löschen (2)')
+            QMetaObject.invokeMethod(action,'clicked');QTest.qWait(30)
+            self.assertEqual(sent.call_args.args,('prepare-delete-record',3,2))
+            popup=self.window.findChild(QObject,'deleteRecordDialog')
+            checkbox=popup.findChild(QObject,'keepOriginalToggle')
+            self.assertTrue(checkbox.property('checked'))
+            self.assertEqual(checkbox.property('text'),'Originaldateien behalten')
+            scroll=popup.findChild(QObject,'deleteRecordFileList')
+            self.assertGreater(scroll.property('contentHeight'),scroll.height())
+            QMetaObject.invokeMethod(popup.findChild(QObject,'cancelDeleteRecordButton'),'clicked')
+            self.assertEqual(action.property('text'),'Löschen (2)')
+            QMetaObject.invokeMethod(action,'clicked');QTest.qWait(30)
+            QMetaObject.invokeMethod(popup.findChild(QObject,'confirmDeleteRecordButton'),'clicked')
+            self.assertEqual(sent.call_args.args,('delete-record',plan['token'],'--keep-original'))
+        self.assertEqual([job['id'] for job in self.controller.history],[1])
+        self.assertFalse(self.window.property('historySelecting'))
+
     def test_record_delete_failure_keeps_details_then_success_removes_only_selected_ids(self):
         plan=self.delete_fixture()
         self.controller.delete_plan=plan;self.controller.recordDeletionOpened.emit()
