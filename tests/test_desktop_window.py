@@ -171,10 +171,12 @@ class DesktopWindowTests(unittest.TestCase):
     def test_gpu_slider_keyboard_saves_live_budget_without_saving_other_draft_edits(self):
         self.queue_fixture()
         self.controller.draft['hardware'] = self.controller_module.GPU
+        self.controller.draft['windows_cpu_only'] = False
+        self.controller.saved_config['windows_cpu_only'] = False
         self.controller.draft['language'] = 'en'
         self.controller.changed.emit()
         slider = self.visual('gpuBudgetSlider')
-        with patch.object(self.controller_module, 'read_settings', return_value={**self.controller_module.DEFAULTS, 'language': 'de'}) , \
+        with patch.object(self.controller_module, 'read_settings', return_value={**self.controller_module.DEFAULTS, 'language': 'de', 'windows_cpu_only': False}) , \
              patch.object(self.controller_module, 'save_settings') as save, \
              patch.object(self.controller, 'action', side_effect=lambda operation, message: operation()):
             self.controller.changed.emit()
@@ -192,9 +194,11 @@ class DesktopWindowTests(unittest.TestCase):
     def test_gpu_slider_waits_for_busy_action_without_losing_pending_value(self):
         self.queue_fixture()
         self.controller.draft['hardware'] = self.controller_module.GPU
+        self.controller.draft['windows_cpu_only'] = False
+        self.controller.saved_config['windows_cpu_only'] = False
         self.controller.changed.emit()
         with patch.object(self.controller_module, 'save_settings') as save, \
-             patch.object(self.controller_module, 'read_settings', return_value=self.controller_module.DEFAULTS.copy()), \
+             patch.object(self.controller_module, 'read_settings', return_value={**self.controller_module.DEFAULTS, 'windows_cpu_only': False}), \
              patch.object(self.controller, 'action', side_effect=lambda operation, message: operation()):
             self.controller.changed.emit()
             slider = self.visual('gpuBudgetSlider')
