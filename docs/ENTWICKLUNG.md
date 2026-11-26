@@ -1,5 +1,9 @@
 # Entwicklung auf macOS und Windows
 
+## Originaldateien bei der Datensatzlöschung erhalten
+
+Der vorbereitete Löschplan gilt für beide Modi. Der Controller übergibt die Auswahl an `delete-record TOKEN --keep-original`. Das Journal bindet begonnene Löschungen an den bestätigten Modus. Die additive SQLite-Tabelle `retained_media` speichert die behaltene Dateiversion anhand des normalisierten Pfads, der Dateigröße und der Änderungszeit. Die Löschtransaktion aktualisiert gleichzeitig diese Tabelle. Nur die automatische Überwachung prüft sie. Der vollständige Datenbankreset leert die Tabelle. [Implementierung und Regressionen](DATENSATZ_LOESCHEN.md)
+
 ## Windows Stable 1.6.0 bauen und verifizieren
 
 Release-Branch `release/windows-1.6.0`, Paket-Code `6fc12c5d54aa177c0f6ac43f5c431d0525936feb`. Der native Builder `scripts/build-windows.py --release-version 1.6.0` nutzt unveränderte Laufzeitpins und die verifizierte 1.5.0-Referenz für Drittanbieterquellen. `scripts/verify_windows_release.py --manifest releases/v1.6.0/windows-release.json --download` gleicht ZIP und enthaltene Programmdateien ab. [Testumfang und verbleibende Plattformgrenzen](WINDOWS_1.6.0.md)
