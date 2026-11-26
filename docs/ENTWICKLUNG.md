@@ -10,7 +10,7 @@ Der vorbereitete Löschplan gilt für beide Modi. Der Controller übergibt die A
 
 ## Windows Stable 1.6.0 bauen und verifizieren
 
-Release-Branch `release/windows-1.6.0`, Paket-Code `6fc12c5d54aa177c0f6ac43f5c431d0525936feb`. Der native Builder `scripts/build-windows.py --release-version 1.6.0` nutzt unveränderte Laufzeitpins und die verifizierte 1.5.0-Referenz für Drittanbieterquellen. `scripts/verify_windows_release.py --manifest releases/v1.6.0/windows-release.json --download` gleicht ZIP und enthaltene Programmdateien ab. [Testumfang und verbleibende Plattformgrenzen](WINDOWS_1.6.0.md)
+Das aktualisierte Paket für den bestehenden Release verwendet Code `5aed5c184cefeb27b0cde2f375c65a39623be99a`. Der ursprüngliche Tag verweist auf `6fc12c5d54aa177c0f6ac43f5c431d0525936feb` vom Branch `release/windows-1.6.0`. Der native Builder `scripts/build-windows.py --release-version 1.6.0` nutzt die verifizierte 1.5.0-Referenz für Drittanbieterquellen und die bestehenden Laufzeitpins. `scripts/verify_windows_release.py --manifest releases/v1.6.0/windows-release.json --download` verifiziert ZIP und Programmdateien des aktuellen Downloads. [Testumfang und Plattformgrenzen](WINDOWS_1.6.0.md)
 
 ## Modellbestand und bestätigtes Löschen
 

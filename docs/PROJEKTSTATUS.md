@@ -1,5 +1,9 @@
 # Projektstatus VoxDrop
 
+## Windows Stable 1.6.0, korrigierter Download vom 26.11.2026
+
+Der vorhandene GitHub-Release liefert die Korrekturen zur Mehrfachauswahl im Verlauf, zum Erhalt von Originaldateien und zur Modelllöschung bei Leerlauf. Paket-Commit `5aed5c184cefeb27b0cde2f375c65a39623be99a`. Alle vier Dateien wurden unter den bisherigen Downloadadressen ersetzt und öffentlich per SHA-256 verifiziert. Der Git-Tag dokumentiert den ursprünglichen Paketstand. 303 Windows-Tests bestanden. EXE-Start und beide Löschdialoge nativ am neuen Paket geprüft. [Release](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.6.0-windows) · [Manifest und Prüfstand](WINDOWS_1.6.0.md)
+
 ## Mehrfachauswahl und Modelllöschung bei Leerlauf, 26.11.2026
 
 Verlaufseinträge lassen sich markieren und gemeinsam mit vorausgewähltem Erhalt der Originale entfernen. In **Modelle** öffnet **Löschen …** die Bestätigung auch bei laufendem Dienst und freier, leerer Warteschlange. Ursache war die aus dem Dienststatus abgeleitete Sperre. Windows-Prüfcommit `5aed5c184cefeb27b0cde2f375c65a39623be99a`: 303 Tests bestanden, 14 übersprungen. Nativer Papierkorbtest mit 20 Aufnahmen und Klickprüfung mit künstlichem Modell bestanden. Mac-Gegenprüfung offen. [Arbeitsbranch](https://github.com/adriantagonist87/VoxDrop/tree/fix/keep-original-on-delete) · [PR #38](https://github.com/adriantagonist87/VoxDrop/pull/38) · [Verlauf](DATENSATZ_LOESCHEN.md) · [Modelle](MODELLVERWALTUNG.md)

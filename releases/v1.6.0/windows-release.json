@@ -4,10 +4,13 @@
   "platform": "windows-x64",
   "application_version": "1.6.0",
   "release_version": "1.6.0",
-  "code_commit": "6fc12c5d54aa177c0f6ac43f5c431d0525936feb",
+  "code_commit": "5aed5c184cefeb27b0cde2f375c65a39623be99a",
+  "asset_revision": 2,
+  "git_tag_commit": "6fc12c5d54aa177c0f6ac43f5c431d0525936feb",
+  "replaces_archive_sha256": "710cdf6c18a7df9bdeb090c7571d136901036472ae237adc06c2a5a4c6df46c8",
   "archive_name": "VoxDrop-1.6.0-Windows-x64.zip",
-  "archive_sha256": "710cdf6c18a7df9bdeb090c7571d136901036472ae237adc06c2a5a4c6df46c8",
-  "archive_size": 46052690,
+  "archive_sha256": "ebbb983d2db41d0d82213d3ef87b67dc4d40ef6ba7ba8f1907b2b4a583d79f59",
+  "archive_size": 46055049,
   "download_url": "https://github.com/adriantagonist87/VoxDrop/releases/download/v1.6.0-windows/VoxDrop-1.6.0-Windows-x64.zip",
   "atrain_commit": "ea8a7057857220b4299c0ba0b2aaf6def2f35b87",
   "runtime": "runtime-2ce5d3d2adcc",
@@ -52,8 +55,8 @@
     },
     {
       "path": "Desktop/controller.py",
-      "size": 96669,
-      "sha256": "2608251381d527dfa69d604d270f83bb74e4e523d437d4e511ed364398b0359f"
+      "size": 97628,
+      "sha256": "d292c1d75f3a1093b813f2cbcf3f02bf568f0f2f752ec8a1f30cff2cd5be2a74"
     },
     {
       "path": "Desktop/desktop.py",
@@ -102,8 +105,8 @@
     },
     {
       "path": "Desktop/qml/Main.qml",
-      "size": 91142,
-      "sha256": "ac3f3845ccff7bf3008c02007b820c924d93895dfc10d1291e2c3cee2bd1efa2"
+      "size": 96562,
+      "sha256": "2e3a21e7adab621d0fe43854700d8cb19038b04efa573fee243abfb10ac90c03"
     },
     {
       "path": "Desktop/qml/ModelDownload.qml",
@@ -367,8 +370,8 @@
     },
     {
       "path": "Engine/history_store.py",
-      "size": 1629,
-      "sha256": "20391f53e0bb9d1a03ec1b1e6f86f2af6d83c8cac85528cbbd2bfcce5d2f0652"
+      "size": 1718,
+      "sha256": "ff19850ed90e6a99dfb2d12ca83c1d3a824825bdbabefaa7c45a4623899c89d8"
     },
     {
       "path": "Engine/login_agent.py",
@@ -422,8 +425,8 @@
     },
     {
       "path": "Engine/record_delete.py",
-      "size": 15440,
-      "sha256": "f2e9de1c85abfa3f853909228b290300e1ff2b705cd5d0724d4eb6b6a174f74e"
+      "size": 19195,
+      "sha256": "976920e2356497600b0749a32d6a75a2c3b53c256090dfceb02229e07943cbdb"
     },
     {
       "path": "Engine/runtime_logs.py",
@@ -457,8 +460,8 @@
     },
     {
       "path": "Engine/watch_service.py",
-      "size": 114931,
-      "sha256": "432f68862dd919eb7990a3f0c4caa46c1f1027112303c53eb07175130452df22"
+      "size": 115470,
+      "sha256": "abd056068d0218c7793a558cf77ab44b12064433513ceec3bf1807d87bf9312c"
     },
     {
       "path": "Installation.md",
@@ -478,12 +481,12 @@
     {
       "path": "VoxDrop.exe",
       "size": 290304,
-      "sha256": "4f4e6dd9d9651446eab49addb0f1e4ac36f24abc84e2f0237745717f4ab03782"
+      "sha256": "8f2b846036a8aa53646bf43eb504690cd86e8e11bff7faa1edb858661103dd34"
     },
     {
       "path": "VoxDrop.pdb",
-      "size": 1232896,
-      "sha256": "36b054c30d78011803028a0f24d502507d1a9dd26d6442347eba0f457cbd3dea"
+      "size": 1245184,
+      "sha256": "e39184f9789e67f34d5b9516624c9839d0e28c01b986edcf996480b5b382a3bc"
     },
     {
       "path": "assets/VoxDrop.ico",
@@ -498,7 +501,7 @@
     {
       "path": "build-info.json",
       "size": 341,
-      "sha256": "9113de2dd9c071e4ab4038ca649ebcc1e3a2e59c92f57e723e2eb2d9faab28a2"
+      "sha256": "806f7d72e767485b9d2e10027a93bbc12a2f990ea736707c707f3ce04a82c208"
     },
     {
       "path": "tools/uv-download.sha256",

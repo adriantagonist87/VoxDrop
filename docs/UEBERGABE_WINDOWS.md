@@ -14,7 +14,7 @@ Vor der gemeinsamen Integration beide Modi auf macOS nativ prüfen. Dazu gehöre
 
 ## Windows Stable 1.6.0, 26.11.2026
 
-Geprüfter Code `6fc12c5d54aa177c0f6ac43f5c431d0525936feb`, [PR #36](https://github.com/adriantagonist87/VoxDrop/pull/36). Der reine Windows-Tag bündelt alle lokalen Funktionsänderungen und verwendet auf neuen Profilen CPU-Schutz. [Version, ZIP-Manifest und Prüfstand](WINDOWS_1.6.0.md)
+Der bestehende Release liefert das aktualisierte Windows-Paket `5aed5c184cefeb27b0cde2f375c65a39623be99a` aus [PR #38](https://github.com/adriantagonist87/VoxDrop/pull/38). ZIP-SHA-256 `ebbb983d2db41d0d82213d3ef87b67dc4d40ef6ba7ba8f1907b2b4a583d79f59`. Der Tag bleibt der Nachweis des ursprünglichen Pakets `6fc12c5d54aa177c0f6ac43f5c431d0525936feb` aus [PR #36](https://github.com/adriantagonist87/VoxDrop/pull/36). Für die macOS-Prüfung der Löschdialoge gilt der neuere Code-Commit. [Version, ZIP-Manifest und Prüfstand](WINDOWS_1.6.0.md)
 
 ## Neuer Einstellungsreiter „Modelle“, 26.11.2026
 
