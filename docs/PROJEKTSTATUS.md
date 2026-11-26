@@ -1,5 +1,9 @@
 # Projektstatus VoxDrop
 
+## Windows Stable 1.6.0, 26.11.2026
+
+Windows 11 x64 bündelt den geprüften Stand einschließlich Modellverwaltung, Download-Fortschritt, Popup-Player, Papierkorb, unabhängigem SMB-Import und Überwachungs-/Stoppsteuerung. Neue Windows-Profile verwenden CPU-Schutz. Die Ursache des CUDA-Systemstillstands bleibt offen. [Paket, Prüfergebnisse und Mac-Gegenprüfung](WINDOWS_1.6.0.md)
+
 ## Modellverwaltung unter Windows, 26.11.2026
 
 Der vierte Einstellungsreiter „Modelle“ zeigt lokale Modelle und ihre Dateigröße. Einzelne Modelle und ihre zugehörigen Download-Kopien lassen sich nach Bestätigung löschen. Windows-Funktionscommit `5c2ebc7664b01b1be8674aa38ec2f92c34ca3daa` lokal installiert. Kombinierte Suite mit 294 bestandenen und 14 übersprungenen Tests. Mac-Gegenprüfung steht aus. [Bedienung, Windows-Nachweis und Mac-Aufgaben](MODELLVERWALTUNG.md)

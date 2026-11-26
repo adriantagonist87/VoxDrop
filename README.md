@@ -6,9 +6,9 @@ VoxDrop macht aus Audio- und Videoaufnahmen durchsuchbare Textdateien. So kannst
 
 ## Aktuelle stabile Version
 
-**VoxDrop 1.5.0** ist für macOS auf Apple Silicon und für Windows 11 auf x64 verfügbar. Prüfsummen und Paketnachweise liegen beim gemeinsamen Release. [Versionshinweise und Prüfsummen](https://github.com/adriantagonist87/VoxDrop/releases/latest)
+**VoxDrop 1.6.0** ist der stabile Stand für Windows 11 x64. Für macOS auf Apple Silicon ist **VoxDrop 1.5.0** der stabile Stand. Prüfsummen und Paketnachweise stehen bei den jeweiligen Releases. [Windows 1.6.0](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.6.0-windows) · [macOS 1.5.0](https://github.com/adriantagonist87/VoxDrop/releases/tag/v1.5.0)
 
-**[macOS-DMG herunterladen](https://github.com/adriantagonist87/VoxDrop/releases/download/v1.5.0/VoxDrop-1.5.0-macOS-arm64.dmg)** · **[Windows-ZIP herunterladen](https://github.com/adriantagonist87/VoxDrop/releases/download/v1.5.0/VoxDrop-1.5.0-Windows-x64.zip)** · [Alle Versionen](https://github.com/adriantagonist87/VoxDrop/releases)
+**[macOS-DMG herunterladen](https://github.com/adriantagonist87/VoxDrop/releases/download/v1.5.0/VoxDrop-1.5.0-macOS-arm64.dmg)** · **[Windows-ZIP herunterladen](https://github.com/adriantagonist87/VoxDrop/releases/download/v1.6.0-windows/VoxDrop-1.6.0-Windows-x64.zip)** · [Alle Versionen](https://github.com/adriantagonist87/VoxDrop/releases)
 
 ## Hardware und System
 
@@ -21,7 +21,7 @@ VoxDrop macht aus Audio- und Videoaufnahmen durchsuchbare Textdateien. So kannst
 
 Für die Ersteinrichtung brauchst du Internet und einen beschreibbaren Programmordner. Unter **Einstellungen → Transkription → Rechengerät** kannst du auch **CPU** wählen.
 
-Unter Windows kannst du **CPU-Schutz für alle wartenden und neuen Aufträge** einschalten. Er verarbeitet auch bereits für CUDA eingeplante Aufträge auf der CPU. Erkennt VoxDrop während der CUDA-Verarbeitung einen Grafiktreiber-Timeout, pausiert die Warteschlange und der Auftrag bleibt für einen erneuten Start erhalten. [Windows-Prüfstand](docs/PROJEKTSTATUS.md#windows-150--funktionsabgleich-und-schutz-bei-grafikfehlern)
+Neue Windows-Profile starten mit **CPU-Schutz für alle wartenden und neuen Aufträge**. Er verarbeitet auch bereits für CUDA eingeplante Aufträge auf der CPU. Bestehende Profile behalten ihre Einstellungen. Erkennt VoxDrop während der CUDA-Verarbeitung einen Grafikfehler, pausiert die Warteschlange und der Auftrag bleibt für einen erneuten Start erhalten. [Windows-Release und bekannter Grafikvorfall](docs/WINDOWS_1.6.0.md)
 
 Für die Rückkehr zur GPU wähle unter **Einstellungen → Transkription** das Rechengerät **NVIDIA-GPU (CUDA)** und schalte den **CPU-Schutz** aus. Speichere, stoppe den laufenden Auftrag über **■** und starte die Verarbeitung wieder mit **▶**. Der zuvor für CUDA eingeplante Auftrag beginnt auf der GPU neu. Diese Gerätewahl gilt auch bei einem regulären Wiederanlauf. [Beobachteter Windows-Langlauf](docs/PROJEKTSTATUS.md#gpu-neustart-und-timeout-bei-qwen-wortzeiten)
 
