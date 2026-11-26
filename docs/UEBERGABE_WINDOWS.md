@@ -1,5 +1,11 @@
 # Übergabeauftrag für Codex auf dem Windows-PC
 
+## Originaldatei beim Löschen behalten, 26.11.2026
+
+Arbeitsbranch [`fix/keep-original-on-delete`](https://github.com/adriantagonist87/VoxDrop/tree/fix/keep-original-on-delete), [PR #38](https://github.com/adriantagonist87/VoxDrop/pull/38), geprüfter Code `e760cc12a66ea9b31ea69dcca5557dc01326aa1e` auf Basis von `v1.6.0-windows`. Die vorausgewählte Option erhält das Original und entfernt Transkripte und Verlauf. Der veröffentlichte Windows-Stable ist 1.6.0.
+
+Vor der gemeinsamen Integration beide Modi auf macOS nativ prüfen. Dazu gehören Dialog bei Mindestgröße/Retina, Finder-Papierkorb, Abbruch und Fortsetzung eines Teilfehlers, SMB-Ablehnung und das Öffnen einer bestehenden Datenbank. Dieselbe Originalversion nach einem Neustart der Überwachung erneut scannen und anschließend manuell hinzufügen. [Windows-Prüfung und Reproduktion](DATENSATZ_LOESCHEN.md)
+
 ## Windows Stable 1.6.0, 26.11.2026
 
 Geprüfter Code `6fc12c5d54aa177c0f6ac43f5c431d0525936feb`, [PR #36](https://github.com/adriantagonist87/VoxDrop/pull/36). Der reine Windows-Tag bündelt alle lokalen Funktionsänderungen und verwendet auf neuen Profilen CPU-Schutz. [Version, ZIP-Manifest und Prüfstand](WINDOWS_1.6.0.md)
