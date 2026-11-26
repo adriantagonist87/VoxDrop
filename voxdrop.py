@@ -425,7 +425,7 @@ def parser():
     job.add_argument("media", type=Path)
     job.add_argument("--output-dir", required=True, type=Path)
     job.add_argument("--language", choices=("auto", "de", "en"), default="auto")
-    job.add_argument("--hardware", choices=HARDWARE, default=DEFAULT_HARDWARE)
+    job.add_argument("--hardware", choices=HARDWARE, default="cpu" if WINDOWS else DEFAULT_HARDWARE)
     job.add_argument("--model", choices=MODELS, default=DEFAULT_MODEL)
     job.add_argument(
         "--skip-silence",

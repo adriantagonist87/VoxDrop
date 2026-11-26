@@ -99,7 +99,7 @@ DEFAULTS = {
     "skip_silence": False,
     "monitoring": False,
     "gpu_budget_percent": 100,
-    "windows_cpu_only": False,
+    "windows_cpu_only": sys.platform == "win32",
 }
 
 

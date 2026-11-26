@@ -201,7 +201,7 @@ def read_settings(path):
         "model": DEFAULT_MODEL,
         "skip_silence": False,
         "gpu_budget_percent": 100,
-        "windows_cpu_only": False,
+        "windows_cpu_only": WINDOWS,
     }
     settings = {name: values.get(name, default) for name, default in defaults.items()}
     if "folders" in values:
