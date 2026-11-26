@@ -609,6 +609,7 @@ ApplicationWindow {
                         AppActionButton { objectName: "transcriptionSettingsTab"; text: "Transkription"; checked: window.settingsTab === 0; onClicked: window.settingsTab = 0 }
                         AppActionButton { objectName: "folderSettingsTab"; text: "Ordner & Überwachung"; checked: window.settingsTab === 1; onClicked: window.settingsTab = 1 }
                         AppActionButton { objectName: "appSettingsTab"; text: "App & Daten"; checked: window.settingsTab === 2; onClicked: window.settingsTab = 2 }
+                        AppActionButton { objectName: "modelSettingsTab"; text: "Modelle"; checked: window.settingsTab === 4; onClicked: window.settingsTab = 4 }
                         AppActionButton { objectName: "transferSettingsTab"; text: "Import & Export"; checked: window.settingsTab === 3; onClicked: window.settingsTab = 3 }
                     }
                     ScrollView {
@@ -905,6 +906,82 @@ ApplicationWindow {
                                 }
                             }
                             ColumnLayout {
+                                id: modelSettings
+                                objectName: "modelSettings"
+                                Layout.fillWidth: true
+                                visible: window.settingsTab === 4
+                                spacing: 10
+                                property var store: api.modelStore
+                                onVisibleChanged: if (visible) api.reloadModelInventory()
+
+                                function sizeText(bytes) {
+                                    const unit = bytes >= 1073741824 ? 1073741824 : bytes >= 1048576 ? 1048576 : 1024
+                                    const label = unit === 1073741824 ? " GiB" : unit === 1048576 ? " MiB" : " KiB"
+                                    return bytes === 0 ? "0 KiB" : (bytes / unit).toLocaleString(Qt.locale("de_DE"), "f", 1) + label
+                                }
+
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    Heading { Layout.fillWidth: true; text: "Lokale Modelle" }
+                                    AppActionButton {
+                                        text: "Aktualisieren"
+                                        enabled: !modelSettings.store.loading && !viewState.busy
+                                        onClicked: api.reloadModelInventory()
+                                    }
+                                }
+                                Muted { Layout.fillWidth: true; wrapMode: Text.WrapAnywhere; text: api.modelLocation }
+                                Muted {
+                                    Layout.fillWidth: true
+                                    visible: modelSettings.store.loading || modelSettings.store.removing || viewState.processingActive
+                                    text: modelSettings.store.removing ? "Modell wird gelöscht …" :
+                                        modelSettings.store.loading ? "Modellspeicher wird gelesen …" :
+                                        "Pausiere die Verarbeitung, um Modelle zu löschen."
+                                }
+                                Copy { Layout.fillWidth: true; visible: text.length > 0; text: modelSettings.store.error; color: warningColor }
+                                Repeater {
+                                    model: modelSettings.store.items
+                                    delegate: Rectangle {
+                                        required property var modelData
+                                        Layout.fillWidth: true
+                                        implicitHeight: modelRow.implicitHeight + 18
+                                        color: surface
+                                        border.color: line
+                                        radius: 6
+                                        RowLayout {
+                                            id: modelRow
+                                            anchors.fill: parent
+                                            anchors.margins: 9
+                                            spacing: 12
+                                            ColumnLayout {
+                                                Layout.fillWidth: true
+                                                spacing: 3
+                                                Copy { Layout.fillWidth: true; font.weight: Font.DemiBold; text: modelData.name }
+                                                Muted {
+                                                    Layout.fillWidth: true
+                                                    text: modelData.status +
+                                                        (modelData.modelBytes > 0 ? " · " + modelSettings.sizeText(modelData.modelBytes) : "") +
+                                                        (modelData.cacheBytes > 0 ? " · Cache " + modelSettings.sizeText(modelData.cacheBytes) : "")
+                                                }
+                                            }
+                                            AppActionButton {
+                                                objectName: "deleteModel-" + modelData.id
+                                                text: "Löschen …"
+                                                errorAlert: true
+                                                visible: modelData.present
+                                                enabled: modelSettings.store.canRemove
+                                                Accessible.name: modelData.name + " löschen"
+                                                onClicked: {
+                                                    confirmModel.modelEntry = modelData
+                                                    confirmModel.open()
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                AppActionButton { text: "Zu den Download-Optionen"; onClicked: window.openSettings(0) }
+                            }
+
+                            ColumnLayout {
                                 Layout.fillWidth: true; visible: window.settingsTab === 3; spacing: 12
                                 Heading { text: "Sicherung für Gerätewechsel"; font.pixelSize: 15 }
                                 Muted { Layout.fillWidth: true; text: "Eine lokale ZIP-Datei mit den gewählten Bestandteilen. Datenbanken werden konsistent gesichert, auch während der Verarbeitung. Programm und Python-Laufzeit werden auf dem neuen Gerät separat installiert." }
@@ -1117,6 +1194,41 @@ ApplicationWindow {
         contentItem: Copy {
             text: "Alle Aufträge, die Warteschlange, der Dateibestand, gespeicherte Abbrüche und der Suchindex werden aus der lokalen Datenbank entfernt – unabhängig vom aktuellen Filter.\n\nAufnahmen und TXT-Dateien bleiben auf ihren Laufwerken erhalten. Bei aktiver Ordnerüberwachung werden die Ordner beim nächsten Intervall vollständig neu eingelesen. Vorhandene Transkripte erscheinen wieder im Bestand; Dateien ohne TXT werden neu eingereiht. Ordner- und Pauseneinstellungen bleiben erhalten."
         }
+    }
+    Dialog {
+        id: confirmModel
+        objectName: "confirmModelDelete"
+        property var modelEntry: ({})
+        title: "Modell löschen?"
+        modal: true
+        anchors.centerIn: Overlay.overlay
+        width: Math.min(510, window.width - 48)
+        background: Rectangle { color: surface; radius: 9; border.color: line }
+        contentItem: Copy {
+            text: confirmModel.modelEntry.name
+                ? "„" + confirmModel.modelEntry.name + "“ und seine vorhandenen Download-Dateien werden dauerhaft vom PC gelöscht. " +
+                  "Aufträge, die dieses Modell brauchen, benötigen danach einen erneuten Download." +
+                  (confirmModel.modelEntry.id.startsWith("qwen") ? "\n\nQwen benötigt sowohl das Sprachmodell als auch den Forced Aligner." : "")
+                : ""
+        }
+        footer: DialogButtonBox {
+            AppActionButton {
+                id: cancelModelDelete
+                objectName: "cancelModelDelete"
+                text: "Abbrechen"
+                primary: true
+                DialogButtonBox.buttonRole: DialogButtonBox.RejectRole
+            }
+            AppActionButton {
+                objectName: "acceptModelDelete"
+                text: "Modell löschen"
+                errorAlert: true
+                enabled: modelSettings.store.canRemove
+                DialogButtonBox.buttonRole: DialogButtonBox.AcceptRole
+            }
+        }
+        onOpened: cancelModelDelete.forceActiveFocus()
+        onAccepted: api.deleteInstalledModel(modelEntry.id, modelEntry.token)
     }
     Dialog {
         id: confirmImport; objectName: "confirmImport"; modal: true

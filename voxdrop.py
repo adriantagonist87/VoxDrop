@@ -10,6 +10,7 @@ from pathlib import Path
 
 import qwen_backend
 from gpu_budget import pace_torch, pace_whisper
+from model_inventory import model_use
 from platform_io import WINDOWS, inference_cpu_threads
 from silence import restore_timestamps, select_speech
 
@@ -79,16 +80,17 @@ def setup_models(data_dir, model=None, qwen_cache=None, *, speakers=True):
     from aTrain_core.integrity import verify_model
     from aTrain_core.load_resources import get_model
 
-    for name, directory, entry in configured_models(speakers, model or WHISPER_MODEL):
-        print(f"Modell bereitstellen und verifizieren: {name}", file=sys.stderr)
-        if get_model(name) != directory:
-            raise ValueError(f"Unerwarteter Modellpfad für {name}.")
-        problems = verify_model(directory, entry["files"])
-        if problems:
-            raise ValueError(f"Prüfsummenfehler bei {name}: " + ", ".join(problems))
+    with model_use(data_dir):
+        for name, directory, entry in configured_models(speakers, model or WHISPER_MODEL):
+            print(f"Modell bereitstellen und verifizieren: {name}", file=sys.stderr)
+            if get_model(name) != directory:
+                raise ValueError(f"Unerwarteter Modellpfad für {name}.")
+            problems = verify_model(directory, entry["files"])
+            if problems:
+                raise ValueError(f"Prüfsummenfehler bei {name}: " + ", ".join(problems))
 
-    if model in (None, DEFAULT_MODEL):
-        qwen_backend.provision_models(data_dir, cache=qwen_cache)
+        if model in (None, DEFAULT_MODEL):
+            qwen_backend.provision_models(data_dir, cache=qwen_cache)
 
 
 def require_models(speakers, model):
@@ -453,16 +455,17 @@ def main(argv=None):
         target = args.output_dir / media.with_suffix(".txt").name
         if os.path.lexists(target):
             raise FileExistsError(f"Die Zieldatei existiert bereits: {target}")
-        result = transcribe(
-            media,
-            language="auto-detect" if args.language == "auto" else args.language,
-            speakers=not args.no_speakers,
-            speaker_count=args.speaker_count,
-            hardware=args.hardware,
-            model=args.model,
-            skip_silence=args.skip_silence,
-            dover_lap=args.dover_lap,
-        )
+        with model_use(args.data_dir):
+            result = transcribe(
+                media,
+                language="auto-detect" if args.language == "auto" else args.language,
+                speakers=not args.no_speakers,
+                speaker_count=args.speaker_count,
+                hardware=args.hardware,
+                model=args.model,
+                skip_silence=args.skip_silence,
+                dover_lap=args.dover_lap,
+            )
         print("Ergebnis schreiben …", file=sys.stderr, flush=True)
         publish_text(target, result)
         print(
