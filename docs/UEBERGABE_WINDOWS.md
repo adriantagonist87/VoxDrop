@@ -1,5 +1,11 @@
 # Übergabeauftrag für Codex auf dem Windows-PC
 
+## Mehrfachauswahl und Modelllöschung bei Leerlauf, 26.11.2026
+
+Geprüfter Code `5aed5c184cefeb27b0cde2f375c65a39623be99a` auf [`fix/keep-original-on-delete`](https://github.com/adriantagonist87/VoxDrop/tree/fix/keep-original-on-delete), [PR #38](https://github.com/adriantagonist87/VoxDrop/pull/38). Windows nativ mit künstlichem 20er-Verlauf, Papierkorb und Modell-Löschdialog im Leerlauf geprüft. 303 modellfreie Tests bestanden, 14 übersprungen. Windows Stable ist 1.6.0.
+
+Auf dem Mac zusätzlich die Mehrfachauswahl beim Blättern, die scrollbare Dateivorschau, beide Modi und einen Teilfehler mit gemeinsamem Journal im Finder-Papierkorb prüfen. Danach Modell löschen, während die freigegebene Warteschlange leer ist, und die Sperre bei einem aktiven Auftrag prüfen. [Verlauf](DATENSATZ_LOESCHEN.md) · [Modelle](MODELLVERWALTUNG.md)
+
 ## Originaldatei beim Löschen behalten, 26.11.2026
 
 Arbeitsbranch [`fix/keep-original-on-delete`](https://github.com/adriantagonist87/VoxDrop/tree/fix/keep-original-on-delete), [PR #38](https://github.com/adriantagonist87/VoxDrop/pull/38), geprüfter Code `e760cc12a66ea9b31ea69dcca5557dc01326aa1e` auf Basis von `v1.6.0-windows`. Die vorausgewählte Option erhält das Original und entfernt Transkripte und Verlauf. Der veröffentlichte Windows-Stable ist 1.6.0.

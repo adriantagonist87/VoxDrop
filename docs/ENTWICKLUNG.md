@@ -1,5 +1,9 @@
 # Entwicklung auf macOS und Windows
 
+## Gemeinsame Vorschau für mehrere Löschvorgänge
+
+`prepare-delete-record JOB_ID [JOB_ID ...]` ermittelt die verknüpften Vorgänge, dedupliziert Dateipfade und speichert die gemeinsame Auswahl im bestätigbaren Journal. `delete-record TOKEN --keep-original` und die Bestätigung ohne Option gelten für die gesamte Vorschau. Eine Modelllöschung im Leerlauf verwendet weiterhin die bestehenden Modell- und SQLite-Sperren. [Datensatzlöschung](DATENSATZ_LOESCHEN.md) · [Modellverwaltung](MODELLVERWALTUNG.md)
+
 ## Originaldateien bei der Datensatzlöschung erhalten
 
 Der vorbereitete Löschplan gilt für beide Modi. Der Controller übergibt die Auswahl an `delete-record TOKEN --keep-original`. Das Journal bindet begonnene Löschungen an den bestätigten Modus. Die additive SQLite-Tabelle `retained_media` speichert die behaltene Dateiversion anhand des normalisierten Pfads, der Dateigröße und der Änderungszeit. Die Löschtransaktion aktualisiert gleichzeitig diese Tabelle. Nur die automatische Überwachung prüft sie. Der vollständige Datenbankreset leert die Tabelle. [Implementierung und Regressionen](DATENSATZ_LOESCHEN.md)

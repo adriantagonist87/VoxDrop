@@ -1,5 +1,9 @@
 # Projektstatus VoxDrop
 
+## Mehrfachauswahl und Modelllöschung bei Leerlauf, 26.11.2026
+
+Verlaufseinträge lassen sich markieren und gemeinsam mit vorausgewähltem Erhalt der Originale entfernen. In **Modelle** öffnet **Löschen …** die Bestätigung auch bei laufendem Dienst und freier, leerer Warteschlange. Ursache war die aus dem Dienststatus abgeleitete Sperre. Windows-Prüfcommit `5aed5c184cefeb27b0cde2f375c65a39623be99a`: 303 Tests bestanden, 14 übersprungen. Nativer Papierkorbtest mit 20 Aufnahmen und Klickprüfung mit künstlichem Modell bestanden. Mac-Gegenprüfung offen. [Arbeitsbranch](https://github.com/adriantagonist87/VoxDrop/tree/fix/keep-original-on-delete) · [PR #38](https://github.com/adriantagonist87/VoxDrop/pull/38) · [Verlauf](DATENSATZ_LOESCHEN.md) · [Modelle](MODELLVERWALTUNG.md)
+
 ## Originaldatei beim Löschen behalten, 26.11.2026
 
 In Windows 1.6.0 bot der Dialog nur das gemeinsame Entfernen von Original, Transkript und Verlauf an. Die Änderung wählt „Originaldatei behalten“ voraus. Dann gelangen die Transkripte in den Papierkorb und VoxDrop entfernt die zugehörigen SQL-/Sucheinträge. Die Ordnerüberwachung überspringt die erhaltene Dateiversion. Per Drop kann sie bewusst erneut hinzugefügt werden.
