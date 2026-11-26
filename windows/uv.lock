@@ -1145,6 +1145,18 @@ wheels = [
 ]
 
 [[package]]
+name = "pyside6-addons"
+version = "6.10.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pyside6-essentials" },
+    { name = "shiboken6" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/99/13/503bec9201881968c372cb634069535e80aec2489f3907d676e151a1023f/pyside6_addons-6.10.2-cp39-abi3-win_amd64.whl", hash = "sha256:c20150068525a17494f3b6576c5d61c417cf9a5870659e29f5ebd83cd20a78ea", size = 164712775, upload-time = "2026-02-02T08:43:23.729Z" },
+]
+
+[[package]]
 name = "pyside6-essentials"
 version = "6.10.2"
 source = { registry = "https://pypi.org/simple" }
@@ -1587,6 +1599,7 @@ dependencies = [
     { name = "platformdirs" },
     { name = "psutil" },
     { name = "pyannote-audio" },
+    { name = "pyside6-addons" },
     { name = "pyside6-essentials" },
     { name = "tabulate" },
     { name = "torch" },
@@ -1610,6 +1623,7 @@ requires-dist = [
     { name = "platformdirs", specifier = "==4.14.0" },
     { name = "psutil", specifier = "==7.2.2" },
     { name = "pyannote-audio", specifier = "==4.0.7" },
+    { name = "pyside6-addons", specifier = "==6.10.2" },
     { name = "pyside6-essentials", specifier = "==6.10.2" },
     { name = "tabulate", specifier = "==0.9.0" },
     { name = "torch", specifier = "==2.9.1+cu128", index = "https://download.pytorch.org/whl/cu128" },

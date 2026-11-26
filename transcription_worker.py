@@ -9,6 +9,7 @@ import tempfile
 import threading
 import time
 from pathlib import Path
+from model_inventory import model_use
 
 from platform_io import WINDOWS, child_process, graphics_timeout_since, inference_cpu_threads, process_options
 from queue_control import JobCancelled
@@ -191,12 +192,13 @@ def main(data_dir, media, result, options):
     configure_runtime(Path(data_dir))
     measurements = {}
     try:
-        text = transcribe(
-            Path(media),
-            **json.loads(options),
-            report=lambda phase, fraction: emit(phase=phase, fraction=fraction),
-            measurements=measurements,
-        )
+        with model_use(Path(data_dir)):
+            text = transcribe(
+                Path(media),
+                **json.loads(options),
+                report=lambda phase, fraction: emit(phase=phase, fraction=fraction),
+                measurements=measurements,
+            )
         Path(result).write_text(
             json.dumps(
                 {"text": text, "measurements": measurements}, ensure_ascii=False

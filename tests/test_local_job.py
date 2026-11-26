@@ -1,5 +1,6 @@
 import io
 import os
+import sys
 import tempfile
 import unittest
 import wave
@@ -84,7 +85,7 @@ class LocalJobTests(unittest.TestCase):
             language="de",
             speakers=True,
             speaker_count=2,
-            hardware=DEFAULT_HARDWARE,
+            hardware="cpu" if sys.platform == "win32" else DEFAULT_HARDWARE,
             model=DEFAULT_MODEL,
             skip_silence=False,
             dover_lap=False,

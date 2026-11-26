@@ -4,7 +4,7 @@ import json
 import os
 import subprocess
 import sys
-from contextlib import suppress
+from contextlib import nullcontext, suppress
 from datetime import datetime
 from pathlib import Path
 from tempfile import NamedTemporaryFile
@@ -13,11 +13,15 @@ from time import time
 
 from model_storage import data_directory
 from file_actions import reveal_in_explorer
+from audio_preview import AudioPreview
 from transcript_search import path_matches, run_content_search, transcript_path, history_category
+from model_inventory import inventory, model_use, remove_model
 from command_process import CommandProcesses
 from rows_model import StableRows
 from network_wait import NetworkPermissionError, retry_network_permission
+from download_status import parse_event, present as present_download, merge_servers
 import profile_transfer
+from shiboken6 import isValid
 from PySide6.QtCore import (
     Property,
     QObject,
@@ -95,7 +99,7 @@ DEFAULTS = {
     "skip_silence": False,
     "monitoring": False,
     "gpu_budget_percent": 100,
-    "windows_cpu_only": False,
+    "windows_cpu_only": sys.platform == "win32",
 }
 
 
@@ -113,24 +117,28 @@ def read_settings():
 COMMANDS=CommandProcesses()
 
 
-def command(*arguments):
+def command(*arguments, progress=None, cancel=None):
     if arguments[0]=='start' and '--owner-pid' not in arguments:
         import psutil
         arguments=(*arguments,'--owner-pid',os.getpid(),'--owner-created',psutil.Process().create_time())
     python = Path(sys.executable)
     if python.name.casefold() == "pythonw.exe":
         python = python.with_name("python.exe")
+    model_command=arguments[0]=='check-model-server' or (arguments[0]=='setup-models' and progress is not None)
+    script=ENGINE/('model_download.py' if model_command else 'watch_service.py')
+    def output(line):
+        event=parse_event(line)
+        if event is not None and progress is not None:progress(event)
     result = COMMANDS.run(
         [
             str(python),
             "-BEs",
             "-Xutf8",
-            str(ENGINE / "watch_service.py"),
-            "--state-dir",
-            str(PROFILE / "service"),
-            "--model-data",
-            str(MODEL_DATA),
-            *(str(value) for value in arguments),
+            str(script),
+            *([] if model_command else ["--state-dir",str(PROFILE / "service")]),
+            *([] if model_command else ["--model-data",str(MODEL_DATA)]),
+            *([str(arguments[0]),'--model-data',str(MODEL_DATA),*(str(value) for value in arguments[1:])]
+              if model_command else [*(str(value) for value in arguments)]),
         ],
         cwd=ENGINE,
         stdout=subprocess.PIPE,
@@ -140,6 +148,7 @@ def command(*arguments):
         creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
         detached_start=arguments[0]=='start',
         allow_stop=arguments[0]=='stop',
+        **(dict(on_stdout=output,cancel=cancel) if model_command else {}),
     )
     if result.returncode:
         details = result.stderr.strip() or result.stdout.strip()
@@ -155,6 +164,10 @@ def command(*arguments):
             raise NetworkPermissionError(
                 "Für den Modell-Download wurde die Netzwerkverbindung verweigert (Windows-Fehler 10013)."
             )
+        if model_command:
+            events=[parse_event(line) for line in result.stdout.splitlines()]
+            errors=[event['message'] for event in events if event and event.get('phase')=='error']
+            raise RuntimeError(errors[-1] if errors else 'Die Modellaktion konnte nicht abgeschlossen werden. Siehe Protokoll.')
         if traceback:
             if arguments[0] == "setup-models":
                 raise RuntimeError("Die Modelle konnten nicht heruntergeladen werden.")
@@ -268,6 +281,25 @@ def output_path(job, *, transcript=False):
     )
 
 
+def probe_detail_files(job):
+    python = Path(sys.executable)
+    if python.name.casefold() == "pythonw.exe":
+        python = python.with_name("python.exe")
+    keys = ("id", "source", "completed_dir", "state", "origin_job_id", "settings", "known_transcript_path")
+    request = {key: job.get(key) for key in keys}
+    try:
+        result = COMMANDS.run(
+            [str(python), "-BEs", "-Xutf8", str(HERE / "detail_files.py"), json.dumps(request)],
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8",
+            timeout=8, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+        )
+    except subprocess.TimeoutExpired as error:
+        raise RuntimeError("Die Dateien sind derzeit nicht erreichbar. Prüfe Laufwerk oder Netzwerk und öffne die Details erneut.") from error
+    if result.returncode:
+        raise RuntimeError("Die Dateien dieses Vorgangs konnten nicht geprüft werden.")
+    return json.loads(result.stdout)
+
+
 def waveform(color):
     image = QPixmap(32, 32)
     image.fill(Qt.GlobalColor.transparent)
@@ -311,10 +343,17 @@ class Controller(QObject):
     dropConflictOpened = Signal()
     dropResolved = Signal()
     detailsOpened = Signal()
+    audioPreviewOpened = Signal()
+    audioPreviewClosed = Signal()
+    recordDeletionOpened = Signal()
+    recordDeletionClosed = Signal()
+    recordDeleted = Signal()
     importPreviewOpened = Signal()
     transferProgress = Signal(str)
     windowRequested = Signal()
     networkPermissionChanged = Signal(bool)
+    modelDownloadProgress = Signal(int, object)
+    modelServerProgress = Signal(int, object)
     logo = Property(QUrl, lambda self: QUrl.fromLocalFile(str(LOGO)), constant=True)
     modelLocation = Property(str, lambda self: str(MODEL_DATA), constant=True)
     gpuName = Property(str, lambda self: GPU_NAME[GPU], constant=True)
@@ -340,6 +379,21 @@ class Controller(QObject):
         self.direct = {}
         self.pending = set()
         self.selected = None
+        self.detail_files = {}
+        self.detail_file_job = None
+        self.detail_file_error = ""
+        self.detail_checking = False
+        self.detail_generation = 0
+        self.delete_plan = {}
+        self.delete_preparing = False
+        self.deleting_record = False
+        self.delete_error = ''
+        self.delete_generation = 0
+        self.audio_generation = 0
+        self.audio_requested = False
+        self.audio_preview = AudioPreview(self, volume=self.preferences.value("audioPreview/volume", 70, type=float))
+        self.audio_preview.volumeChanged.connect(lambda volume: self.preferences.setValue("audioPreview/volume", volume))
+        QApplication.instance().aboutToQuit.connect(self.audio_preview.close)
         self.history = []
         self.queue = []
         self.queue_model = StableRows(self)
@@ -379,10 +433,22 @@ class Controller(QObject):
         self.ready = preview
         self.busy = False
         self.downloading = False
+        self.model_items = []
+        self.model_inventory_loading = False
+        self.model_removing = False
+        self.model_inventory_error = ""
         self.waiting_for_network = False
         self.network_cancel = Event()
         self.networkPermissionChanged.connect(self.network_permission_changed)
         QApplication.instance().aboutToQuit.connect(self.network_cancel.set)
+        self.download_status = {}
+        self.download_generation = 0
+        self.server_generation = 0
+        self.checking_model_server = False
+        self.server_cancel = Event()
+        self.modelDownloadProgress.connect(self.update_model_download)
+        self.modelServerProgress.connect(self.update_model_server)
+        QApplication.instance().aboutToQuit.connect(self.server_cancel.set)
         self.message = ""
         self.message_error = False
         self.message_at = 0
@@ -403,6 +469,56 @@ class Controller(QObject):
 
     settings = Property("QVariantMap", lambda self: self.draft, notify=changed)
 
+    def can_remove_model(self):
+        return (
+            self.ready and not self.busy and not self.stop_command_pending and not self.quitting
+            and not self.snapshot.get("current") and not self.snapshot.get("immediate_count")
+            and (not self.snapshot.get("running") or self.snapshot.get("queue_paused"))
+        )
+
+    @Property("QVariantMap", notify=changed)
+    def modelStore(self):
+        return {
+            "items": self.model_items, "loading": self.model_inventory_loading,
+            "removing": self.model_removing, "error": self.model_inventory_error,
+            "canRemove": bool(self.can_remove_model() and not self.model_inventory_loading),
+        }
+
+    @Slot()
+    def reloadModelInventory(self):
+        if self.model_inventory_loading or self.busy or self.quitting:
+            return
+        self.model_inventory_loading = True
+        self.model_inventory_error = ""
+        self.changed.emit()
+
+        def updated(items, error):
+            self.model_inventory_loading = False
+            self.model_items = items or []
+            self.model_inventory_error = error or ""
+            self.changed.emit()
+
+        self.submit(lambda: inventory(MODEL_DATA), updated)
+
+    @Slot(str, str)
+    def deleteInstalledModel(self, key, token):
+        if not self.can_remove_model() or self.model_inventory_loading:
+            return
+        item = next((row for row in self.model_items
+                     if row["id"] == key and row["present"] and row["token"] == token), None)
+        if item is None:
+            return
+        self.busy = self.model_removing = True
+        self.changed.emit()
+
+        def finished(_result, error):
+            self.model_removing = self.busy = False
+            self.notify(error or f"{item['name']} wurde gelöscht.", bool(error))
+            self.reloadModelInventory()
+            self.refresh()
+
+        self.submit(lambda: remove_model(MODEL_DATA, PROFILE / "service/jobs.sqlite3", key, token), finished)
+
     @property
     def drop_message(self):
         return self._drop_message
@@ -420,6 +536,9 @@ class Controller(QObject):
     queueItems = Property('QVariantList',lambda self:self.queue,notify=queueChanged)
     queueModel = Property(QObject, lambda self:self.queue_model, constant=True)
     historyModel = Property(QObject, lambda self:self.history_model, constant=True)
+    audioPlayer = Property(QObject, lambda self: self.audio_preview, constant=True)
+    recordDeletion = Property('QVariantMap',lambda self:dict(plan=self.delete_plan,preparing=self.delete_preparing,
+        deleting=self.deleting_record,error=self.delete_error),notify=changed)
     dropPlan = Property('QVariantMap', lambda self: self.drop_plan, notify=changed)
     transfer = Property('QVariantMap', lambda self: dict(running=self.transfer_running, status=self.transfer_status,
         exportOptions=self.export_options, importOptions=self.import_options, preview=self.import_preview,
@@ -480,6 +599,8 @@ class Controller(QObject):
             "ready": self.ready,
             "busy": busy,
             "downloading": self.downloading,
+            "modelDownload": present_download(self.download_status),
+            "checkingModelServer": self.checking_model_server,
             "waitingForNetwork": self.waiting_for_network,
             "running": running,
             "service": STATES.get(service.get("state"), "Aktiv")
@@ -526,7 +647,7 @@ class Controller(QObject):
             "autostart": windows_login_item()
             if sys.platform == "win32"
             else self.snapshot.get("autostart", False),
-            "modelsReady": self.models_present(),
+            "modelsReady": self.models_present() and not self.downloading and self.download_status.get('phase') not in ('error','cancelled'),
             "message": self.message,
             "messageError": self.message_error,
             "feedbackText": self.drop_message if drop_latest else self.message,
@@ -556,6 +677,7 @@ class Controller(QObject):
         speakers = settings.get("speakers", True)
         known_result = job.get('result_kind') in ('existing','reused','duplicate')
         pending = job['state'] in ('seen', 'ready') and not known_result
+        files = self.detail_files if self.detail_file_job == job["id"] else {}
         memory = job.get("peak_memory_bytes")
         method = {
             "dover-lap": f"DOVER-Lap ({job.get('speaker_passes') or 3} Durchgänge)",
@@ -564,6 +686,18 @@ class Controller(QObject):
         return {
             "name": Path(job["source"]).name,
             "path": str(output_path(job)),
+            "originalPath": files.get("original", str(output_path(job))),
+            "transcriptPath": files.get("transcript", str(output_path(job, transcript=True))),
+            "canPlayOriginal": files.get("originalAvailable", False),
+            "canDeleteRecord": history_category(job) is not None,
+            "canRevealOriginal": files.get("originalAvailable", False),
+            "canOpenTranscript": files.get("transcriptAvailable", False),
+            "canRevealTranscript": files.get("transcriptAvailable", False),
+            "filesChecking": self.detail_checking,
+            "fileError": self.detail_file_error,
+            "filesMessage": ("Dateien werden geprüft …" if self.detail_checking else
+                             "Originaldatei nicht mehr am gespeicherten Ort gefunden." if files and not files.get("originalAvailable") else
+                             "Für diesen Vorgang ist kein Transkript vorhanden." if files and not files.get("transcriptAvailable") else ""),
             "status": STATES.get(job["state"], job["state"]),
             "error": job.get("error") or "",
             "note": ({'existing':'Vorhandene TXT-Datei erkannt. Inhalt und Aufnahme wurden nicht durch VoxDrop gegengeprüft.',
@@ -623,6 +757,8 @@ class Controller(QObject):
 
         def finish(result, error):
             self.pending.discard(task)
+            if not isValid(self):
+                return
             if shutdown or not self.quitting:
                 callback(result, error)
 
@@ -641,6 +777,10 @@ class Controller(QObject):
             return
         self.waiting_for_network = waiting
         if self.downloading:
+            if waiting:
+                self.download_status.update(phase='waiting',bytesPerSecond=0,
+                    message='Netzwerkzugriff verweigert (10013). Automatischer erneuter Versuch in fünf Sekunden.')
+                self.changed.emit()
             self.notify(
                 "Netzwerkzugriff verweigert (Windows 10013). Falls eine Freigabeanfrage erscheint, "
                 "bestätige sie selbst. Ohne sichtbare Anfrage prüfe das Protokoll. "
@@ -651,6 +791,10 @@ class Controller(QObject):
     @Slot()
     def cancelNetworkWait(self):
         self.network_cancel.set()
+
+    @Slot()
+    def cancelModelServerCheck(self):
+        self.server_cancel.set()
 
     def action(self, operation, success, *, downloading=False):
         if self.busy or self.stop_command_pending or not self.ready:
@@ -666,9 +810,14 @@ class Controller(QObject):
         def finished(result, error):
             self.busy = False
             self.downloading = False
+            if downloading:
+                self.download_status.update(phase='cancelled' if self.network_cancel.is_set() else 'error' if error else 'complete',
+                    message=error or success,bytesPerSecond=0)
             if not error:
                 self.refresh_saved_settings()
             self.notify(error or success, bool(error))
+            if downloading and self.model_items:
+                self.reloadModelInventory()
             self.refresh()
 
         self.submit(operation, finished)
@@ -723,6 +872,13 @@ class Controller(QObject):
         if key in DEFAULTS and key != "folders":
             if self.draft.get(key) == value:
                 return
+            if key in ('model','speakers'):
+                if self.downloading:return
+                self.server_cancel.set()
+                self.server_generation+=1
+                self.download_generation+=1
+                self.checking_model_server=False
+                self.download_status={}
             self.draft[key] = value
             if value and key in ('include_subfolders', 'create_output_subfolder'):
                 other = 'create_output_subfolder' if key == 'include_subfolders' else 'include_subfolders'
@@ -1115,6 +1271,12 @@ class Controller(QObject):
     def downloadModels(self):
         selected = self.draft["model"]
         flags = [] if self.draft["speakers"] else ["--no-speakers"]
+        if self.busy or self.stop_command_pending or not self.ready:
+            return
+        self.download_generation += 1
+        generation = self.download_generation
+        servers=self.download_status.get('servers',[])
+        self.download_status=dict(phase='preparing',message='Dateien und Größen werden ermittelt …',servers=servers)
 
         def download():
             app = ROOT.parent.parent
@@ -1138,7 +1300,8 @@ class Controller(QObject):
                     "Installiere den VoxDrop-Ordner in einem beschreibbaren Programme-Ordner."
                 ) from error
             return retry_network_permission(
-                lambda: command("setup-models", "--model", selected, *flags),
+                lambda: command("setup-models", "--model", selected, *flags,
+                    progress=lambda event:self.modelDownloadProgress.emit(generation,event),cancel=self.network_cancel),
                 self.network_cancel,
                 self.networkPermissionChanged.emit,
             )
@@ -1148,6 +1311,44 @@ class Controller(QObject):
             "Modelle sind einsatzbereit.",
             downloading=True,
         )
+
+    @Slot(int,object)
+    def update_model_download(self,generation,event):
+        if self.quitting or generation!=self.download_generation:return
+        servers=merge_servers(self.download_status.get('servers',[]),event.get('servers',[]))
+        self.download_status={**event,'servers':servers}
+        self.changed.emit()
+
+    @Slot(int,object)
+    def update_model_server(self,generation,event):
+        if self.quitting or generation!=self.server_generation:return
+        self.download_status['servers']=merge_servers(self.download_status.get('servers',[]),event.get('servers',[]))
+        self.changed.emit()
+
+    @Slot()
+    def checkModelServer(self):
+        if not self.ready or self.quitting or self.checking_model_server or (self.busy and not self.downloading):return
+        self.server_generation+=1
+        generation=self.server_generation
+        selected=self.draft['model']
+        flags=[] if self.draft['speakers'] else ['--no-speakers']
+        self.server_cancel.clear()
+        self.checking_model_server=True
+        self.changed.emit()
+        def check():
+            return command('check-model-server','--model',selected,*flags,
+                progress=lambda event:self.modelServerProgress.emit(generation,event),cancel=self.server_cancel)
+        def finished(result,error):
+            if generation!=self.server_generation:return
+            self.checking_model_server=False
+            if error:
+                for server in self.download_status.get('servers',[]):
+                    if server.get('state')=='checking':
+                        server.update(state='unconfirmed',detail='Prüfung abgebrochen.' if self.server_cancel.is_set()
+                                      else 'Prüfung konnte nicht abgeschlossen werden.',checkedAt=time(),latencyMs=None)
+                self.notify(error,True)
+            self.changed.emit()
+        self.submit(check,finished)
 
     @Slot()
     def openLog(self):
@@ -1275,6 +1476,11 @@ class Controller(QObject):
         return self.tray is not None and self.tray.isVisible()
 
     def cancelForegroundWork(self):
+        self.closeDetails()
+        self.download_generation+=1
+        self.server_generation+=1
+        self.server_cancel.set()
+        self.checking_model_server=False
         self.transfer_cancel.set()
         self.content_cancel.set()
         self.network_cancel.set()
@@ -1285,6 +1491,7 @@ class Controller(QObject):
 
     @Slot()
     def requestQuit(self):
+        self.closeDetails()
         if self.quitting:
             return
         self.quitting=True
@@ -1647,9 +1854,76 @@ class Controller(QObject):
             None,
         )
         if selected:
+            self.closeDetails()
             self.selected = selected
+            self.detail_file_job = identifier
+            self.detail_files = {}
+            self.detail_file_error = ""
             self.changed.emit()
             self.detailsOpened.emit()
+            self.check_detail_files()
+
+    def check_detail_files(self, action=None):
+        if self.selected is None:
+            return
+        generation = self.detail_generation
+        job = dict(self.selected)
+        self.detail_checking = True
+        self.detail_file_error = ""
+        self.changed.emit()
+
+        def checked(files, error):
+            if generation != self.detail_generation:
+                return
+            self.detail_checking = False
+            self.detail_file_job = job["id"]
+            self.detail_files = files or {}
+            self.detail_file_error = error or (files or {}).get("error", "")
+            self.changed.emit()
+            if action is not None and not error:
+                action(files)
+
+        self.submit(lambda: probe_detail_files(job), checked)
+
+    @Slot()
+    def closeDetails(self):
+        self.detail_generation += 1
+        self.closeAudioPreview()
+        self.cancelRecordDeletion()
+
+    @Slot()
+    def closeAudioPreview(self):
+        self.audio_generation += 1
+        self.audio_preview.close()
+        if self.audio_requested:
+            self.audio_requested = False
+            self.audioPreviewClosed.emit()
+
+    def detail_error(self, message):
+        self.detail_file_error = message
+        self.changed.emit()
+        self.notify(message, True)
+
+    @Slot()
+    def playOriginal(self):
+        if self.selected is None:
+            return
+        self.closeAudioPreview()
+        generation = self.audio_generation
+        self.audio_requested = True
+        self.audioPreviewOpened.emit()
+        def play(files):
+            if generation != self.audio_generation or not self.audio_requested:
+                return
+            if files["originalAvailable"]:
+                self.audio_preview.play_file(files["original"])
+            else:
+                self.detail_error("Die Originaldatei ist nicht mehr am gespeicherten Ort vorhanden.")
+        self.check_detail_files(play)
+
+    @Slot()
+    def revealOriginal(self):
+        self.reveal_detail_file(False)
 
     @Slot(bool)
     def retryJob(self, repeat):
@@ -1671,37 +1945,88 @@ class Controller(QObject):
 
     @Slot()
     def openTranscript(self):
-        if self.selected is None or (self.selected['state'] not in ('done','existing','duplicate')
-                                     and not self.selected.get('known_transcript_path')):
-            return
-        path=output_path(self.selected,transcript=True)
-
-        def checked(result,error):
-            if error:
-                self.notify(error,True)
-            elif not QDesktopServices.openUrl(QUrl.fromLocalFile(str(result))):
-                self.notify('Das Transkript konnte mit der Standardanwendung nicht geöffnet werden.',True)
-
-        def locate():
-            if not path.is_file():
-                raise FileNotFoundError('Die TXT-Datei ist nicht mehr am gespeicherten Ausgabeort vorhanden.')
-            return path
-
-        self.submit(locate,checked)
+        def opened(files):
+            if not files["transcriptAvailable"]:
+                self.detail_error("Für diesen Vorgang ist kein Transkript vorhanden.")
+            elif not QDesktopServices.openUrl(QUrl.fromLocalFile(files["transcript"])):
+                self.detail_error("Das Transkript konnte mit der Standardanwendung nicht geöffnet werden.")
+        self.check_detail_files(opened)
 
     @Slot()
     def revealOutput(self):
-        if self.selected is not None:
-            path = output_path(self.selected, transcript=True)
+        self.reveal_detail_file(True)
+
+    def reveal_detail_file(self, transcript):
+        def reveal(files):
+            key = "transcript" if transcript else "original"
+            if not files[key + "Available"]:
+                self.detail_error("Das Transkript ist nicht vorhanden." if transcript else "Die Originaldatei ist nicht mehr am gespeicherten Ort vorhanden.")
+                return
+            path = Path(files[key])
             if sys.platform == "win32":
                 def revealed(result, error):
                     if error:
-                        self.notify(error, True)
+                        self.detail_error(error)
                 self.submit(lambda: reveal_in_explorer(path), revealed)
             elif sys.platform == "darwin":
                 subprocess.Popen(["/usr/bin/open", "-R", str(path)])
             else:
                 QDesktopServices.openUrl(QUrl.fromLocalFile(str(path.parent)))
+        self.check_detail_files(reveal)
+
+    @Slot()
+    def requestRecordDeletion(self):
+        if not self.selected or not self.detail.get('canDeleteRecord') or not self.ready or self.busy or self.stop_command_pending:
+            return
+        self.closeAudioPreview()
+        self.delete_generation+=1;generation=self.delete_generation
+        identifier=self.selected['id']
+        self.delete_plan={};self.delete_error='';self.delete_preparing=True;self.busy=True
+        self.changed.emit();self.recordDeletionOpened.emit()
+        def prepared(plan,error):
+            if generation!=self.delete_generation:
+                if plan and plan.get('token'):
+                    self.submit(lambda:command('discard-delete-record',plan['token']),lambda *_:None)
+                return
+            self.delete_preparing=False;self.busy=False
+            self.delete_plan=plan or {};self.delete_error=error or ''
+            self.changed.emit()
+        self.submit(lambda:json.loads(command('prepare-delete-record',identifier)),prepared)
+
+    @Slot()
+    def cancelRecordDeletion(self):
+        if self.deleting_record or (not self.delete_preparing and not self.delete_plan and not self.delete_error):return
+        token=self.delete_plan.get('token')
+        self.delete_generation+=1
+        if self.delete_preparing:self.busy=False
+        self.delete_preparing=False;self.delete_plan={};self.delete_error=''
+        self.changed.emit();self.recordDeletionClosed.emit()
+        if token:self.submit(lambda:command('discard-delete-record',token),lambda *_:None)
+
+    @Slot()
+    def confirmRecordDeletion(self):
+        token=self.delete_plan.get('token')
+        if not token or self.busy or self.stop_command_pending or self.deleting_record or self.delete_preparing:return
+        self.busy=True;self.deleting_record=True;self.delete_error='';self.clearing=True
+        self.reset_generation+=1;self.history_search_timer.stop();self.content_cancel.set();self.content_token=''
+        self.changed.emit()
+        def remove():
+            if not self.content_done.wait(10):raise RuntimeError('Die Detailsuche konnte noch nicht beendet werden. Bitte erneut versuchen.')
+            return json.loads(command('delete-record',token))
+        def removed(result,error):
+            self.busy=False;self.deleting_record=False;self.clearing=False
+            if error:
+                self.delete_error=error;self.changed.emit();return
+            identifiers=set(result['deletedIds'])
+            self.delete_plan={};self.delete_error='';self.closeDetails();self.selected=None
+            for section in ('jobs','queue'):
+                self.snapshot[section]=[job for job in self.snapshot.get(section,[]) if job['id'] not in identifiers]
+            self.history_page=0;self.content_status='';self.drop_plan={};self.drop_backlog=[]
+            self.dropResolved.emit();self.update_history();self.update_queue()
+            self.recordDeletionClosed.emit();self.recordDeleted.emit()
+            self.notify('Dateien in den Papierkorb verschoben und Datensatz gelöscht.')
+            self.refresh()
+        self.submit(remove,removed)
 
     @Slot()
     def clearHistory(self):
@@ -1814,8 +2139,11 @@ class Controller(QObject):
             if missing:
                 text += f' · {missing} nicht erreichbare Medienordner fehlen; siehe Sicherungsmanifest.'
             self.set_transfer_progress(text); self.notify(text, bool(missing))
-        self.run_transfer(lambda: profile_transfer.export_backup(PROFILE, MODEL_DATA, filename, options,
-            cancel=self.transfer_cancel, progress=self.transferProgress.emit), completed)
+        def export():
+            with model_use(MODEL_DATA) if options["models"] else nullcontext():
+                return profile_transfer.export_backup(PROFILE, MODEL_DATA, filename, options,
+                    cancel=self.transfer_cancel, progress=self.transferProgress.emit)
+        self.run_transfer(export, completed)
 
     @Slot()
     def chooseImportBackup(self):
@@ -1889,9 +2217,10 @@ class Controller(QObject):
             if service_was_running:
                 command('stop')
             try:
-                return profile_transfer.restore_backup(PROFILE, MODEL_DATA, archive, options,
-                    mappings=mappings, media_destination=media, hardware=GPU, cancel=self.transfer_cancel,
-                    progress=self.transferProgress.emit)
+                with model_use(MODEL_DATA) if options["models"] else nullcontext():
+                    return profile_transfer.restore_backup(PROFILE, MODEL_DATA, archive, options,
+                        mappings=mappings, media_destination=media, hardware=GPU, cancel=self.transfer_cancel,
+                        progress=self.transferProgress.emit)
             finally:
                 if (was_running or service_was_running) and CONFIG.is_file() and not self.quitting:
                     command('start', CONFIG)
