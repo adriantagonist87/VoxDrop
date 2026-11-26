@@ -1,5 +1,11 @@
 # Projektstatus VoxDrop
 
+## Originaldatei beim Löschen behalten, 26.11.2026
+
+In Windows 1.6.0 bot der Dialog nur das gemeinsame Entfernen von Original, Transkript und Verlauf an. Die Änderung wählt „Originaldatei behalten“ voraus. Dann gelangen die Transkripte in den Papierkorb und VoxDrop entfernt die zugehörigen SQL-/Sucheinträge. Die Ordnerüberwachung überspringt die erhaltene Dateiversion. Per Drop kann sie bewusst erneut hinzugefügt werden.
+
+Geprüfter Windows-Code `e760cc12a66ea9b31ea69dcca5557dc01326aa1e`. 299 modellfreie Tests bestanden, 14 übersprungen. Beide Löschmodi, Abbrechen und gezielte Wiederherstellung künstlicher Dateien nativ bei 100/125/150 % geprüft. Die produktive App lief während der Prüfung. Mac-Prüfung offen. [Arbeitsbranch](https://github.com/adriantagonist87/VoxDrop/tree/fix/keep-original-on-delete) · [PR #38](https://github.com/adriantagonist87/VoxDrop/pull/38) · [Prüfumfang](DATENSATZ_LOESCHEN.md)
+
 ## Windows Stable 1.6.0, 26.11.2026
 
 Windows 11 x64 bündelt den geprüften Stand einschließlich Modellverwaltung, Download-Fortschritt, Popup-Player, Papierkorb, unabhängigem SMB-Import und Überwachungs-/Stoppsteuerung. Neue Windows-Profile verwenden CPU-Schutz. Die Ursache des CUDA-Systemstillstands bleibt offen. [Paket, Prüfergebnisse und Mac-Gegenprüfung](WINDOWS_1.6.0.md)
