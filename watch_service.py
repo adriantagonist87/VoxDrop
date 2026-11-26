@@ -51,7 +51,7 @@ from queue_control import (
     WATCHED_JOB, WATCH_PATH,
 )
 from media_history import MediaBusy, initialise_media_history, remember_result, previously_transcribed
-from history_store import HISTORY_FILTERS, search_storage_lock, storage_generation
+from history_store import HISTORY_FILTERS, media_path_key, search_storage_lock, storage_generation
 from app_lifecycle import initialise_lifecycle, stopping, register_owner, lifecycle_lock, watch_owner, stop_service
 from voxdrop import (
     DEFAULT_DATA,
@@ -177,6 +177,9 @@ CREATE TABLE IF NOT EXISTS storage_state (
     id INTEGER PRIMARY KEY CHECK(id=1), generation INTEGER NOT NULL DEFAULT 0
 );
 INSERT OR IGNORE INTO storage_state VALUES (1,0);
+CREATE TABLE IF NOT EXISTS retained_media (
+    source TEXT PRIMARY KEY, size INTEGER NOT NULL, mtime_ns INTEGER NOT NULL
+);
 """
 )
 
@@ -201,7 +204,7 @@ def read_settings(path):
         "model": DEFAULT_MODEL,
         "skip_silence": False,
         "gpu_budget_percent": 100,
-        "windows_cpu_only": False,
+        "windows_cpu_only": WINDOWS,
     }
     settings = {name: values.get(name, default) for name, default in defaults.items()}
     if "folders" in values:
@@ -497,11 +500,19 @@ def is_scan_directory(metadata, device):
     )
 
 
-def verify_source_directory(root, parent):
-    if not parent.is_relative_to(root):
-        raise OSError(f"Ordner liegt außerhalb des überwachten Pfads: {parent}")
+def verify_source_directory(root, parent, *, source_root=None):
+    anchor = root
+    if not parent.is_relative_to(anchor):
+        # A Windows drive letter may resolve to UNC. Keep the job's path
+        # spelling, but validate every descendant through the resolved root.
+        # Resolving the whole parent would hide a replaced child symlink.
+        if source_root is None or str(source_root).lower().startswith("smb://"):
+            raise OSError(f"Ordner liegt außerhalb des überwachten Pfads: {parent}")
+        anchor = Path(os.path.abspath(Path(source_root).expanduser()))
+        if not parent.is_relative_to(anchor) or anchor.resolve(strict=True) != root:
+            raise OSError(f"Ordner liegt außerhalb des überwachten Pfads: {parent}")
     device = root.stat().st_dev
-    for name in parent.relative_to(root).parts:
+    for name in parent.relative_to(anchor).parts:
         root /= name
         if name.startswith(".") or not is_scan_directory(root.lstat(), device):
             raise OSError(f"Unterordner ist kein regulärer Ordner am Quellpfad: {root}")
@@ -558,7 +569,7 @@ def inspect_folders(settings):
     recursive = bool(settings.get("include_subfolders") and settings.get("watch_path"))
     if recursive and (parent := settings.get("source_parent")):
         parent = Path(parent)
-        verify_source_directory(incoming, parent)
+        verify_source_directory(incoming, parent, source_root=settings.get("watch_path"))
         incoming = completed = parent
     if settings.get("watch_path") and settings.get("probe_write", True):
         verify_writable(incoming)
@@ -626,6 +637,11 @@ def scan(db, settings, now=None, *, inspect=inspect_folders, generation=None, co
             if path not in enabled_watch_paths(latest) or folder_profile(latest, path) != settings:
                 return
         for candidate in versions:
+            if db.execute(
+                'SELECT 1 FROM retained_media WHERE source=? AND size=? AND mtime_ns=?',
+                (media_path_key(candidate[0]), *candidate[1:]),
+            ).fetchone():
+                continue
             destination = (
                 str(Path(candidate[0]).parent)
                 if settings.get("include_subfolders")
@@ -1273,7 +1289,8 @@ def job_folders(job, settings):
         completed = Path(job["completed_dir"])
         if parent == completed:
             return probe_job_paths(
-                {"watch_path": str(parent), "create_output_subfolder": False}
+                {"watch_path": str(parent), "create_output_subfolder": False,
+                 "include_subfolders": True}, parent=parent
             )
         incoming, output, _, _ = inspect_folders_with_deadline(
             {
@@ -1822,7 +1839,7 @@ def clear_history(db, state):
         try:
             if db.execute("SELECT 1 FROM jobs WHERE state IN ('copying','transcribing','exporting')").fetchone():
                 raise ValueError('Der Verlauf kann nach Abschluss des aktiven Auftrags geleert werden.')
-            names=['jobs','transcript-search.sqlite3','transcript-search.sqlite3-wal',
+            names=['jobs','record-delete','transcript-search.sqlite3','transcript-search.sqlite3-wal',
                    'transcript-search.sqlite3-shm','content-search-result.json']
             artifacts=[state/name for name in names]+list(state.glob('.search-*'))
             for artifact in artifacts:
@@ -1835,7 +1852,7 @@ def clear_history(db, state):
             for table in ('job_retries','events','transcription_measurements','speaker_diarization',
                           'audio_durations','copy_claims','copy_exports','known_results','queue_positions',
                           'cancel_requests','preemptions','immediate_jobs','drop_batches','folder_status',
-                          'folder_refresh','connection','service','queue_graphics_hold','jobs'):
+                          'folder_refresh','connection','service','queue_graphics_hold','retained_media','jobs'):
                 db.execute(f'DELETE FROM {table}')
             # Retain monotonic job IDs and the user's pause, never old file/search records.
             db.execute('UPDATE storage_state SET generation=generation+1 WHERE id=1')
@@ -2338,6 +2355,11 @@ def main(argv=None):
     rerun.add_argument("job_id", type=int)
     rerun.add_argument("config", type=Path)
     commands.add_parser("clear-history")
+    commands.add_parser('prepare-delete-record').add_argument('job_ids',type=int,nargs='+')
+    delete_record = commands.add_parser('delete-record')
+    delete_record.add_argument('token')
+    delete_record.add_argument('--keep-original',action='store_true')
+    commands.add_parser('discard-delete-record').add_argument('token')
     commands.add_parser('stop')
     commands.add_parser("enqueue-folders").add_argument("config", type=Path)
     commands.add_parser('prepare-drop').add_argument('config', type=Path)
@@ -2482,6 +2504,12 @@ def main(argv=None):
                 print(retranscribe(db, args.job_id, read_settings(args.config)))
             elif args.command == "clear-history":
                 clear_history(db, state)
+            elif args.command in ('prepare-delete-record','delete-record','discard-delete-record'):
+                import record_delete
+                if args.command=='prepare-delete-record':result=record_delete.prepare(db,state,*args.job_ids)
+                elif args.command=='delete-record':result=record_delete.execute(db,state,args.token,keep_original=args.keep_original)
+                else:record_delete.discard(state,args.token);result={}
+                print(json.dumps(result,ensure_ascii=True))
             elif args.command == "reconcile-folders":
                 print(reconcile_watched_jobs(db, read_settings(args.config)))
             elif args.command == "rescan-folders":

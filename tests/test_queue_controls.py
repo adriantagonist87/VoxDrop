@@ -40,9 +40,22 @@ class QueueTests(unittest.TestCase):
         return self.db.execute('select * from jobs where id=?',(identifier,)).fetchone()
 
     @unittest.skipUnless(WINDOWS, "Windows CPU-Schutz")
+    def test_new_windows_profile_safely_routes_queued_cuda_selection_to_cpu(self):
+        config = json.loads(self.config.read_text())
+        config["hardware"] = "cuda"
+        self.config.write_text(json.dumps(config), encoding="utf-8")
+        settings = service.read_settings(self.config)
+        self.assertTrue(settings["windows_cpu_only"])
+        self.settings = service.folder_profile(settings, str(self.incoming))
+        self.add()
+        self.assertTrue(service.next_job(self.db, self.state, self.engine, config=self.config))
+        self.assertEqual(self.engine.call_args.kwargs["hardware"], "cpu")
+
+    @unittest.skipUnless(WINDOWS, "Windows CPU-Schutz")
     def test_graphics_timeout_pauses_queue_and_cpu_mode_retries_queued_cuda_job(self):
         config = json.loads(self.config.read_text())
         config["hardware"] = "cuda"
+        config["windows_cpu_only"] = False
         self.config.write_text(json.dumps(config))
         self.settings = service.folder_profile(service.read_settings(self.config), str(self.incoming))
         source, one = self.add()

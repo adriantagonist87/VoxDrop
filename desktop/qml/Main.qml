@@ -10,6 +10,8 @@ ApplicationWindow {
     property var settings: api.settings
     property var selected: api.detail
     property bool historySearchOpen: false
+    property bool historySelecting: false
+    property var historySelectedIds: []
     property bool settingsOpen: false
     property int settingsTab: 0
     property int workTab: 0
@@ -24,6 +26,13 @@ ApplicationWindow {
     function openSettings(tab) { settingsTab = tab; settingsOpen = true }
     function showHistory() { settingsOpen = false; workTab = 1 }
     function showQueue() { settingsOpen = false; workTab = 0 }
+    function toggleHistorySelection(id) {
+        const selection = historySelectedIds.slice()
+        const index = selection.indexOf(id)
+        if (index === -1) selection.push(id)
+        else selection.splice(index, 1)
+        historySelectedIds = selection
+    }
     readonly property color canvas: "#1e1e1e"
     readonly property color sidebar: "#242424"
     readonly property color surface: "#292929"
@@ -277,6 +286,34 @@ ApplicationWindow {
             RowLayout {
                 anchors.fill: parent; anchors.leftMargin: 16; anchors.rightMargin: 16
                 spacing: 12
+                Switch {
+                    id: watchSwitch
+                    objectName: "headerMonitoringSwitch"
+                    Layout.preferredWidth: 44; Layout.preferredHeight: 30
+                    padding: 0
+                    enabled: viewState.ready && !viewState.busy
+                    Binding { target: watchSwitch; property: "checked"; value: viewState.monitoringEnabled }
+                    Accessible.name: "Ordnerüberwachung"
+                    Accessible.description: "Ordnerüberwachung sofort ein- oder ausschalten. Die Warteschlange wird separat gesteuert."
+                    ToolTip.visible: hovered
+                    ToolTip.text: checked ? "Ordnerüberwachung ausschalten" : "Ordnerüberwachung einschalten"
+                    ToolTip.delay: 700
+                    indicator: Rectangle {
+                        implicitWidth: 42; implicitHeight: 24
+                        x: 1; y: (watchSwitch.height - height) / 2
+                        radius: 12
+                        color: watchSwitch.checked ? window.accent : "#505055"
+                        opacity: watchSwitch.enabled ? 1 : 0.65
+                        border.color: watchSwitch.activeFocus ? window.textColor : "#68686b"
+                        border.width: watchSwitch.activeFocus ? 2 : 1
+                        Rectangle {
+                            x: watchSwitch.checked ? parent.width - width - 3 : 3
+                            y: 3; width: 18; height: 18; radius: 9
+                            color: watchSwitch.checked ? "#14231c" : window.textColor
+                        }
+                    }
+                    onClicked: api.setMonitoring(!viewState.monitoringEnabled)
+                }
                 AppActionButton {
                     objectName: "folderStatusButton"
                     text: "Überwachung " + (viewState.monitoringEnabled ? "an" : "aus") + " · Ordner " + viewState.availableFolderCount + "/" + (viewState.folderCount - viewState.pausedFolderCount) + (viewState.pausedFolderCount ? " · " + viewState.pausedFolderCount + " pausiert" : "")
@@ -354,7 +391,7 @@ ApplicationWindow {
             RowLayout {
                 anchors.fill: parent; anchors.margins: 14
                 spacing: 14
-                PlaybackButton { api: window.api; viewState: window.viewState; showLabel: false; Layout.preferredWidth: 44; Layout.maximumWidth: 44 }
+                PlaybackButton { api: window.api; viewState: window.viewState; showLabel: false; Layout.preferredWidth: 44; Layout.maximumWidth: 44; onStopRequested: stopOptions.open() }
                 ColumnLayout {
                     Layout.fillWidth: true; spacing: 4
                     Copy {
@@ -543,6 +580,28 @@ ApplicationWindow {
                                 onActivated: index => api.setOrder(index === 1 ? "asc" : "desc")
                             }
                         }
+                        RowLayout {
+                            Layout.fillWidth: true
+                            visible: window.historySelecting || jobs.count > 0
+                            AppActionButton {
+                                objectName: "toggleHistorySelection"
+                                text: window.historySelecting ? "Auswahl beenden" : "Auswählen"
+                                onClicked: {
+                                    window.historySelecting = !window.historySelecting
+                                    window.historySelectedIds = []
+                                }
+                            }
+                            Item { Layout.fillWidth: true }
+                            AppActionButton {
+                                objectName: "deleteSelectedHistory"
+                                visible: window.historySelecting
+                                text: "Löschen (" + window.historySelectedIds.length + ")"
+                                Accessible.name: window.historySelectedIds.length + " ausgewählte Einträge löschen"
+                                errorAlert: true
+                                enabled: window.historySelectedIds.length > 0 && viewState.ready && !viewState.busy
+                                onClicked: api.requestHistoryDeletion(window.historySelectedIds)
+                            }
+                        }
                         Muted { text: "Keine Aufträge"; visible: jobs.count === 0; Layout.fillWidth: true }
                         ListView {
                             id: jobs
@@ -556,30 +615,47 @@ ApplicationWindow {
                             delegate: ItemDelegate {
                                 id: job
                                 required property var modelData
+                                objectName: "historyJob-" + modelData.id
+                                readonly property bool marked: window.historySelectedIds.indexOf(modelData.id) !== -1
                                 width: ListView.view.width - (jobs.ScrollBar.vertical.visible ? 10 : 0)
                                 padding: 8
                                 implicitHeight: jobInfo.implicitHeight + 16
-                                Accessible.name: "Auftragsdetails " + modelData.name
-                                onClicked: api.showDetails(modelData.id)
+                                Accessible.name: (window.historySelecting ? "Auswahl ändern: " : "Auftragsdetails ") + modelData.name
+                                onClicked: {
+                                    if (window.historySelecting) window.toggleHistorySelection(modelData.id)
+                                    else api.showDetails(modelData.id)
+                                }
                                 background: Rectangle {
                                     radius: 5
-                                    color: job.hovered || job.activeFocus ? "#303030" : "transparent"
+                                    color: job.marked ? "#29372e" : job.hovered || job.activeFocus ? "#303030" : "transparent"
                                     border.color: job.activeFocus ? accent : "transparent"
                                     Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: line }
                                 }
-                                contentItem: ColumnLayout {
-                                    id: jobInfo
-                                    spacing: 3
-                                    Copy { text: job.modelData.name; font.pixelSize: 14; font.weight: Font.DemiBold; Layout.fillWidth: true; maximumLineCount: 1; elide: Text.ElideMiddle }
-                                    Muted { text: "Neutranskription"; visible: job.modelData.repeat; Layout.fillWidth: true }
-                                    Muted { text: job.modelData.path; Layout.fillWidth: true; maximumLineCount: 1; elide: Text.ElideMiddle }
-                                    Muted { text: "Aufnahme " + job.modelData.audio + " · Verarbeitung " + job.modelData.elapsed; Layout.fillWidth: true; maximumLineCount: 1; elide: Text.ElideRight }
-                                    Muted { text: window.completionTime(job.modelData); Layout.fillWidth: true }
-                                    Copy { text: job.modelData.errorText || ""; visible: text.length > 0; color: warningColor; Layout.fillWidth: true; maximumLineCount: 2; elide: Text.ElideRight }
-                                    RowLayout {
+                                contentItem: RowLayout {
+                                    Toggle {
+                                        objectName: "selectHistoryJob-" + job.modelData.id
+                                        visible: window.historySelecting
+                                        checked: job.marked
+                                        Accessible.name: job.modelData.name + " auswählen"
+                                        Layout.alignment: Qt.AlignTop
+                                        Layout.preferredWidth: 23
+                                        onToggled: window.toggleHistorySelection(job.modelData.id)
+                                    }
+                                    ColumnLayout {
+                                        id: jobInfo
                                         Layout.fillWidth: true
-                                        Muted { text: job.modelData.status; color: job.modelData.error ? warningColor : muted; Layout.fillWidth: true }
-                                        Muted { text: job.modelData.updated }
+                                        spacing: 3
+                                        Copy { text: job.modelData.name; font.pixelSize: 14; font.weight: Font.DemiBold; Layout.fillWidth: true; maximumLineCount: 1; elide: Text.ElideMiddle }
+                                        Muted { text: "Neutranskription"; visible: job.modelData.repeat; Layout.fillWidth: true }
+                                        Muted { text: job.modelData.path; Layout.fillWidth: true; maximumLineCount: 1; elide: Text.ElideMiddle }
+                                        Muted { text: "Aufnahme " + job.modelData.audio + " · Verarbeitung " + job.modelData.elapsed; Layout.fillWidth: true; maximumLineCount: 1; elide: Text.ElideRight }
+                                        Muted { text: window.completionTime(job.modelData); Layout.fillWidth: true }
+                                        Copy { text: job.modelData.errorText || ""; visible: text.length > 0; color: warningColor; Layout.fillWidth: true; maximumLineCount: 2; elide: Text.ElideRight }
+                                        RowLayout {
+                                            Layout.fillWidth: true
+                                            Muted { text: job.modelData.status; color: job.modelData.error ? warningColor : muted; Layout.fillWidth: true }
+                                            Muted { text: job.modelData.updated }
+                                        }
                                     }
                                 }
                             }
@@ -609,6 +685,7 @@ ApplicationWindow {
                         AppActionButton { objectName: "transcriptionSettingsTab"; text: "Transkription"; checked: window.settingsTab === 0; onClicked: window.settingsTab = 0 }
                         AppActionButton { objectName: "folderSettingsTab"; text: "Ordner & Überwachung"; checked: window.settingsTab === 1; onClicked: window.settingsTab = 1 }
                         AppActionButton { objectName: "appSettingsTab"; text: "App & Daten"; checked: window.settingsTab === 2; onClicked: window.settingsTab = 2 }
+                        AppActionButton { objectName: "modelSettingsTab"; text: "Modelle"; checked: window.settingsTab === 4; onClicked: window.settingsTab = 4 }
                         AppActionButton { objectName: "transferSettingsTab"; text: "Import & Export"; checked: window.settingsTab === 3; onClicked: window.settingsTab = 3 }
                     }
                     ScrollView {
@@ -734,13 +811,13 @@ ApplicationWindow {
                                 }
                                 Rectangle { Layout.fillWidth: true; height: 1; color: line }
                                 Heading { text: "Modelle & Speicher"; font.pixelSize: 14 }
-                                Copy { text: viewState.modelsReady ? "Modelle installiert" : "Modell-Setup erforderlich"; Layout.fillWidth: true }
+                                Copy { text: viewState.downloading ? "Modelleinrichtung läuft" : viewState.modelDownload.error ? "Modellprüfung fehlgeschlagen" : viewState.modelsReady ? "Modelle installiert" : "Modell-Setup erforderlich"; Layout.fillWidth: true }
                                 Muted { text: "Modellspeicher: " + api.modelLocation; Layout.fillWidth: true; wrapMode: Text.WrapAnywhere }
                                 RowLayout {
-                                    AppActionButton { objectName: "downloadModelsButton"; text: "Modelle herunterladen"; visible: !viewState.modelsReady; enabled: viewState.ready && !viewState.busy; onClicked: api.downloadModels() }
+                                    AppActionButton { objectName: "downloadModelsButton"; text: "Modelle herunterladen"; visible: !viewState.modelsReady || viewState.modelDownload.error; enabled: viewState.ready && !viewState.busy; onClicked: api.downloadModels() }
                                     AppActionButton { text: "Protokoll öffnen"; onClicked: api.openLog() }
                                 }
-                                TaskProgress { Layout.fillWidth: true; visible: viewState.downloading; indeterminate: true }
+                                ModelDownload { objectName: "modelDownloadPanel"; Layout.fillWidth: true; api: window.api; status: viewState.modelDownload; downloading: viewState.downloading; checking: viewState.checkingModelServer }
                                 Muted { text: "GPU-Budget oben: wirkt sofort, auch für laufende Aufträge. Rechenzeit wird kooperativ freigegeben; Lastspitzen und Grafikspeicherbedarf bleiben möglich."; Layout.fillWidth: true }
                             }
 
@@ -905,6 +982,83 @@ ApplicationWindow {
                                 }
                             }
                             ColumnLayout {
+                                id: modelSettings
+                                objectName: "modelSettings"
+                                Layout.fillWidth: true
+                                visible: window.settingsTab === 4
+                                spacing: 10
+                                property var store: api.modelStore
+                                onVisibleChanged: if (visible) api.reloadModelInventory()
+
+                                function sizeText(bytes) {
+                                    const unit = bytes >= 1073741824 ? 1073741824 : bytes >= 1048576 ? 1048576 : 1024
+                                    const label = unit === 1073741824 ? " GiB" : unit === 1048576 ? " MiB" : " KiB"
+                                    return bytes === 0 ? "0 KiB" : (bytes / unit).toLocaleString(Qt.locale("de_DE"), "f", 1) + label
+                                }
+
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    Heading { Layout.fillWidth: true; text: "Lokale Modelle" }
+                                    AppActionButton {
+                                        text: "Aktualisieren"
+                                        enabled: !modelSettings.store.loading && !viewState.busy
+                                        onClicked: api.reloadModelInventory()
+                                    }
+                                }
+                                Muted { Layout.fillWidth: true; wrapMode: Text.WrapAnywhere; text: api.modelLocation }
+                                Muted {
+                                    Layout.fillWidth: true
+                                    objectName: "modelStoreStatus"
+                                    visible: modelSettings.store.loading || modelSettings.store.removing || modelSettings.store.processing
+                                    text: modelSettings.store.removing ? "Modell wird gelöscht …" :
+                                        modelSettings.store.loading ? "Modellspeicher wird gelesen …" :
+                                        "Modelle können gelöscht werden, sobald die aktive Verarbeitung beendet ist."
+                                }
+                                Copy { Layout.fillWidth: true; visible: text.length > 0; text: modelSettings.store.error; color: warningColor }
+                                Repeater {
+                                    model: modelSettings.store.items
+                                    delegate: Rectangle {
+                                        required property var modelData
+                                        Layout.fillWidth: true
+                                        implicitHeight: modelRow.implicitHeight + 18
+                                        color: surface
+                                        border.color: line
+                                        radius: 6
+                                        RowLayout {
+                                            id: modelRow
+                                            anchors.fill: parent
+                                            anchors.margins: 9
+                                            spacing: 12
+                                            ColumnLayout {
+                                                Layout.fillWidth: true
+                                                spacing: 3
+                                                Copy { Layout.fillWidth: true; font.weight: Font.DemiBold; text: modelData.name }
+                                                Muted {
+                                                    Layout.fillWidth: true
+                                                    text: modelData.status +
+                                                        (modelData.modelBytes > 0 ? " · " + modelSettings.sizeText(modelData.modelBytes) : "") +
+                                                        (modelData.cacheBytes > 0 ? " · Cache " + modelSettings.sizeText(modelData.cacheBytes) : "")
+                                                }
+                                            }
+                                            AppActionButton {
+                                                objectName: "deleteModel-" + modelData.id
+                                                text: "Löschen …"
+                                                errorAlert: true
+                                                visible: modelData.present
+                                                enabled: modelSettings.store.canRemove
+                                                Accessible.name: modelData.name + " löschen"
+                                                onClicked: {
+                                                    confirmModel.modelEntry = modelData
+                                                    confirmModel.open()
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                AppActionButton { text: "Zu den Download-Optionen"; onClicked: window.openSettings(0) }
+                            }
+
+                            ColumnLayout {
                                 Layout.fillWidth: true; visible: window.settingsTab === 3; spacing: 12
                                 Heading { text: "Sicherung für Gerätewechsel"; font.pixelSize: 15 }
                                 Muted { Layout.fillWidth: true; text: "Eine lokale ZIP-Datei mit den gewählten Bestandteilen. Datenbanken werden konsistent gesichert, auch während der Verarbeitung. Programm und Python-Laufzeit werden auf dem neuen Gerät separat installiert." }
@@ -1022,6 +1176,47 @@ ApplicationWindow {
         MenuItem { objectName: "cancelCurrentButton"; text: "Diesen Auftrag abbrechen …"; enabled: !viewState.busy && Boolean(viewState.current.canCancel); onTriggered: { confirmCurrent.jobId = viewState.current.id; confirmCurrent.jobName = viewState.current.name; confirmCurrent.open() } }
     }
     Dialog {
+        id: stopOptions
+        objectName: "stopProcessingDialog"
+        title: "Transkription stoppen"
+        modal: true
+        parent: Overlay.overlay
+        anchors.centerIn: parent
+        width: Math.min(620, window.width - 32)
+        closePolicy: Popup.CloseOnEscape
+        contentItem: ColumnLayout {
+            spacing: 10
+            AppActionButton {
+                objectName: "stopProcessingNowButton"
+                text: "Transkription sofort stoppen?"
+                Layout.fillWidth: true
+                enabled: viewState.canStopProcessing
+                onClicked: { stopOptions.close(); api.stopProcessing() }
+            }
+            AppActionButton {
+                id: finishChoice
+                objectName: "finishCurrentThenPauseButton"
+                text: "Transkription geregelt fertigstellen und Warteschlange pausieren"
+                Layout.fillWidth: true
+                implicitHeight: finishCaption.implicitHeight + topPadding + bottomPadding
+                enabled: viewState.ready && !viewState.busy && !viewState.processingStopping
+                contentItem: Copy {
+                    id: finishCaption
+                    text: finishChoice.text; font: finishChoice.font
+                    color: finishChoice.enabled ? window.textColor : window.muted
+                    horizontalAlignment: Text.AlignHCenter
+                }
+                onClicked: { stopOptions.close(); api.pauseQueue(true) }
+            }
+            AppActionButton {
+                objectName: "cancelStopProcessingButton"
+                text: "Abbruch"
+                Layout.fillWidth: true
+                onClicked: stopOptions.close()
+            }
+        }
+    }
+    Dialog {
         id: feedbackDialog; objectName: "feedbackDialog"; title: "VoxDrop – Rückmeldung"; modal: true
         anchors.centerIn: Overlay.overlay; width: Math.min(640, window.width - 48); height: Math.min(420, window.height - 48)
         standardButtons: Dialog.Close
@@ -1047,11 +1242,40 @@ ApplicationWindow {
     Connections {
         target: api
         function onDetailsOpened() { detail.open() }
+        function onAudioPreviewOpened() { audioPopup.open() }
+        function onAudioPreviewClosed() { audioPopup.close() }
+        function onRecordDeletionOpened() { deleteRecord.open() }
+        function onRecordDeletionClosed() { deleteRecord.close() }
+        function onRecordDeleted() {
+            detail.close()
+            window.historySelecting = false
+            window.historySelectedIds = []
+        }
         function onDropConflictOpened() { dropConflicts.open() }
         function onDropResolved() { dropConflicts.close() }
     }
 
     DropConflictDialog { id: dropConflicts; api: window.api }
+
+    Popup {
+        id: audioPopup
+        objectName: "audioPreviewPopup"
+        parent: Overlay.overlay
+        anchors.centerIn: parent
+        width: Math.min(800, window.width - 32)
+        padding: 0
+        modal: true
+        focus: true
+        closePolicy: Popup.CloseOnPressOutside | Popup.CloseOnEscape
+        background: Rectangle { color: "#292b2a"; radius: 10 }
+        Overlay.modal: Rectangle { color: "#38000000" }
+        onClosed: api.closeAudioPreview()
+        contentItem: AudioPreview {
+            objectName: "audioPreviewPanel"
+            player: api.audioPlayer
+            extraError: selected.fileError || ""
+        }
+    }
 
     Dialog {
         id: detail
@@ -1059,9 +1283,10 @@ ApplicationWindow {
         modal: true
         title: "Auftragsdetails"
         anchors.centerIn: Overlay.overlay
-        width: Math.min(610, window.width - 48)
-        height: Math.min(window.height - 46, detailsContent.implicitHeight + 102)
+        width: Math.min(780, window.width - 48)
+        height: Math.min(window.height - 46, detailsContent.implicitHeight + detailFooter.implicitHeight + 72)
         padding: 14
+        onClosed: api.closeDetails()
         background: Rectangle { color: surface; radius: 9; border.color: line }
         contentItem: ScrollView {
             id: detailsScroll
@@ -1085,22 +1310,116 @@ ApplicationWindow {
                         Copy { text: modelData.value; Layout.fillWidth: true; Layout.preferredWidth: 1 }
                     }
                 }
-                Muted { text: selected.path || ""; Layout.fillWidth: true }
+                Muted { text: "Originaldatei: " + (selected.originalPath || ""); Layout.fillWidth: true }
+                Muted { text: "Transkript: " + (selected.transcriptPath || ""); Layout.fillWidth: true }
+                Muted { text: selected.filesMessage || ""; visible: text.length > 0; Layout.fillWidth: true }
+                Copy { text: selected.fileError || ""; color: warningColor; visible: text.length > 0; Layout.fillWidth: true }
                 Copy { text: selected.error || ""; color: warningColor; visible: text.length > 0; Layout.fillWidth: true }
                 Muted { text: selected.note || ""; visible: text.length > 0; Layout.fillWidth: true }
             }
         }
         footer: Item {
+            id: detailFooter
             implicitHeight: detailActions.implicitHeight + 20
-            Flow {
+            GridLayout {
                 id: detailActions
-                x: 14; y: 10; width: parent.width - 28; spacing: 6
-                AppActionButton { objectName: "openTranscriptButton"; text: "Transkript öffnen"; primary: true; visible: selected.openTranscript || false; enabled: !viewState.busy; onClicked: api.openTranscript() }
-                AppActionButton { objectName: "revealTranscriptButton"; text: Qt.platform.os === "osx" ? "Im Finder zeigen" : "Im Explorer zeigen"; visible: selected.reveal || false; onClicked: api.revealOutput() }
-                AppActionButton { text: "Erneut versuchen"; visible: selected.retry || false; enabled: !viewState.busy; onClicked: { api.retryJob(false); detail.close() } }
-                AppActionButton { text: "Neu transkribieren"; visible: selected.repeat || false; enabled: !viewState.busy; onClicked: { api.retryJob(true); detail.close() } }
-                AppActionButton { objectName: "closeJobDialog"; text: "Schließen"; onClicked: detail.close() }
+                x: 14; y: 10; width: parent.width - 28
+                columns: 2; columnSpacing: 8; rowSpacing: 6
+                AppActionButton { objectName: "revealOriginalButton"; text: Qt.platform.os === "osx" ? "Originaldatei im Finder anzeigen" : "Originaldatei im Explorer anzeigen"; Layout.fillWidth: true; enabled: selected.canRevealOriginal || false; onClicked: api.revealOriginal() }
+                AppActionButton { objectName: "playOriginalButton"; text: "Originaldatei abspielen"; primary: true; Layout.fillWidth: true; enabled: selected.canPlayOriginal || false; onClicked: api.playOriginal() }
+                AppActionButton { objectName: "revealTranscriptButton"; text: Qt.platform.os === "osx" ? "Transkript im Finder anzeigen" : "Transkript im Explorer anzeigen"; Layout.fillWidth: true; enabled: selected.canRevealTranscript || false; onClicked: api.revealOutput() }
+                AppActionButton { objectName: "openTranscriptButton"; text: "Transkript öffnen"; Layout.fillWidth: true; enabled: selected.canOpenTranscript || false; onClicked: api.openTranscript() }
+                AppActionButton { objectName: "retranscribeButton"; text: "Neu transkribieren"; Layout.fillWidth: true; enabled: (selected.repeat || false) && (selected.canPlayOriginal || false) && !viewState.busy; onClicked: { api.retryJob(true); detail.close() } }
+                AppActionButton { objectName: "closeJobDialog"; text: "Schließen"; Layout.fillWidth: true; onClicked: detail.close() }
+                AppActionButton { objectName: "retryJobButton"; text: "Erneut versuchen"; visible: selected.retry || false; enabled: !viewState.busy; Layout.fillWidth: true; onClicked: { api.retryJob(false); detail.close() } }
+                AppActionButton { objectName: "deleteRecordButton"; text: "Datensatz löschen"; errorAlert: true; Layout.fillWidth: true; Layout.columnSpan: 2; enabled: (selected.canDeleteRecord || false) && viewState.ready && !viewState.busy; onClicked: api.requestRecordDeletion() }
             }
+        }
+    }
+
+    Dialog {
+        id: deleteRecord
+        objectName: "deleteRecordDialog"
+        property var deletion: api.recordDeletion
+        property bool keepOriginal: true
+        readonly property int selectionCount: deletion.plan.selectedCount || deletion.selectionCount
+        readonly property bool multiple: selectionCount > 1
+        readonly property bool keepsOriginal: deletion.plan.lockedMode ? deletion.plan.keepOriginal : keepOriginal
+        modal: true
+        title: multiple ? "Datensätze löschen" : "Datensatz löschen"
+        anchors.centerIn: Overlay.overlay
+        width: Math.min(650,window.width-48)
+        height: Math.min(window.height-48,deleteContent.implicitHeight+deleteButtons.implicitHeight+80)
+        closePolicy: deletion.deleting ? Popup.NoAutoClose : Popup.CloseOnEscape
+        background: Rectangle { color: surface; radius: 9; border.color: line }
+        onClosed: api.cancelRecordDeletion()
+        onOpened: {
+            keepOriginal = true
+            cancelDeleteRecord.forceActiveFocus()
+        }
+        contentItem: ColumnLayout {
+                id: deleteContent
+                spacing: 10
+                Copy {
+                    Layout.fillWidth: true
+                    text: deleteRecord.deletion.plan.name || (deleteRecord.multiple ? deleteRecord.selectionCount + " ausgewählte Einträge" : selected.name || "")
+                    font.bold: true
+                }
+                Toggle {
+                    objectName: "keepOriginalToggle"
+                    Layout.fillWidth: true
+                    text: deleteRecord.multiple ? "Originaldateien behalten" : "Originaldatei behalten"
+                    checked: deleteRecord.keepsOriginal
+                    enabled: Boolean(deleteRecord.deletion.plan.token) && !deleteRecord.deletion.plan.lockedMode && !deleteRecord.deletion.deleting
+                    onToggled: deleteRecord.keepOriginal = checked
+                }
+                Copy {
+                    objectName: "deleteRecordWarning"
+                    Layout.fillWidth: true
+                    color: warningColor
+                    text: deleteRecord.keepsOriginal
+                        ? "Transkripte werden in den Papierkorb verschoben. Die Datenbankeinträge werden unwiderruflich gelöscht."
+                        : "Originaldateien und Transkripte werden in den Papierkorb verschoben. Die Datenbankeinträge werden unwiderruflich gelöscht."
+                }
+                Copy {
+                    Layout.fillWidth: true
+                    visible: (deleteRecord.deletion.plan.recordCount || 0) > deleteRecord.selectionCount
+                    text: "Mit verknüpften Aufträgen werden insgesamt " + deleteRecord.deletion.plan.recordCount + " Datensätze gelöscht."
+                }
+                ScrollView {
+                    id: deleteScroll
+                    objectName: "deleteRecordFileList"
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    Layout.preferredHeight: deleteFiles.implicitHeight
+                    visible: deleteFiles.implicitHeight > 0
+                    clip: true
+                    contentWidth: availableWidth
+                    ColumnLayout {
+                        id: deleteFiles
+                        width: deleteScroll.availableWidth
+                        Repeater {
+                            model: deleteRecord.deletion.plan.files || []
+                            delegate: Copy {
+                                required property var modelData
+                                Layout.fillWidth: true; wrapMode: Text.WrapAnywhere; font.pixelSize: 12
+                                text: (modelData.role === "original" ? "Originaldatei: " : modelData.role === "transcript" ? "Transkript: " : "Lokale Arbeitskopien: ") + modelData.path
+                                    + (modelData.trashed ? " · bereits im Papierkorb"
+                                        : modelData.protected ? " · andere/geänderte Datei, bleibt erhalten"
+                                        : modelData.missing ? " · nicht mehr vorhanden"
+                                        : modelData.role === "original" && deleteRecord.keepsOriginal ? " · bleibt erhalten" : "")
+                            }
+                        }
+                    }
+                }
+                Copy { Layout.fillWidth: true; visible: deleteRecord.deletion.preparing || deleteRecord.deletion.deleting; text: deleteRecord.deletion.preparing ? "Betroffene Dateien werden geprüft …" : "Dateien werden in den Papierkorb verschoben …" }
+                Copy { objectName: "deleteRecordError"; Layout.fillWidth: true; visible: text.length>0; wrapMode: Text.WrapAnywhere; color: warningColor; text: deleteRecord.deletion.error || "" }
+        }
+        footer: RowLayout {
+            id: deleteButtons
+            spacing: 10
+            AppActionButton { objectName: "confirmDeleteRecordButton"; text: "Jetzt löschen"; errorAlert: true; Layout.fillWidth: true; enabled: Boolean(deleteRecord.deletion.plan.token) && !deleteRecord.deletion.preparing && !deleteRecord.deletion.deleting && !viewState.busy; onClicked: api.confirmRecordDeletion(deleteRecord.keepsOriginal) }
+            AppActionButton { id: cancelDeleteRecord; objectName: "cancelDeleteRecordButton"; text: "Abbrechen"; primary: true; Layout.fillWidth: true; enabled: !deleteRecord.deletion.deleting; onClicked: deleteRecord.close() }
         }
     }
 
@@ -1117,6 +1436,41 @@ ApplicationWindow {
         contentItem: Copy {
             text: "Alle Aufträge, die Warteschlange, der Dateibestand, gespeicherte Abbrüche und der Suchindex werden aus der lokalen Datenbank entfernt – unabhängig vom aktuellen Filter.\n\nAufnahmen und TXT-Dateien bleiben auf ihren Laufwerken erhalten. Bei aktiver Ordnerüberwachung werden die Ordner beim nächsten Intervall vollständig neu eingelesen. Vorhandene Transkripte erscheinen wieder im Bestand; Dateien ohne TXT werden neu eingereiht. Ordner- und Pauseneinstellungen bleiben erhalten."
         }
+    }
+    Dialog {
+        id: confirmModel
+        objectName: "confirmModelDelete"
+        property var modelEntry: ({})
+        title: "Modell löschen?"
+        modal: true
+        anchors.centerIn: Overlay.overlay
+        width: Math.min(510, window.width - 48)
+        background: Rectangle { color: surface; radius: 9; border.color: line }
+        contentItem: Copy {
+            text: confirmModel.modelEntry.name
+                ? "„" + confirmModel.modelEntry.name + "“ und seine vorhandenen Download-Dateien werden dauerhaft vom PC gelöscht. " +
+                  "Aufträge, die dieses Modell brauchen, benötigen danach einen erneuten Download." +
+                  (confirmModel.modelEntry.id.startsWith("qwen") ? "\n\nQwen benötigt sowohl das Sprachmodell als auch den Forced Aligner." : "")
+                : ""
+        }
+        footer: DialogButtonBox {
+            AppActionButton {
+                id: cancelModelDelete
+                objectName: "cancelModelDelete"
+                text: "Abbrechen"
+                primary: true
+                DialogButtonBox.buttonRole: DialogButtonBox.RejectRole
+            }
+            AppActionButton {
+                objectName: "acceptModelDelete"
+                text: "Modell löschen"
+                errorAlert: true
+                enabled: modelSettings.store.canRemove
+                DialogButtonBox.buttonRole: DialogButtonBox.AcceptRole
+            }
+        }
+        onOpened: cancelModelDelete.forceActiveFocus()
+        onAccepted: api.deleteInstalledModel(modelEntry.id, modelEntry.token)
     }
     Dialog {
         id: confirmImport; objectName: "confirmImport"; modal: true
