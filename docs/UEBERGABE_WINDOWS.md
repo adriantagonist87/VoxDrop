@@ -1,5 +1,9 @@
 # Übergabeauftrag für Codex auf dem Windows-PC
 
+## Windows Stable 1.6.0, 26.11.2026
+
+Geprüfter Code `6fc12c5d54aa177c0f6ac43f5c431d0525936feb`, [PR #36](https://github.com/adriantagonist87/VoxDrop/pull/36). Der reine Windows-Tag bündelt alle lokalen Funktionsänderungen und verwendet auf neuen Profilen CPU-Schutz. [Version, ZIP-Manifest und Prüfstand](WINDOWS_1.6.0.md)
+
 ## Neuer Einstellungsreiter „Modelle“, 26.11.2026
 
 Windows-Code `5c2ebc7664b01b1be8674aa38ec2f92c34ca3daa` lokal installiert und mit isolierten Modellordnern geprüft. 294 kombinierte Testfälle bestanden, 14 übersprungen. Alle vier produktiven Modelle vorhanden. Die native Mac-Gegenprüfung soll insbesondere die verlinkten HF-Snapshots, Dateisperren, den Bestätigungsdialog bei Mindestgröße und den erneuten Qwen-Download abdecken. [PR #34](https://github.com/adriantagonist87/VoxDrop/pull/34) · [Modellverwaltung](MODELLVERWALTUNG.md)

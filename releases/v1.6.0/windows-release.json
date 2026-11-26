@@ -1,0 +1,534 @@
+{
+  "schema_version": 1,
+  "release": "v1.6.0-windows",
+  "platform": "windows-x64",
+  "application_version": "1.6.0",
+  "release_version": "1.6.0",
+  "code_commit": "6fc12c5d54aa177c0f6ac43f5c431d0525936feb",
+  "archive_name": "VoxDrop-1.6.0-Windows-x64.zip",
+  "archive_sha256": "710cdf6c18a7df9bdeb090c7571d136901036472ae237adc06c2a5a4c6df46c8",
+  "archive_size": 46052690,
+  "download_url": "https://github.com/adriantagonist87/VoxDrop/releases/download/v1.6.0-windows/VoxDrop-1.6.0-Windows-x64.zip",
+  "atrain_commit": "ea8a7057857220b4299c0ba0b2aaf6def2f35b87",
+  "runtime": "runtime-2ce5d3d2adcc",
+  "models_included": false,
+  "runtime_downloaded_on_first_launch": true,
+  "verified_on": "2026-11-26",
+  "files": [
+    {
+      "path": "Desktop/GPL-3.0-only.txt",
+      "size": 35821,
+      "sha256": "0b383d5a63da644f628d99c33976ea6487ed89aaa59f0b3257992deac1171e6b"
+    },
+    {
+      "path": "Desktop/LGPL-3.0-only.txt",
+      "size": 7816,
+      "sha256": "ea7d049c7705dc13afc202dd18e1827f3484f8212fd3fa7b82fc4a0c363432c9"
+    },
+    {
+      "path": "Desktop/Qt-Lizenzen.md",
+      "size": 1736,
+      "sha256": "05f8e17f7737b512531ad426afa8811a7de919fb8ba8a7498df727194dfd4b77"
+    },
+    {
+      "path": "Desktop/assets/Inter-LICENSE.txt",
+      "size": 4472,
+      "sha256": "b3195af0fb14368d1b3b10fb9d3fe503b7163ea083859d2ee553bc74da07c320"
+    },
+    {
+      "path": "Desktop/assets/InterVariable.ttf",
+      "size": 879708,
+      "sha256": "4989b125924991b90d05b2d16e0e388c48f7d5bb8b30539bbf9c755278d0ccaf"
+    },
+    {
+      "path": "Desktop/audio_preview.py",
+      "size": 7007,
+      "sha256": "e288800b458c1b5a5e01e01919df2c2dc517d15c56ed70906156e06b9e50f3dc"
+    },
+    {
+      "path": "Desktop/command_process.py",
+      "size": 4391,
+      "sha256": "e0ea241e05fc4e29073b60c96deb83cf3a71c4ab9537ebb1c63060140f9385e7"
+    },
+    {
+      "path": "Desktop/controller.py",
+      "size": 96669,
+      "sha256": "2608251381d527dfa69d604d270f83bb74e4e523d437d4e511ed364398b0359f"
+    },
+    {
+      "path": "Desktop/desktop.py",
+      "size": 4215,
+      "sha256": "951adb9f89d9991a142a0d9000793f42a4c999659b64c88cd83a2b30b8bdb611"
+    },
+    {
+      "path": "Desktop/detail_files.py",
+      "size": 1918,
+      "sha256": "79e482e178fa190e5d2e4d3d1783aee25ac94141a280aa8be8f00349c0746ddf"
+    },
+    {
+      "path": "Desktop/download_status.py",
+      "size": 3473,
+      "sha256": "d885e1abd24dbef470b8778ec80530390d5a91a6d6a18bcc723b4702f09f3e72"
+    },
+    {
+      "path": "Desktop/file_actions.py",
+      "size": 2072,
+      "sha256": "e8516c1b204fa9b5e9ae79b67b23d2d1ee0dc9f39954207a1a5e4bd7599bda17"
+    },
+    {
+      "path": "Desktop/model_storage.py",
+      "size": 814,
+      "sha256": "480f7b6decdb5c26d77a3539ecd5a358b5f35329fb98d84c0177eafdd73ef94a"
+    },
+    {
+      "path": "Desktop/network_wait.py",
+      "size": 767,
+      "sha256": "1e12a69dc468abcd6f397447841f53a7e533a83459187648fec24bea2e3b86a1"
+    },
+    {
+      "path": "Desktop/profile_transfer.py",
+      "size": 30461,
+      "sha256": "63fa1009ae3e125bdce7b016f2fae02553ae4826c607cfad34a10889efe69f64"
+    },
+    {
+      "path": "Desktop/qml/AudioPreview.qml",
+      "size": 8841,
+      "sha256": "1b50b1bd8562f80b8a6c0e4c88d3144985948c3d2c1f0ae44fa6212392cf156d"
+    },
+    {
+      "path": "Desktop/qml/DropConflictDialog.qml",
+      "size": 5792,
+      "sha256": "4042d06b8b02f4de7a336fde6bc710467b230f718413ef8640e6ce3826093479"
+    },
+    {
+      "path": "Desktop/qml/Main.qml",
+      "size": 91142,
+      "sha256": "ac3f3845ccff7bf3008c02007b820c924d93895dfc10d1291e2c3cee2bd1efa2"
+    },
+    {
+      "path": "Desktop/qml/ModelDownload.qml",
+      "size": 5791,
+      "sha256": "7092e777c8a93ba51945cd0ff208a094768a9c28835c132609ad078df34172cb"
+    },
+    {
+      "path": "Desktop/qml/PlaybackButton.qml",
+      "size": 2991,
+      "sha256": "f13b2e8f0353b9731574866e7bc5e5015e992e6eac01b9e713ea56bd8894bf7e"
+    },
+    {
+      "path": "Desktop/qml/QueuePane.qml",
+      "size": 15262,
+      "sha256": "9ad27e4c61cf794ae6805d8264cfaf6a5b6c3ff1ad21d8d93b6f733be739713f"
+    },
+    {
+      "path": "Desktop/qml/SearchToggle.qml",
+      "size": 776,
+      "sha256": "d8b7113ef100e99ca4ef08509bd63a1417c6031e51aa5a9e6c759276c114b656"
+    },
+    {
+      "path": "Desktop/requirements-macos.txt",
+      "size": 308,
+      "sha256": "18bc7a2ad58a3e001e80accb293f4e966fd0c47b5abef9e8a37b1e5c27f51c2e"
+    },
+    {
+      "path": "Desktop/rows_model.py",
+      "size": 2551,
+      "sha256": "49b9c9a26a7d399ae05b8afe0c956e807c1ce650debb56753da4bda854fa82af"
+    },
+    {
+      "path": "Desktop/transcript_search.py",
+      "size": 12362,
+      "sha256": "faa06eb5e1955a0e215455d237385a0de8523a29e4545c605821b913236ad350"
+    },
+    {
+      "path": "Desktop/window_state.py",
+      "size": 3746,
+      "sha256": "4e5b7271f42a96b71addf3911430c55a8a4ed7b5e63c8f64bb177554834abd1f"
+    },
+    {
+      "path": "DoverPackages/dover_lap-1.3.1.dist-info/INSTALLER",
+      "size": 2,
+      "sha256": "e6184ce10e266134fdcfa401e8f1a95005bcd4f18d16b62b757323e2833fe9a9"
+    },
+    {
+      "path": "DoverPackages/dover_lap-1.3.1.dist-info/LICENSE",
+      "size": 1065,
+      "sha256": "2fee0a00c01d82f70d5d35a84f5154e83fb9ff1d3c48631456d8d7222f33758f"
+    },
+    {
+      "path": "DoverPackages/dover_lap-1.3.1.dist-info/METADATA",
+      "size": 5901,
+      "sha256": "e9bfb8d92d81d829f7d6c5461bd96f5bcc421a4ed44d5f95c3380ce8604e1cb7"
+    },
+    {
+      "path": "DoverPackages/dover_lap-1.3.1.dist-info/RECORD",
+      "size": 2161,
+      "sha256": "055f1b477c19823f4846d6173609a69fa85e128747a013856042021f1d68eedc"
+    },
+    {
+      "path": "DoverPackages/dover_lap-1.3.1.dist-info/REQUESTED",
+      "size": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "DoverPackages/dover_lap-1.3.1.dist-info/WHEEL",
+      "size": 92,
+      "sha256": "c903798389a0e00c9b4639208bef72cb889010589b1909a5cfbf0f8a4e4eafe0"
+    },
+    {
+      "path": "DoverPackages/dover_lap-1.3.1.dist-info/entry_points.txt",
+      "size": 55,
+      "sha256": "6007adc691be4db206572b88b646e74ff0212dd9955919de9a05cffaa9da9eec"
+    },
+    {
+      "path": "DoverPackages/dover_lap-1.3.1.dist-info/top_level.txt",
+      "size": 10,
+      "sha256": "791fd4abeb78795633711437b74a04e7e35cde5109e5f9a70383affe3c044fac"
+    },
+    {
+      "path": "DoverPackages/dover_lap/__init__.py",
+      "size": 39,
+      "sha256": "8bee4fc0fbb57f68e1c6042399e61c5deb09514a9be405330d202598eb7be0a9"
+    },
+    {
+      "path": "DoverPackages/dover_lap/dover_lap.py",
+      "size": 5300,
+      "sha256": "57bc711ce0a2c49f909e1814f910a18cddf71ce281bd1c2f775464523aebf1b1"
+    },
+    {
+      "path": "DoverPackages/dover_lap/libs/__init__.py",
+      "size": 80,
+      "sha256": "59913afd56c5856043b37b061648e0ed5c7ca57a47b7919c76ae5fa3ccb433ed"
+    },
+    {
+      "path": "DoverPackages/dover_lap/libs/rttm.py",
+      "size": 4198,
+      "sha256": "2671ca768578f0ca25afbe6738b87b86834504901767a75abf87f2e5f0be706d"
+    },
+    {
+      "path": "DoverPackages/dover_lap/libs/turn.py",
+      "size": 9006,
+      "sha256": "35637c4f11334e28fe760dbaff4be78f3bf64502aaf85714517ff2ea5d7c6fd4"
+    },
+    {
+      "path": "DoverPackages/dover_lap/libs/uem.py",
+      "size": 3899,
+      "sha256": "7ff3322a61532348116b549b5bd51e1c96a6ecab6315573996d20b7e00a386a4"
+    },
+    {
+      "path": "DoverPackages/dover_lap/libs/utils.py",
+      "size": 2556,
+      "sha256": "87782d812afc5a78dc13059ab27538df15e88c3a48d16f6bf6d50c60571b5220"
+    },
+    {
+      "path": "DoverPackages/dover_lap/src/__init__.py",
+      "size": 132,
+      "sha256": "c1a7c4f7d9292be3b2c2dde196b30e1977d4569cc6707ae806bee5263d3a643b"
+    },
+    {
+      "path": "DoverPackages/dover_lap/src/doverlap.py",
+      "size": 2261,
+      "sha256": "6df8f7284ee7baf45d2a127b5c2fc6c16ccaea8c22a3220bd5e16d30d49e7219"
+    },
+    {
+      "path": "DoverPackages/dover_lap/src/label_mapping.py",
+      "size": 1969,
+      "sha256": "5815f402866cd6f684c535f562cc0e3fe6144c5ba24acee22d62dc0c2a628104"
+    },
+    {
+      "path": "DoverPackages/dover_lap/src/label_voting.py",
+      "size": 5748,
+      "sha256": "fa1cd021fec8957825b6ec9a60552727fa32974af48fe300276a9dfb7444d1a8"
+    },
+    {
+      "path": "DoverPackages/dover_lap/src/mapping/__init__.py",
+      "size": 66,
+      "sha256": "6e7ff92c9eac2ddedb067ea6f4491684e6766d536184d383346952d3da6cd258"
+    },
+    {
+      "path": "DoverPackages/dover_lap/src/mapping/greedy.py",
+      "size": 7791,
+      "sha256": "c6e05470191d5502b6de2a63a4c1bb5ea3ed43d2867c2b0c5a5feca97b679e13"
+    },
+    {
+      "path": "DoverPackages/dover_lap/src/mapping/hungarian.py",
+      "size": 4386,
+      "sha256": "f1c9c69e4b404785f1584982c69f289ebfc18ce4df074ce6786dad43d9d5a7d1"
+    },
+    {
+      "path": "DoverPackages/dover_lap/src/mapping/map_utils.py",
+      "size": 1548,
+      "sha256": "a85392fd6538278f04e127e3f1cecd2c8dd1aff64a8c8c159fc37f2208dc3ff9"
+    },
+    {
+      "path": "DoverPackages/dover_lap/src/voting/__init__.py",
+      "size": 42,
+      "sha256": "37d42c06a8e188539b4332a9dfafce32cc64c587ecb13450d88b5029917b1b18"
+    },
+    {
+      "path": "DoverPackages/dover_lap/src/voting/average.py",
+      "size": 2391,
+      "sha256": "b0267a07ec0793567dba0c1f304f5731bf8f228940161ea36c8c94286ee781e9"
+    },
+    {
+      "path": "Engine/aTrain-LICENSE.txt",
+      "size": 34523,
+      "sha256": "8486a10c4393cee1c25392769ddd3b2d6c242d6ec7928e1414efff7dfb2f07ef"
+    },
+    {
+      "path": "Engine/aTrain_core/__init__.py",
+      "size": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "Engine/aTrain_core/__main__.py",
+      "size": 59,
+      "sha256": "f210ed5a568564adb82a17cdabf64a82d5ea607b034037adba4382325b1b5b44"
+    },
+    {
+      "path": "Engine/aTrain_core/backends/common.py",
+      "size": 3694,
+      "sha256": "b98ab921b7d55f44b1a0275b594b9381113d7ba1a2f7c6980c39dfe8ef128e0a"
+    },
+    {
+      "path": "Engine/aTrain_core/backends/crisper_transformers.py",
+      "size": 3640,
+      "sha256": "be6cd60eb8be3a4d54c3621264da9b477b5834ebb88a4d454e20e7e15ac24bd2"
+    },
+    {
+      "path": "Engine/aTrain_core/cli.py",
+      "size": 3582,
+      "sha256": "4019d9a1f3abe738b871ddb841cb8343c40f2b382825d645acf1c375147feda8"
+    },
+    {
+      "path": "Engine/aTrain_core/data/formats.json",
+      "size": 4357,
+      "sha256": "58a96cc3e01969bd185859e911f37122095f22bd297f744623eadb19dc64d8b8"
+    },
+    {
+      "path": "Engine/aTrain_core/data/languages.json",
+      "size": 2161,
+      "sha256": "2379b043383c6658418c9b1f496e1f7d8f231cb6b9154aad9adc81c3ad87c8a5"
+    },
+    {
+      "path": "Engine/aTrain_core/data/models.json",
+      "size": 17615,
+      "sha256": "944d78a011513dadbe5fc3b3ea870cd1b30c14b8c1f3370d183dd771c968c466"
+    },
+    {
+      "path": "Engine/aTrain_core/engine.py",
+      "size": 9305,
+      "sha256": "53bd0c626f6b1951358ec3b95c3c38d0445aa06866ec1096809a20cca0c0ac5c"
+    },
+    {
+      "path": "Engine/aTrain_core/globals.py",
+      "size": 3564,
+      "sha256": "1b64fbaf4e5374c1e3e047cfa376d64deaa7324d47257711193e9828da0ae1b6"
+    },
+    {
+      "path": "Engine/aTrain_core/integrity.py",
+      "size": 3067,
+      "sha256": "909fba88eeca743b95e0f83148a3def845ab48f873b354fc1333673d0b608264"
+    },
+    {
+      "path": "Engine/aTrain_core/load_resources.py",
+      "size": 4925,
+      "sha256": "6df9d7bfc0c8a9f8c1540bbb7563b52a685c520b4117ccda4909262cd5e5ac9f"
+    },
+    {
+      "path": "Engine/aTrain_core/output_formats/netflix_subtitles.py",
+      "size": 24913,
+      "sha256": "efe65ebcfd54b2e76d0b38905b4c9c367ee10a913ac4f304c79e9cd4899b16fc"
+    },
+    {
+      "path": "Engine/aTrain_core/outputs.py",
+      "size": 15592,
+      "sha256": "7c9249287f46e6018eba9c1ed518e289c0282c8686d253e0156fb1a7016b0175"
+    },
+    {
+      "path": "Engine/aTrain_core/settings.py",
+      "size": 4058,
+      "sha256": "3917e92b235a4af3d4dcfeef246cb97a9852ff5caba845183d2f08bc89a315dd"
+    },
+    {
+      "path": "Engine/aTrain_core/transcribe.py",
+      "size": 5545,
+      "sha256": "be5fc195e01d9d5cf31d329d840ef4df638b9ba98970789e19d391b6e2f29ec6"
+    },
+    {
+      "path": "Engine/app_lifecycle.py",
+      "size": 6881,
+      "sha256": "88ecec367a37ca1b0f2b28239b861069b4a2744b9e245ad07e4c11d3163e5082"
+    },
+    {
+      "path": "Engine/gpu_budget.py",
+      "size": 6758,
+      "sha256": "94a5261b7ba1cc1473fe7ef07fac27e0a4007f7863b5a1393fb5de439a06cec7"
+    },
+    {
+      "path": "Engine/history_store.py",
+      "size": 1629,
+      "sha256": "20391f53e0bb9d1a03ec1b1e6f86f2af6d83c8cac85528cbbd2bfcce5d2f0652"
+    },
+    {
+      "path": "Engine/login_agent.py",
+      "size": 2161,
+      "sha256": "301a755369c28bd7f6bff8bf9a77fc0f464385669f8205739429d2b765fb7ebe"
+    },
+    {
+      "path": "Engine/media_history.py",
+      "size": 1125,
+      "sha256": "456318bdcf16eb257388f97e639f15a25f12a28918898449aa0846dba3d56c39"
+    },
+    {
+      "path": "Engine/model_download.py",
+      "size": 16500,
+      "sha256": "431fc7aea4dd637e4f27f63900ff1ef688f77c2088af86dc0b50dcda2e2dfe51"
+    },
+    {
+      "path": "Engine/model_inventory.py",
+      "size": 7999,
+      "sha256": "61bafc9c7a906896a22a5a581ba9bc854910a7554f3046b4f4ac83c1c1d572a6"
+    },
+    {
+      "path": "Engine/platform_io.py",
+      "size": 18967,
+      "sha256": "bb18d484e92dc78d398e1a10240689f209421cbaf21bef1936907fd02eebd59f"
+    },
+    {
+      "path": "Engine/queue_control.py",
+      "size": 13788,
+      "sha256": "dd37f1b5b9eadff809cc7024e0bc9a593ab97587b7320602ab2e85db5ed08442"
+    },
+    {
+      "path": "Engine/qwen-models.json",
+      "size": 2062,
+      "sha256": "6a8dafd83bb21bbca4484697b419edce97552c5bfbab615952ed3461be16be24"
+    },
+    {
+      "path": "Engine/qwen-windows-models.json",
+      "size": 1556,
+      "sha256": "21a9448b287b0b96ff086a310c3030827f041ddf72ea5b10f5c93c4f1b69bda3"
+    },
+    {
+      "path": "Engine/qwen_backend.py",
+      "size": 13377,
+      "sha256": "e66551975ae9e6e8bb18e8d10a2bc36723d681fe3ba4208e3ab02d75998ef459"
+    },
+    {
+      "path": "Engine/qwen_cuda.py",
+      "size": 6148,
+      "sha256": "b69883c937fa0994b02f9c6808dede9f07ca97d969620082007d4c79b218198e"
+    },
+    {
+      "path": "Engine/record_delete.py",
+      "size": 15440,
+      "sha256": "f2e9de1c85abfa3f853909228b290300e1ff2b705cd5d0724d4eb6b6a174f74e"
+    },
+    {
+      "path": "Engine/runtime_logs.py",
+      "size": 1167,
+      "sha256": "93d93489a574a6be9a1229e85525fafde5ee50f8de04484ef68247bb642312ed"
+    },
+    {
+      "path": "Engine/silence.py",
+      "size": 1875,
+      "sha256": "a27794472e5b1c44e7e7befeefb1240230ec5de55c4ca14d34392fb906a7db23"
+    },
+    {
+      "path": "Engine/smb_paths.py",
+      "size": 4058,
+      "sha256": "b624ca639ad6dcbd036617c26c4d491bb24ce3dd26b9106c273a88cddd0c769b"
+    },
+    {
+      "path": "Engine/speaker_diarization.py",
+      "size": 6615,
+      "sha256": "ae40dca523c4779c661fc0f7c5130314fceadba3889288581db37ef6ea538b71"
+    },
+    {
+      "path": "Engine/transcription_worker.py",
+      "size": 7600,
+      "sha256": "12730c9293bd6aa587c617e1fdf7a431254371e8a5f34a90fa37394ecb858bab"
+    },
+    {
+      "path": "Engine/voxdrop.py",
+      "size": 16931,
+      "sha256": "b122ad840a8d605d0ac4e4afadb1d3db2632704f287554e844bf0a38229e1396"
+    },
+    {
+      "path": "Engine/watch_service.py",
+      "size": 114931,
+      "sha256": "432f68862dd919eb7990a3f0c4caa46c1f1027112303c53eb07175130452df22"
+    },
+    {
+      "path": "Installation.md",
+      "size": 5237,
+      "sha256": "06e208725d192b5179ac8b36f93b94585557fcb43d4aaea30aabf41db9c70604"
+    },
+    {
+      "path": "LICENSE",
+      "size": 35184,
+      "sha256": "6f1e622c82a380075843bb084a7ec3b1f1d12a4a02526d75e78b0924a860aa75"
+    },
+    {
+      "path": "Quellcode/aTrain-ea8a7057857220b4299c0ba0b2aaf6def2f35b87.tar.gz",
+      "size": 28652521,
+      "sha256": "a72ceee2f8ef440874c52d7ee8a98afe0586f8ec5d7f4395573b124e6473816e"
+    },
+    {
+      "path": "VoxDrop.exe",
+      "size": 290304,
+      "sha256": "4f4e6dd9d9651446eab49addb0f1e4ac36f24abc84e2f0237745717f4ab03782"
+    },
+    {
+      "path": "VoxDrop.pdb",
+      "size": 1232896,
+      "sha256": "36b054c30d78011803028a0f24d502507d1a9dd26d6442347eba0f457cbd3dea"
+    },
+    {
+      "path": "assets/VoxDrop.ico",
+      "size": 112203,
+      "sha256": "f74f4736730303b31bf295b2bf81f436c769b93bf5561e58cabf5af261df6816"
+    },
+    {
+      "path": "assets/VoxDropLogo.png",
+      "size": 1517561,
+      "sha256": "bafd2bd8e243adb0a4020efdf7f037125dda9c1b0bd6db437aca4e84a88135ec"
+    },
+    {
+      "path": "build-info.json",
+      "size": 341,
+      "sha256": "9113de2dd9c071e4ab4038ca649ebcc1e3a2e59c92f57e723e2eb2d9faab28a2"
+    },
+    {
+      "path": "tools/uv-download.sha256",
+      "size": 96,
+      "sha256": "b706970932643830577957ab4a282419341f6b1263877991ba8741960bcfad3b"
+    },
+    {
+      "path": "tools/uv.exe",
+      "size": 31803184,
+      "sha256": "1791d7a9ed5b6df13ccf80f102e025c333010d96326b4ff0262aa3b578835c5a"
+    },
+    {
+      "path": "windows/diagnose.py",
+      "size": 1565,
+      "sha256": "60d7f421ce938fcee347ca7195cc3e32b9e5a433123980017709f87ecf489f30"
+    },
+    {
+      "path": "windows/launcher.c",
+      "size": 9636,
+      "sha256": "444e1a7ba7902375c6b32853d0cc43f3d2dd42c0364c130de5dde1f08171b875"
+    },
+    {
+      "path": "windows/pyproject.toml",
+      "size": 1031,
+      "sha256": "5b6e528a5a665d9b76b5e4546786bb49e27b3637bc4dbadb8536f7e4a16c5b86"
+    },
+    {
+      "path": "windows/uv.lock",
+      "size": 104262,
+      "sha256": "2ce5d3d2adcc21926a91657c55c91f4f9a7b36bc6015d0a4850347747f321626"
+    }
+  ]
+}

@@ -1,5 +1,9 @@
 # Entwicklung auf macOS und Windows
 
+## Windows Stable 1.6.0 bauen und verifizieren
+
+Release-Branch `release/windows-1.6.0`, Paket-Code `6fc12c5d54aa177c0f6ac43f5c431d0525936feb`. Der native Builder `scripts/build-windows.py --release-version 1.6.0` nutzt unveränderte Laufzeitpins und die verifizierte 1.5.0-Referenz für Drittanbieterquellen. `scripts/verify_windows_release.py --manifest releases/v1.6.0/windows-release.json --download` gleicht ZIP und enthaltene Programmdateien ab. [Testumfang und verbleibende Plattformgrenzen](WINDOWS_1.6.0.md)
+
 ## Modellbestand und bestätigtes Löschen
 
 `model_inventory.py` liest den lokalen Bestand aus den bestehenden Modellmanifesten. Alle App-Builder übernehmen das Modul. Die Verwaltung arbeitet in einem Hintergrundthread und prüft den Bestand vor dem Löschen erneut. Eine gemeinsame Dateisperre für Modellzugriffe sowie die Auftragsprüfung unter SQLite-Schreibreservierung sichern den Löschpfad. [Modellverwaltung und Plattformprüfung](MODELLVERWALTUNG.md)
