@@ -1,5 +1,15 @@
 # Datensatz löschen
 
+## Mehrfachauswahl im Verlauf, 26.11.2026
+
+**Auswählen** zeigt Checkboxen in **Verlauf & Bestand**. Die Auswahl verwendet Auftrags-IDs und bleibt beim Blättern erhalten. **Löschen (n)** öffnet eine gemeinsame Vorschau mit allen betroffenen Dateien und einer vorausgewählten Option **Originaldateien behalten**. Dabei werden nur Transkripte und Arbeitskopien in den Papierkorb verschoben. Die ausgewählten und direkt verknüpften Vorgänge verschwinden aus Verlauf, Suche und Datenbank. Abbrechen bewahrt die Auswahl. Der Dialog bleibt beim Scrollen mit Löschmodus und Warnung sichtbar.
+
+Die Engine fasst überlappende Gruppen zusammen, prüft alle Gruppen vor der ersten Papierkorboperation und entfernt die SQL-Zeilen in einer Transaktion. Netzlaufwerke oder laufende verknüpfte Aufträge blockieren die Auswahl mit Angabe des betroffenen Pfads bzw. Auftrags. Das Journal kann eine unterbrochene Löschung über einen beteiligten Eintrag fortsetzen. Eine bereits begonnene Löschung kann nicht um unbeteiligte Einträge erweitert werden.
+
+Windows-Code `5aed5c184cefeb27b0cde2f375c65a39623be99a`, [PR #38](https://github.com/adriantagonist87/VoxDrop/pull/38). 317 Tests, 303 bestanden und 14 übersprungen. Die native Klickprüfung bei Mindestgröße und 125 % legte 20 TXT in den Windows-Papierkorb, behielt alle 20 Originale, prüfte Abbrechen und löschte drei weitere Testvorgänge einschließlich Original. Ein unbeteiligter Vorgang blieb sichtbar und vollständig erhalten. Die künstlichen Dateien wurden wiederhergestellt. **Unter macOS ungeprüft.**
+
+Die separate Testkopie des SHA-256-geprüften Windows-Stable-Pakets mit den aktualisierten Programmdateien startete über die normale EXE mit isoliertem Profil. Beide Löschmodi und das Entfernen eines synthetischen Modells bei Leerlauf bestanden erneut mit der paketinternen Laufzeit bei 150 %. Die Papierkorbdateien wurden wiederhergestellt. Die erste EXE-Prüfung fragte die Datenbank vor deren Einrichtung ab. Der wiederholte Start prüfte die Einrichtung vor der Abfrage und bestätigte den GUI-Prozess.
+
 ## Originaldatei behalten, 26.11.2026
 
 Unter Windows 1.6.0 ließ sich der Datensatz nur zusammen mit dem Original löschen. In [PR #38](https://github.com/adriantagonist87/VoxDrop/pull/38) zeigt der Dialog „Originaldatei behalten“ vorausgewählt an. Bei Bestätigung bleiben Originale am vorhandenen Ort. Zugehörige TXT und Arbeitskopien gehen in den Papierkorb, SQL- und Sucheinträge werden danach entfernt. Mit abgewählter Checkbox gehen auch die Originale in den Papierkorb. Die Vorschau zeigt die jeweilige Wirkung. Netzlaufwerke sind in beiden Modi ausgeschlossen.

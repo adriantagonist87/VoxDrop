@@ -1,5 +1,11 @@
 # Installierte Modelle verwalten
 
+## Löschknopf bei Leerlauf, 26.11.2026
+
+Windows 1.6.0 deaktivierte **Löschen …** auch bei leerer, freigegebener Warteschlange, solange der Hintergrunddienst lief. In Code `5aed5c184cefeb27b0cde2f375c65a39623be99a` öffnet **Löschen …** bei Leerlauf ohne vorheriges Pausieren den bisherigen Bestätigungsdialog. Bei einem aktiven oder anstehenden Sofortauftrag bleibt die Aktion gesperrt. Das Backend reserviert den SQLite-Schreibzugriff und prüft die exklusive Modellsperre vor dem Entfernen.
+
+Windows-Test mit synthetischer Whisper-Datei bei laufend gemeldetem Dienst und leerer, freigegebener Warteschlange. Beide Klickpfade, Abbrechen und bestätigtes Löschen, bestanden nativ bei 125 %. Der Qt-Regressionsfall prüft zusätzlich die weiterhin gesperrte Aktion während eines Sofortauftrags. Die produktiven Modellordner waren nicht Teil des Tests. Mac-Gegenprüfung offen. [PR #38](https://github.com/adriantagonist87/VoxDrop/pull/38)
+
 In **Einstellungen → Modelle**, dem vierten Reiter, zeigt VoxDrop Qwen3-ASR, Qwen3 Forced Aligner, Whisper Large v3 Turbo und die pyannote-Sprechererkennung. Die Liste zeigt den Zustand und die Größe der lokalen Dateien. „Unvollständig“ weist auf fehlende oder leere Dateien im gepinnten Manifest hin. Beim Download prüft VoxDrop weiterhin Prüfsummen.
 
 **Löschen …** öffnet eine Bestätigung für den einzelnen Eintrag. Der App-Modellordner und der zugehörige Hugging-Face-Repo-Cache werden dauerhaft gelöscht. Der gemeinsam genutzte Xet-Cache lässt sich keinem einzelnen Modell zuordnen. VoxDrop lässt ihn bei dieser Aktion stehen. Zum erneuten Download führt der Reiter zu den bestehenden Download-Optionen unter **Transkription**. Qwen benötigt Sprachmodell und Forced Aligner. Eine gespeicherte Modellauswahl und die Einstellungen bereits eingereihter Aufträge ändern sich durch das Löschen nicht.
