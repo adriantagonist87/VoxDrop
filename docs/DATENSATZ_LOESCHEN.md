@@ -8,6 +8,8 @@ Das Journal bindet begonnene Löschungen an die bestätigte Auswahl und kann äl
 
 Windows 11 mit Python 3.12.13 und PySide6 6.10.2, Code `e760cc12a66ea9b31ea69dcca5557dc01326aa1e`. `python -m unittest discover -s tests -v` mit `QT_QPA_PLATFORM=offscreen`, Software-Rendering und deaktiviertem CUDA ergab 313 Fälle, 299 bestanden und 14 übersprungen. Beide Löschmodi und Abbrechen liefen nativ über QML → Controller → CLI → Papierkorb → SQLite bei 1010 × 630 logischen Pixeln und 100/125/150 %. Alle neun verschobenen künstlichen Dateien wurden gezielt wiederhergestellt. Der erste Sandbox-Lauf scheiterte an Windows-Dateipfaden und Registry-Lesezugriffen. Die isolierten nativen Prüfungen waren erfolgreich. Die laufende produktive App wurde nicht aktualisiert. **Unter macOS ungeprüft.** [Arbeitsbranch](https://github.com/adriantagonist87/VoxDrop/tree/fix/keep-original-on-delete)
 
+Eine separate Kopie des SHA-256-geprüften Stable-ZIP mit den fünf geänderten Programmdateien startete über die normale EXE mit eigener, offline eingerichteter Laufzeit. Beide Modi bestanden in dieser Kopie bei 125 %. Die drei künstlichen Dateien aus diesem Lauf wurden ebenfalls aus dem Papierkorb wiederhergestellt.
+
 **Offener Stabilitätsvorfall:** Nach dem späteren Start einer produktiven CUDA-Transkription meldete der Nutzer einen vollständigen PC-Stillstand. Die Ursache ist nicht geklärt. Die folgenden Funktionstests der Löschung sind keine CUDA-Dauerfreigabe. App beendet, Queue pausiert, CPU-Schutz vorübergehend aktiv. [Gesicherte Befunde und weitere Diagnose](SYSTEMSTILLSTAND_2026-11-23.md).
 
 ## Bedienung und Nutzerentscheidung vom 23.11.2026
