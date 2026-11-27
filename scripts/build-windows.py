@@ -19,8 +19,8 @@ from zipfile import ZipFile
 
 ROOT = Path(__file__).resolve().parents[1]
 ENGINE = (
-    "watch_service.py voxdrop.py transcription_worker.py silence.py smb_paths.py "
-    "platform_io.py gpu_budget.py queue_control.py media_history.py history_store.py app_lifecycle.py runtime_logs.py login_agent.py qwen_backend.py qwen_cuda.py qwen-models.json "
+    "watch_service.py voxdrop.py model_download.py transcription_worker.py silence.py smb_paths.py "
+    "platform_io.py gpu_budget.py queue_control.py media_history.py history_store.py record_delete.py model_inventory.py app_lifecycle.py runtime_logs.py login_agent.py qwen_backend.py qwen_cuda.py qwen-models.json "
     "qwen-windows-models.json speaker_diarization.py"
 ).split()
 

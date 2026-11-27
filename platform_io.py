@@ -59,7 +59,7 @@ def _current_wer_report(event, started):
 
 
 def graphics_timeout_since(started):
-    """Look for display recovery or a GPU engine timeout during this CUDA run."""
+    """Look for display recovery, a GPU timeout or graphics live dump during CUDA."""
     if not WINDOWS or not started:
         return None
     now = time.time()
@@ -81,7 +81,7 @@ def graphics_timeout_since(started):
         pass
     query = (f"*[System[{date} and {WER_PROVIDER}]"
              " and EventData[Data[@Name='EventName']='LiveKernelEvent'"
-             " and (Data[@Name='P1']='141' or Data[@Name='P1']='117')]]")
+             " and (Data[@Name='P1']='141' or Data[@Name='P1']='117' or Data[@Name='P1']='193')]]")
     try:
         reports = _windows_events("Application", query)
     except unavailable:
@@ -89,6 +89,8 @@ def graphics_timeout_since(started):
     for report in reports:
         try:
             if _current_wer_report(report, since):
+                if report.findtext(f"{EVENT_NS}EventData/{EVENT_NS}Data[@Name='P1']")=='193':
+                    return "Grafik-Watchdog (Windows-Fehlerbericht 193)"
                 return "GPU-Timeout (Windows-Fehlerbericht 141/117)"
         except unavailable:
             continue

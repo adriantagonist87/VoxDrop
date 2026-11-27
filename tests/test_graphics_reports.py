@@ -20,13 +20,13 @@ class GraphicsReportTests(unittest.TestCase):
         io._first_wer_time.cache_clear()
         self.addCleanup(io._first_wer_time.cache_clear)
 
-    def event(self, number=1001, report_id="", dump="", stamp=None):
+    def event(self, number=1001, report_id="", dump="", stamp=None, code="141"):
         root = ET.Element(io.EVENT_NS + "Event")
         system = ET.SubElement(root, io.EVENT_NS + "System")
         ET.SubElement(system, io.EVENT_NS + "EventID").text = str(number)
         ET.SubElement(system, io.EVENT_NS + "TimeCreated", SystemTime=stamp or self.after)
         payload = ET.SubElement(root, io.EVENT_NS + "EventData")
-        for key, value in (("ReportId", report_id), ("AttachedFiles", dump)):
+        for key, value in (("ReportId", report_id), ("AttachedFiles", dump), ("P1",code)):
             ET.SubElement(payload, io.EVENT_NS + "Data", Name=key).text = value
         return root
 
@@ -55,6 +55,18 @@ class GraphicsReportTests(unittest.TestCase):
             [], reports, subprocess.TimeoutExpired("wevtutil", 2), [self.event(stamp=self.after)]
         ]):
             self.assertIn("141/117", io.graphics_timeout_since(self.start))
+
+    def test_current_graphics_live_dump_193_is_detected_without_calling_it_a_bugcheck(self):
+        report=self.event(report_id=self.new_id,code='193')
+        with patch.object(io,'_windows_events',side_effect=[[],[report],[self.event(stamp=self.after)]]) as query:
+            self.assertEqual(io.graphics_timeout_since(self.start),'Grafik-Watchdog (Windows-Fehlerbericht 193)')
+        self.assertIn("Data[@Name='P1']='193'",query.call_args_list[1].args[1])
+
+    def test_replayed_193_reports_still_require_current_dump_and_first_submission(self):
+        reports=[self.event(report_id=self.new_id,code='193',dump=r'C:\Windows\WATCHDOG-20261030-1450.dmp'),
+                 self.event(report_id=self.old_id,code='193')]
+        with patch.object(io,'_windows_events',side_effect=[[],reports,[self.event(stamp=self.before)]]):
+            self.assertIsNone(io.graphics_timeout_since(self.start))
 
     def test_direct_driver_events_remain_effective_in_long_running_job(self):
         for number in (153, 4101):
